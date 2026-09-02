@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#8c3d1f">
+<meta name="description" content="500 Australian adventures for Riley &amp; Elli — a shared checklist across both phones.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Our Adventure">
+<title>Our Australian Adventure</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ───────────────────────── Lock screen ───────────────────────── -->
+<div id="lock" class="lock">
+  <div class="lock-card">
+    <div class="lock-emblem">🇦🇺</div>
+    <h1>Our Australian Adventure</h1>
+    <p class="lock-sub">500 places to see before we run out of country.</p>
+    <form id="lockForm" autocomplete="on">
+      <label for="passphrase">Passphrase</label>
+      <input id="passphrase" type="password" inputmode="text" autocomplete="current-password"
+             placeholder="the one we agreed on" required>
+      <button id="lockBtn" type="submit" class="btn-primary">Unlock</button>
+    </form>
+    <p id="lockMsg" class="lock-msg" role="status" aria-live="polite"></p>
+  </div>
+</div>
+
+<!-- ───────────────────────── Who's this phone ───────────────────── -->
+<div id="whoami" class="lock hidden">
+  <div class="lock-card">
+    <div class="lock-emblem">👋</div>
+    <h1>Who's on this phone?</h1>
+    <p class="lock-sub">So we know who ticked what. You can change it later in Us.</p>
+    <div class="who-row">
+      <button class="btn-who" data-who="Riley">Riley</button>
+      <button class="btn-who" data-who="Elli">Elli</button>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── App ───────────────────────────────── -->
+<div id="app" class="hidden">
+
+  <header class="topbar">
+    <div class="topbar-main">
+      <div class="eyebrow">RILEY &amp; ELLI</div>
+      <h1 id="progressCount">0 / 500</h1>
+    </div>
+    <button id="randomBtn" class="btn-dice" title="Pick a random adventure" aria-label="Pick a random adventure">🎲</button>
+  </header>
+
+  <div class="progressbar"><i id="progressFill"></i></div>
+  <div id="syncBar" class="syncbar" role="status" aria-live="polite"></div>
+
+  <!-- Adventures -->
+  <section id="tab-list" class="panel">
+    <div class="filters">
+      <input id="search" type="search" placeholder="Search a place, region or activity…" autocomplete="off">
+      <div class="chiprow" id="quickChips">
+        <button class="chip" data-quick="all">All</button>
+        <button class="chip" data-quick="todo">To do</button>
+        <button class="chip" data-quick="done">Done</button>
+        <button class="chip" data-quick="short">⭐ Shortlist</button>
+        <button class="chip" data-quick="gem">💎 Hidden gems</button>
+      </div>
+      <details class="morefilters">
+        <summary>More filters</summary>
+        <div class="selects">
+          <label>State<select id="fState"></select></label>
+          <label>Category<select id="fCat"></select></label>
+          <label>Max effort<select id="fDiff"></select></label>
+          <label>Max cost<select id="fCost"></select></label>
+        </div>
+        <button id="clearFilters" class="btn-ghost">Clear filters</button>
+      </details>
+    </div>
+    <div id="resultCount" class="resultcount"></div>
+    <div id="list" class="list"></div>
+  </section>
+
+  <!-- Map / states -->
+  <section id="tab-states" class="panel hidden">
+    <h2>Progress by state</h2>
+    <div id="stateGrid" class="stategrid"></div>
+    <h2>By category</h2>
+    <div id="catGrid" class="stategrid"></div>
+  </section>
+
+  <!-- Memories -->
+  <section id="tab-memories" class="panel hidden">
+    <h2>Our memories</h2>
+    <p class="muted">Everything you've done together, most recent first.</p>
+    <div id="memList" class="list"></div>
+  </section>
+
+  <!-- Us -->
+  <section id="tab-us" class="panel hidden">
+    <h2>Us</h2>
+    <div id="usStats" class="usstats"></div>
+    <h2>Achievements</h2>
+    <div id="achList" class="achlist"></div>
+    <h2>Settings</h2>
+    <div class="settings">
+      <p>This phone is <strong id="whoLabel">—</strong>.
+         <button id="switchWho" class="btn-ghost">Switch</button></p>
+      <p id="connState" class="muted"></p>
+      <button id="refreshBtn" class="btn-ghost">Force refresh from server</button>
+      <button id="signOutBtn" class="btn-ghost danger">Sign out this phone</button>
+      <p class="fineprint">Access, opening hours, seasonal closures, permits and Traditional Owner
+         requirements change. Always check before you travel.</p>
+    </div>
+  </section>
+
+  <nav class="tabbar">
+    <button class="tab active" data-tab="tab-list"><span>🧭</span>Adventures</button>
+    <button class="tab" data-tab="tab-states"><span>🗺️</span>States</button>
+    <button class="tab" data-tab="tab-memories"><span>📸</span>Memories</button>
+    <button class="tab" data-tab="tab-us"><span>❤️</span>Us</button>
+  </nav>
+</div>
+
+<!-- ───────────────────────── Detail sheet ───────────────────────── -->
+<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Adventure detail">
+  <div class="sheet-backdrop" data-close></div>
+  <div class="sheet-card">
+    <button class="sheet-close" data-close aria-label="Close">✕</button>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>
