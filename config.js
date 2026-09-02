@@ -8,7 +8,7 @@
  */
 window.OAA_CONFIG = {
   // Supabase → Project Settings → Data API → Project URL
-  supabaseUrl: 'YOUR_SUPABASE_URL',
+  supabaseUrl: 'https://ajyuozqoukigeeyhvuqc.supabase.co',
 
   // Supabase → Project Settings → API Keys → anon / publishable key
   supabaseAnonKey: 'YOUR_SUPABASE_ANON_KEY',
