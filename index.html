@@ -96,7 +96,13 @@
   <!-- Memories -->
   <section id="tab-memories" class="panel hidden">
     <h2>Our memories</h2>
-    <p class="muted">Everything you've done together, most recent first.</p>
+    <div class="chiprow" id="groupChips">
+      <button class="chip on" data-group="adventure">Adventure</button>
+      <button class="chip" data-group="month">Month</button>
+      <button class="chip" data-group="year">Year</button>
+      <button class="chip" data-group="category">Category</button>
+    </div>
+    <div id="photoStatus" class="photostatus"></div>
     <div id="memList" class="list"></div>
   </section>
 
@@ -134,6 +140,22 @@
     <div id="sheetBody"></div>
   </div>
 </div>
+
+<!-- ───────────────────────── Photo lightbox ─────────────────── -->
+<div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Photo">
+  <button class="lb-close" data-lbclose aria-label="Close">✕</button>
+  <button class="lb-nav prev" data-lbstep="-1" aria-label="Previous photo">‹</button>
+  <button class="lb-nav next" data-lbstep="1" aria-label="Next photo">›</button>
+  <div class="lb-stage"><img id="lbImg" alt=""></div>
+  <div class="lb-meta">
+    <div id="lbTitle" class="lb-title"></div>
+    <div id="lbSub" class="lb-sub"></div>
+    <button id="lbDelete" class="btn-ghost danger">Delete photo</button>
+  </div>
+</div>
+
+<!-- One persistent picker, reused by whichever adventure is open -->
+<input type="file" id="photoInput" accept="image/*" multiple hidden>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 

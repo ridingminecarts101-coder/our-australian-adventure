@@ -70,6 +70,33 @@ bypasses all security and must never go near this repo.
 
 ---
 
+### 1.5 Add the photo album (optional, 1 min)
+
+Only needed if you want photos attached to adventures.
+
+1. **SQL Editor** → **New query**
+2. Paste the whole of `supabase/schema-photos.sql`
+3. **Run**
+
+That creates a `photos` table and a **private** storage bucket called `memories`.
+Private matters: the photos aren't readable by URL, so the app mints short-lived
+signed links instead of leaving them open to anyone who guesses the address.
+
+**How photos are handled:**
+
+- Each one is resized to a 1600px long edge before upload — roughly 300–500 KB
+  instead of the 3–5 MB an iPhone produces. On the free 1 GB tier that's around
+  2,000 photos rather than about 250.
+- The date shown is the **camera's own EXIF timestamp**, not the file date. File
+  dates change whenever a photo is copied or synced between devices; EXIF doesn't.
+  If a photo has no EXIF, the app falls back to the file date, then the date you
+  ticked the adventure off, and says which it used.
+- No signal? Photos are resized and queued on the phone, and upload themselves
+  when you're back in range. The queue survives closing the app.
+- Viewing photos needs a connection — the signed links can't be fetched offline.
+
+---
+
 ## Stage 2 — GitHub Pages (5 min)
 
 1. Go to your repo → **Settings** → **Pages**.

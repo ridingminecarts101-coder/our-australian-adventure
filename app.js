@@ -196,6 +196,320 @@ function subscribeRealtime() {
       realtimeOk = status === 'SUBSCRIBED';
       refreshSyncBar();
     });
+
+  sb.channel('photo-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'photos' }, payload => {
+      if (payload.eventType === 'DELETE') {
+        photos = photos.filter(p => p.id !== payload.old.id);
+      } else if (payload.new) {
+        const i = photos.findIndex(p => p.id === payload.new.id);
+        if (i >= 0) photos[i] = payload.new; else photos.push(payload.new);
+      }
+      renderMemories();
+      if (openId !== null) renderSheet(openId);
+    })
+    .subscribe();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Photos
+// ══════════════════════════════════════════════════════════════════════
+//  Pipeline for each picked photo:
+//    1. read the real "date taken" out of the file's EXIF before we touch it
+//    2. resize to something sane (phone originals are 3-5 MB; the free tier
+//       gives us 1 GB, so full-size uploads would fill it in ~250 photos)
+//    3. upload to private Storage, then record the row
+//  If there's no signal, steps 2-3 go into an IndexedDB queue and run later.
+
+const BUCKET = 'memories';
+const MAX_EDGE = 1600;
+const JPEG_QUALITY = 0.82;
+const SIGNED_TTL = 7200;                       // 2 hours
+
+let photos = [];                               // rows from public.photos
+let pendingPhotos = [];                        // queued locally, not yet uploaded
+const signedUrls = new Map();                  // storage_path -> { url, expires }
+let uploading = 0;
+let photoTargetId = null;                      // which adventure the picker is for
+let lightbox = { list: [], index: 0 };
+
+// ── Tiny IndexedDB wrapper for the upload queue ──────────────────────
+function idb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('oaa-photos', 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains('queue')) {
+        req.result.createObjectStore('queue', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbAll() {
+  try {
+    const db = await idb();
+    return await new Promise((res, rej) => {
+      const r = db.transaction('queue').objectStore('queue').getAll();
+      r.onsuccess = () => res(r.result || []);
+      r.onerror = () => rej(r.error);
+    });
+  } catch { return []; }
+}
+async function idbPut(item) {
+  try {
+    const db = await idb();
+    await new Promise((res, rej) => {
+      const r = db.transaction('queue', 'readwrite').objectStore('queue').put(item);
+      r.onsuccess = res; r.onerror = () => rej(r.error);
+    });
+  } catch { /* storage unavailable — the photo stays in memory only */ }
+}
+async function idbDelete(id) {
+  try {
+    const db = await idb();
+    await new Promise((res, rej) => {
+      const r = db.transaction('queue', 'readwrite').objectStore('queue').delete(id);
+      r.onsuccess = res; r.onerror = () => rej(r.error);
+    });
+  } catch { /* nothing to do */ }
+}
+
+// ── EXIF: the camera's own timestamp ─────────────────────────────────
+// The file's lastModified date is the filesystem's, and it changes whenever
+// a photo is copied or synced. EXIF DateTimeOriginal is what the camera
+// actually recorded, so we read that first and only fall back if it's absent.
+async function readExifDate(file) {
+  try {
+    const buf = await file.slice(0, 262144).arrayBuffer();
+    const view = new DataView(buf);
+    if (view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return null;   // not a JPEG
+
+    let offset = 2;
+    while (offset + 4 < view.byteLength) {
+      if (view.getUint8(offset) !== 0xFF) { offset++; continue; }
+      const marker = view.getUint8(offset + 1);
+      const size = view.getUint16(offset + 2);
+      if (marker === 0xE1) {                                               // APP1
+        const tiff = offset + 10;                                          // skip "Exif\0\0"
+        if (tiff + 8 > view.byteLength) return null;
+        const little = view.getUint16(tiff) === 0x4949;
+        const readShort = o => view.getUint16(o, little);
+        const readLong  = o => view.getUint32(o, little);
+
+        const findTag = (dirStart, tag) => {
+          if (dirStart + 2 > view.byteLength) return null;
+          const count = readShort(dirStart);
+          for (let i = 0; i < count; i++) {
+            const entry = dirStart + 2 + i * 12;
+            if (entry + 12 > view.byteLength) break;
+            if (readShort(entry) === tag) return entry;
+          }
+          return null;
+        };
+
+        const ifd0 = tiff + readLong(tiff + 4);
+        const exifPtr = findTag(ifd0, 0x8769);
+        if (!exifPtr) return null;
+        const exifDir = tiff + readLong(exifPtr + 8);
+
+        // 0x9003 DateTimeOriginal, falling back to 0x9004 DateTimeDigitized
+        const dateEntry = findTag(exifDir, 0x9003) || findTag(exifDir, 0x9004);
+        if (!dateEntry) return null;
+        const strOffset = tiff + readLong(dateEntry + 8);
+        let str = '';
+        for (let i = 0; i < 19 && strOffset + i < view.byteLength; i++) {
+          str += String.fromCharCode(view.getUint8(strOffset + i));
+        }
+        // EXIF format: "YYYY:MM:DD HH:MM:SS"
+        const m = str.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+        if (!m) return null;
+        const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+        return isNaN(d) ? null : d;
+      }
+      if (marker === 0xD8 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD7)) offset += 2;
+      else if (marker === 0xDA) break;                                     // image data starts
+      else offset += 2 + size;
+    }
+  } catch { /* fall through */ }
+  return null;
+}
+
+// ── Resize ───────────────────────────────────────────────────────────
+async function downscale(file) {
+  let bitmap;
+  try {
+    // from-image applies the EXIF orientation flag, so photos aren't sideways
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch {
+    bitmap = await createImageBitmap(file);
+  }
+  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+  bitmap.close?.();
+
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', JPEG_QUALITY));
+  if (!blob) throw new Error('Could not process that image.');
+  return { blob, width: w, height: h };
+}
+
+// ── Adding photos ────────────────────────────────────────────────────
+async function addPhotos(adventureId, files) {
+  const list = [...files].filter(f => f.type.startsWith('image/'));
+  if (!list.length) { toast('No images in that selection'); return; }
+
+  uploading += list.length;
+  renderPhotoStatus();
+
+  for (const file of list) {
+    try {
+      const exif = await readExifDate(file);
+      const r = row(adventureId);
+      let takenAt, source;
+      if (exif)                       { takenAt = exif;                          source = 'exif'; }
+      else if (file.lastModified)     { takenAt = new Date(file.lastModified);   source = 'file'; }
+      else if (r.completed_at)        { takenAt = new Date(r.completed_at);      source = 'completed'; }
+      else                            { takenAt = new Date();                    source = 'upload'; }
+
+      const { blob, width, height } = await downscale(file);
+      const item = {
+        id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
+        adventure_id: adventureId,
+        blob, width, height, bytes: blob.size,
+        taken_at: takenAt.toISOString(),
+        taken_at_source: source,
+        uploaded_by: who,
+      };
+      pendingPhotos.push(item);
+      await idbPut(item);
+      renderAll();
+    } catch (err) {
+      console.warn('photo failed', err);
+      toast('Could not read that photo');
+    } finally {
+      uploading--;
+      renderPhotoStatus();
+    }
+  }
+  flushPhotoQueue();
+}
+
+async function flushPhotoQueue() {
+  if (!sb || !online || flushPhotoQueue.busy) { renderPhotoStatus(); return; }
+  if (!pendingPhotos.length) { renderPhotoStatus(); return; }
+  flushPhotoQueue.busy = true;
+
+  for (const item of [...pendingPhotos]) {
+    try {
+      const path = `${item.adventure_id}/${item.id}.jpg`;
+      const up = await sb.storage.from(BUCKET)
+        .upload(path, item.blob, { contentType: 'image/jpeg', upsert: true });
+      if (up.error) throw up.error;
+
+      const ins = await sb.from('photos').insert({
+        adventure_id: item.adventure_id,
+        storage_path: path,
+        taken_at: item.taken_at,
+        taken_at_source: item.taken_at_source,
+        width: item.width, height: item.height, bytes: item.bytes,
+        uploaded_by: item.uploaded_by || who,
+      }).select().single();
+      if (ins.error) throw ins.error;
+
+      photos.push(ins.data);
+      pendingPhotos = pendingPhotos.filter(p => p.id !== item.id);
+      await idbDelete(item.id);
+      renderAll();
+    } catch (err) {
+      console.warn('upload failed, will retry', err.message || err);
+      break;                                    // stop on first failure; try again later
+    }
+  }
+  flushPhotoQueue.busy = false;
+  renderPhotoStatus();
+}
+
+async function pullPhotos() {
+  if (!sb || !online) return;
+  const { data, error } = await sb.from('photos').select('*').order('taken_at', { ascending: false });
+  if (error) { console.warn('photo pull failed', error.message); return; }
+  photos = data || [];
+}
+
+async function deletePhoto(photoId) {
+  const p = photos.find(x => x.id === photoId);
+  if (!p) return;
+  if (!confirm('Delete this photo? It will disappear from both phones.')) return;
+  try {
+    await sb.storage.from(BUCKET).remove([p.storage_path]);
+    const { error } = await sb.from('photos').delete().eq('id', photoId);
+    if (error) throw error;
+    photos = photos.filter(x => x.id !== photoId);
+    signedUrls.delete(p.storage_path);
+    closeLightbox();
+    renderAll();
+    toast('Photo deleted');
+  } catch (err) {
+    toast('Could not delete that photo');
+    console.warn(err);
+  }
+}
+
+// ── Signed URLs (the bucket is private, so links are minted on demand) ─
+async function ensureSignedUrls(paths) {
+  if (!sb || !online) return;
+  const now = Date.now();
+  const needed = [...new Set(paths)].filter(p => {
+    const hit = signedUrls.get(p);
+    return !hit || hit.expires < now + 60000;
+  });
+  if (!needed.length) return;
+
+  const { data, error } = await sb.storage.from(BUCKET).createSignedUrls(needed, SIGNED_TTL);
+  if (error) { console.warn('signing failed', error.message); return; }
+  for (const d of data || []) {
+    if (d.signedUrl) signedUrls.set(d.path, { url: d.signedUrl, expires: now + SIGNED_TTL * 1000 });
+  }
+}
+
+function photoSrc(p) {
+  if (p.pending) return p.objectUrl;
+  const hit = signedUrls.get(p.storage_path);
+  return hit ? hit.url : '';
+}
+
+// All photos for an adventure: uploaded ones plus anything still queued.
+function photosFor(adventureId) {
+  const queued = pendingPhotos
+    .filter(p => p.adventure_id === adventureId)
+    .map(p => ({ ...p, pending: true, objectUrl: objectUrlFor(p) }));
+  return [...photos.filter(p => p.adventure_id === adventureId), ...queued]
+    .sort((a, b) => new Date(a.taken_at || 0) - new Date(b.taken_at || 0));
+}
+
+const objectUrls = new Map();
+function objectUrlFor(item) {
+  if (!objectUrls.has(item.id)) objectUrls.set(item.id, URL.createObjectURL(item.blob));
+  return objectUrls.get(item.id);
+}
+
+function renderPhotoStatus() {
+  const el = $('#photoStatus');
+  if (!el) return;
+  const queued = pendingPhotos.length;
+  const s = queued === 1 ? '' : 's';
+  let msg = '';
+  if (uploading)              msg = `Processing ${uploading} photo${uploading === 1 ? '' : 's'}…`;
+  else if (queued && !sb)     msg = `${queued} photo${s} saved on this phone — not connected to the shared album.`;
+  else if (queued && !online) msg = `${queued} photo${s} saved on this phone — they'll upload when you have signal.`;
+  else if (queued)            msg = `Uploading ${queued} photo${s}…`;
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -280,23 +594,178 @@ function renderStates() {
   $('#catGrid').innerHTML   = group(a => a.category);
 }
 
+let memoryGrouping = 'adventure';
+
+function thumbHTML(p, i) {
+  const src = photoSrc(p);
+  return `<button class="thumb${p.pending ? ' pending' : ''}" data-photo="${esc(p.id)}" data-idx="${i}"
+            aria-label="View photo">
+    ${src ? `<img src="${esc(src)}" alt="" loading="lazy">` : '<span class="thumb-wait"></span>'}
+    ${p.pending ? '<span class="thumb-badge">&uarr;</span>' : ''}
+  </button>`;
+}
+
 function renderMemories() {
-  const done = ADV
-    .filter(a => isDone(a.id))
-    .sort((x, y) => new Date(row(y.id).completed_at || 0) - new Date(row(x.id).completed_at || 0));
-  $('#memList').innerHTML = done.length ? done.map(a => {
-    const r = row(a.id);
-    return `<div class="memory" data-open="${a.id}">
-      <b>${esc(a.title)}</b>
-      <div class="card-meta">${esc(a.place)} · ${esc(STATE_NAMES[a.state])}</div>
-      <div class="badges">
-        ${r.completed_by ? `<span class="badge">Ticked by ${esc(r.completed_by)}</span>` : ''}
-        ${r.completed_at ? `<span class="badge">${fmtDate(r.completed_at)}</span>` : ''}
-        ${r.rating ? `<span class="badge star">${'★'.repeat(r.rating)}</span>` : ''}
+  const el = $('#memList');
+
+  if (memoryGrouping === 'adventure') {
+    // Anything ticked off, plus anything that has photos on it.
+    const withPhotos = new Set(photos.concat(pendingPhotos).map(p => p.adventure_id));
+    const list = ADV
+      .filter(a => isDone(a.id) || withPhotos.has(a.id))
+      .sort((x, y) => new Date(row(y.id).completed_at || 0) - new Date(row(x.id).completed_at || 0));
+
+    el.innerHTML = list.length ? list.map(a => {
+      const r = row(a.id);
+      const ph = photosFor(a.id);
+      return `<div class="memory">
+        <div data-open="${a.id}">
+          <b>${esc(a.title)}</b>
+          <div class="card-meta">${esc(a.place)} · ${esc(STATE_NAMES[a.state])}</div>
+          <div class="badges">
+            ${r.completed_by ? `<span class="badge">Ticked by ${esc(r.completed_by)}</span>` : ''}
+            ${r.completed_at ? `<span class="badge">${fmtDate(r.completed_at)}</span>` : ''}
+            ${r.rating ? `<span class="badge star">${'★'.repeat(r.rating)}</span>` : ''}
+            ${ph.length ? `<span class="badge">📷 ${ph.length}</span>` : ''}
+          </div>
+          <p class="${r.memory ? '' : 'nomemory'}">${esc(r.memory || 'No memory written yet — tap to add one.')}</p>
+        </div>
+        ${ph.length ? `<div class="strip" data-group-key="adv-${a.id}">${ph.map((p, i) => thumbHTML(p, i)).join('')}</div>` : ''}
+      </div>`;
+    }).join('') : `<div class="empty">No adventures ticked off yet.<br>Go and make some. ❤️</div>`;
+    hydrateThumbs();
+    return;
+  }
+
+  // Photo-led groupings.
+  const all = [
+    ...photos,
+    ...pendingPhotos.map(p => ({ ...p, pending: true, objectUrl: objectUrlFor(p) })),
+  ];
+  if (!all.length) {
+    el.innerHTML = `<div class="empty">No photos yet.<br>Open an adventure and add some under <b>Our memory of it</b>.</div>`;
+    return;
+  }
+
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  const keyOf = p => {
+    const d = p.taken_at ? new Date(p.taken_at) : null;
+    const ok = d && !isNaN(d);
+    if (memoryGrouping === 'year')  return ok ? String(d.getFullYear()) : 'Date unknown';
+    if (memoryGrouping === 'month') return ok ? `${MONTHS[d.getMonth()]} ${d.getFullYear()}` : 'Date unknown';
+    const a = ADV.find(x => x.id === p.adventure_id);
+    return a ? a.category : 'Uncategorised';
+  };
+  const sortVal = p => {
+    const d = p.taken_at ? new Date(p.taken_at) : null;
+    return d && !isNaN(d) ? d.getTime() : 0;
+  };
+
+  const groups = new Map();
+  for (const p of all) {
+    const k = keyOf(p);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(p);
+  }
+
+  const keys = [...groups.keys()];
+  if (memoryGrouping === 'category') keys.sort();
+  else keys.sort((a, b) => {                          // newest period first
+    if (a === 'Date unknown') return 1;
+    if (b === 'Date unknown') return -1;
+    return Math.max(...groups.get(b).map(sortVal)) - Math.max(...groups.get(a).map(sortVal));
+  });
+
+  el.innerHTML = keys.map(k => {
+    const items = groups.get(k).sort((a, b) => sortVal(b) - sortVal(a));
+    return `<section class="photogroup">
+      <div class="photogroup-head">
+        <h3>${esc(k)}</h3>
+        <span>${items.length} photo${items.length === 1 ? '' : 's'}</span>
       </div>
-      <p class="${r.memory ? '' : 'nomemory'}">${esc(r.memory || 'No memory written yet — tap to add one.')}</p>
-    </div>`;
-  }).join('') : `<div class="empty">No adventures ticked off yet.<br>Go and make some. ❤️</div>`;
+      <div class="grid" data-group-key="${esc(k)}">
+        ${items.map((p, i) => thumbHTML(p, i)).join('')}
+      </div>
+    </section>`;
+  }).join('');
+  hydrateThumbs();
+}
+
+// Thumbnails render straight away using whatever signed links we already hold,
+// then we mint the missing ones and fill the gaps in place - no full re-render,
+// so scroll position and any open sheet survive.
+async function hydrateThumbs() {
+  const missing = [];
+  $$('.thumb').forEach(btn => {
+    const p = findPhoto(btn.dataset.photo);
+    if (p && !p.pending && !photoSrc(p)) missing.push(p.storage_path);
+  });
+  if (!missing.length) return;
+  await ensureSignedUrls(missing);
+  $$('.thumb').forEach(btn => {
+    const p = findPhoto(btn.dataset.photo);
+    if (!p) return;
+    const src = photoSrc(p);
+    if (src && !btn.querySelector('img')) {
+      btn.innerHTML = `<img src="${esc(src)}" alt="" loading="lazy">`;
+    }
+  });
+}
+
+function findPhoto(id) {
+  const up = photos.find(p => p.id === id);
+  if (up) return up;
+  const q = pendingPhotos.find(p => p.id === id);
+  return q ? { ...q, pending: true, objectUrl: objectUrlFor(q) } : null;
+}
+
+// -- Lightbox --------------------------------------------------------
+async function openLightbox(photoId, groupKey) {
+  const container = groupKey
+    ? document.querySelector(`[data-group-key="${CSS.escape(groupKey)}"]`)
+    : null;
+  const ids = container ? $$('.thumb', container).map(b => b.dataset.photo) : [photoId];
+  lightbox.list = ids.map(findPhoto).filter(Boolean);
+  lightbox.index = Math.max(0, lightbox.list.findIndex(p => p.id === photoId));
+  $('#lightbox').classList.remove('hidden');
+  await showLightbox();
+}
+
+async function showLightbox() {
+  const p = lightbox.list[lightbox.index];
+  if (!p) return closeLightbox();
+  if (!p.pending && !photoSrc(p)) await ensureSignedUrls([p.storage_path]);
+
+  const a = ADV.find(x => x.id === p.adventure_id);
+  const d = p.taken_at ? new Date(p.taken_at) : null;
+  const when = d && !isNaN(d)
+    ? d.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
+    : 'Date unknown';
+  const SOURCE_NOTE = {
+    exif: '',
+    file: ' (from the file date)',
+    completed: ' (the date you ticked it off)',
+    upload: ' (upload date)',
+  };
+
+  $('#lbImg').src = photoSrc(p) || '';
+  $('#lbTitle').textContent = a ? a.title : 'Photo';
+  $('#lbSub').textContent =
+    `${when}${SOURCE_NOTE[p.taken_at_source] || ''}` +
+    (a ? ` · ${a.place}` : '') +
+    (p.uploaded_by ? ` · added by ${p.uploaded_by}` : '') +
+    (p.pending ? ' · waiting to upload' : '');
+  $('#lbDelete').classList.toggle('hidden', !!p.pending);
+  $('#lbDelete').dataset.photo = p.id;
+  const many = lightbox.list.length > 1;
+  $$('.lb-nav').forEach(b => b.classList.toggle('hidden', !many));
+}
+
+function closeLightbox() {
+  $('#lightbox').classList.add('hidden');
+  $('#lbImg').src = '';
+  lightbox = { list: [], index: 0 };
 }
 
 const ACHIEVEMENTS = [
@@ -370,6 +839,7 @@ function renderAll() {
   renderMemories();
   renderUs();
   if (openId !== null) renderSheet(openId);
+  renderPhotoStatus();
   refreshSyncBar();
 }
 
@@ -380,6 +850,7 @@ function renderSheet(id) {
   const a = ADV.find(x => x.id === id);
   if (!a) return;
   const r = row(id);
+  const ph = photosFor(id);
   const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.place + ', ' + STATE_NAMES[a.state] + ', Australia')}`;
 
   $('#sheetBody').innerHTML = `
@@ -419,7 +890,20 @@ function renderSheet(id) {
 
     <h3>Our memory of it</h3>
     <textarea id="memoryBox" placeholder="What actually happened…">${esc(r.memory || '')}</textarea>
-    <div class="sheet-actions"><button class="btn-primary" data-act="saveMemory">Save memory</button></div>`;
+    <div class="sheet-actions"><button class="btn-primary" data-act="saveMemory">Save memory</button></div>
+
+    <h3>Photos${ph.length ? ` <span class="count">${ph.length}</span>` : ''}</h3>
+    <div class="strip sheet-strip" data-group-key="adv-${a.id}">
+      ${ph.map((p, i) => thumbHTML(p, i)).join('')}
+      <button class="thumb add" data-act="addPhoto" aria-label="Add photos">
+        <span>+</span><small>Add</small>
+      </button>
+    </div>
+    <p class="photohint">${ph.length
+      ? 'Tap a photo to see it full size.'
+      : 'Photos are resized before uploading, and dated from the camera’s own timestamp.'}</p>`;
+
+  hydrateThumbs();
 }
 
 function openSheet(id) {
@@ -495,13 +979,54 @@ function wireUI() {
     renderList();
   };
 
+  // Memories grouping
+  $$('#groupChips .chip').forEach(c => c.onclick = () => {
+    memoryGrouping = c.dataset.group;
+    $$('#groupChips .chip').forEach(x => x.classList.toggle('on', x === c));
+    renderMemories();
+  });
+
   // Card taps (delegated — the list is re-rendered constantly)
   document.body.addEventListener('click', e => {
+    // Photo thumbnails come first: they sit inside cards that would otherwise
+    // swallow the tap and open the adventure sheet instead.
+    const thumb = e.target.closest('.thumb');
+    if (thumb && !thumb.classList.contains('add')) {
+      const holder = thumb.closest('[data-group-key]');
+      openLightbox(thumb.dataset.photo, holder && holder.dataset.groupKey);
+      return;
+    }
+    if (e.target.closest('[data-lbclose]')) { closeLightbox(); return; }
+    const step = e.target.closest('[data-lbstep]');
+    if (step) {
+      const n = lightbox.list.length;
+      if (n) { lightbox.index = (lightbox.index + +step.dataset.lbstep + n) % n; showLightbox(); }
+      return;
+    }
+    if (e.target.id === 'lbDelete') { deletePhoto(e.target.dataset.photo); return; }
+
     const tick = e.target.closest('[data-toggle]');
     if (tick) { toggleDone(+tick.dataset.toggle); return; }
     const open = e.target.closest('[data-open]');
     if (open) { openSheet(+open.dataset.open); return; }
     if (e.target.closest('[data-close]')) { closeSheet(); return; }
+  });
+
+  // Photo picker
+  $('#photoInput').addEventListener('change', async e => {
+    const files = e.target.files;
+    const target = photoTargetId;
+    e.target.value = '';                        // so re-picking the same file fires again
+    if (target != null && files && files.length) await addPhotos(target, files);
+  });
+
+  // Keyboard support for the lightbox
+  addEventListener('keydown', e => {
+    if ($('#lightbox').classList.contains('hidden')) return;
+    const n = lightbox.list.length;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowRight' && n) { lightbox.index = (lightbox.index + 1) % n; showLightbox(); }
+    if (e.key === 'ArrowLeft'  && n) { lightbox.index = (lightbox.index - 1 + n) % n; showLightbox(); }
   });
 
   // Sheet actions
@@ -516,6 +1041,10 @@ function wireUI() {
       applyPatch(openId, { memory: $('#memoryBox').value.trim() || null });
       toast('Memory saved');
     }
+    if (act.dataset.act === 'addPhoto') {
+      photoTargetId = openId;
+      $('#photoInput').click();
+    }
   });
 
   // Random pick
@@ -527,7 +1056,9 @@ function wireUI() {
 
   // Settings
   $('#switchWho').onclick = () => { $('#whoami').classList.remove('hidden'); };
-  $('#refreshBtn').onclick = async () => { await pullProgress(); toast('Refreshed'); };
+  $('#refreshBtn').onclick = async () => {
+    await pullProgress(); await pullPhotos(); signedUrls.clear(); renderAll(); toast('Refreshed');
+  };
   $('#signOutBtn').onclick = async () => {
     if (!confirm('Sign this phone out? Your shared progress stays safe on the server.')) return;
     if (sb) await sb.auth.signOut();
@@ -543,9 +1074,11 @@ function wireUI() {
   });
 
   // Connectivity
-  addEventListener('online',  () => { online = true;  flushOutbox(); pullProgress(); });
+  addEventListener('online',  () => { online = true;  flushOutbox(); pullProgress(); pullPhotos().then(renderAll); flushPhotoQueue(); });
   addEventListener('offline', () => { online = false; refreshSyncBar(); });
-  addEventListener('visibilitychange', () => { if (!document.hidden) { flushOutbox(); pullProgress(); } });
+  addEventListener('visibilitychange', () => {
+    if (!document.hidden) { flushOutbox(); pullProgress(); pullPhotos().then(renderAll); flushPhotoQueue(); }
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -571,10 +1104,14 @@ async function enterApp() {
   $('#lock').classList.add('hidden');
   $('#app').classList.remove('hidden');
   if (!who) $('#whoami').classList.remove('hidden');
+  pendingPhotos = await idbAll();
   renderAll();
   await pullProgress();
+  await pullPhotos();
+  renderAll();
   subscribeRealtime();
   flushOutbox();
+  flushPhotoQueue();
 }
 
 // ══════════════════════════════════════════════════════════════════════
