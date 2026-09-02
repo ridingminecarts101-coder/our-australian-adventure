@@ -11,9 +11,9 @@ window.OAA_CONFIG = {
   supabaseUrl: 'https://ajyuozqoukigeeyhvuqc.supabase.co',
 
   // Supabase → Project Settings → API Keys → anon / publishable key
-  supabaseAnonKey: 'YOUR_SUPABASE_ANON_KEY',
+  supabaseAnonKey: 'sb_publishable_9wV1tV299jWR-jV3bW121A_UOa7M_R_',
 
   // The single shared account both phones sign in as. The passphrase typed on
   // the lock screen is this account's password.
-  sharedEmail: 'YOUR_SHARED_EMAIL',
+  sharedEmail: 'rileylawler664@gmail.com',
 };
