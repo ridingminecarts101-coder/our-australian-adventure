@@ -69,7 +69,7 @@ const CONTINENT_BOXES = {
 };
 
 const COUNTRIES = {
-  AU: ['Australia', '🇦🇺'], NZ: ['New Zealand', '🇳🇿'], ID: ['Indonesia', '🇮🇩'],
+  AU: ['Australia', '🇦🇺'], NZ: ['New Zealand', '🇳🇿'],
   FJ: ['Fiji', '🇫🇯'], PF: ['French Polynesia', '🇵🇫'], VU: ['Vanuatu', '🇻🇺'],
   NC: ['New Caledonia', '🇳🇨'], WS: ['Samoa', '🇼🇸'], TO: ['Tonga', '🇹🇴'],
   CK: ['Cook Islands', '🇨🇰'], SB: ['Solomon Islands', '🇸🇧'],
@@ -84,6 +84,10 @@ const COUNTRIES = {
   GR: ['Greece', '🇬🇷'], CZ: ['Czechia', '🇨🇿'], HR: ['Croatia', '🇭🇷'],
   PL: ['Poland', '🇵🇱'], US: ['United States', '🇺🇸'], CA: ['Canada', '🇨🇦'],
   MX: ['Mexico', '🇲🇽'],
+  DK: ['Denmark', '🇩🇰'], SE: ['Sweden', '🇸🇪'],
+  JP: ['Japan', '🇯🇵'], KR: ['South Korea', '🇰🇷'], CN: ['China', '🇨🇳'],
+  HK: ['Hong Kong', '🇭🇰'], SG: ['Singapore', '🇸🇬'], AE: ['United Arab Emirates', '🇦🇪'],
+  ID: ['Indonesia', '🇮🇩'],
 };
 
 // Small island nations are collected behind one row rather than listed beside

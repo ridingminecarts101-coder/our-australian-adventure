@@ -1191,12 +1191,16 @@ const ACHIEVEMENTS = [
   ['🔟', 'Getting Going',    'Complete 10 adventures',                         d => d.done >= 10],
   ['🎒', 'Proper Travellers','Complete 50 adventures',                         d => d.done >= 50],
   ['💯', 'Century',          'Complete 100 adventures',                        d => d.done >= 100],
-  ['🏅', 'Halfway',          'Complete 250 adventures',                        d => d.done >= 250],
-  ['👑', 'The Lot',          'Complete all 500 adventures',                    d => d.done >= 500],
+  ['🏅', 'Serious About It', 'Complete 250 adventures',                        d => d.done >= 250],
+  ['🌐', 'Half the World',   () => `Complete half of all ${ADV.length}`,        d => d.done >= ADV.length / 2],
+  ['👑', 'The Lot',          () => `Complete all ${ADV.length} adventures`,     d => d.done >= ADV.length],
   ['💎', 'Gem Hunters',      'Find 25 hidden gems',                            d => d.gems >= 25],
   ['🗺️', 'State Hopper',     'An adventure in all 8 Australian states and territories', d => d.states >= 8],
-  ['🌏', 'Continent Hopper','An adventure on three different continents',     d => d.countries >= 3],
+  ['🌏', 'Continent Hopper','An adventure on three different continents',     d => d.continents >= 3],
   ['🐾', 'Good Dog',        'Complete 15 dog-friendly adventures',            d => d.dogs >= 15],
+  ['🎢', 'Coaster Credit',  'Visit 5 theme parks',                            d => d.parks >= 5],
+  ['🎡', 'Season Pass',     'Visit 15 theme parks',                           d => d.parks >= 15],
+  ['🏰', 'The Mouse Tour',  'Every Disney resort on earth - three continents',  d => d.disneyTotal > 0 && d.disney >= d.disneyTotal],
   ['⛰️', 'Hard Yards',       'Complete 5 adventures rated 5 for effort',       d => d.hard >= 5],
   ['💸', 'Cheap Dates',      'Complete 25 free adventures',                    d => d.free >= 25],
   ['📸', 'Storytellers',     'Write 20 memories',                              d => d.memories >= 20],
@@ -1204,9 +1208,10 @@ const ACHIEVEMENTS = [
 ];
 
 function achievementData() {
-  const d = { done: 0, gems: 0, states: 0, countries: 0, hard: 0, free: 0, memories: 0, ratings: 0, dogs: 0 };
+  const d = { done: 0, gems: 0, states: 0, countries: 0, hard: 0, free: 0, memories: 0, ratings: 0, dogs: 0, tags: new Map() };
   const states = new Set();
   const countries = new Set();
+  const continents = new Set();
   for (const a of ADV) {
     const r = row(a.id);
     if (r.memory) d.memories++;
@@ -1217,11 +1222,19 @@ function achievementData() {
     if (a.difficulty === 5) d.hard++;
     if (a.cost === 0) d.free++;
     if (a.dog_friendly === 'yes') d.dogs++;
+    for (const t of (a.tags || [])) d.tags.set(t, (d.tags.get(t) || 0) + 1);
     if (a.admin1 !== 'AUS') states.add(a.admin1);
     countries.add(a.country);
+    continents.add(a.continent);
   }
   d.states = states.size;
   d.countries = countries.size;
+  d.continents = continents.size;
+  d.disney = d.tags.get('disney') || 0;
+  d.parks = d.tags.get('theme-park') || 0;
+  // How many Disney resorts exist at all, so the achievement text stays right
+  // if a seventh ever opens.
+  d.disneyTotal = ADV.filter(a => (a.tags || []).includes('disney')).length;
   return d;
 }
 
@@ -1234,7 +1247,7 @@ function renderMe() {
   const byPerson = new Map();
   for (const r of progress.values()) {
     if (!r.completed) continue;
-    const name = r.completed_by || 'Unattributed';
+    const name = r.completed_by || who || 'You';
     byPerson.set(name, (byPerson.get(name) || 0) + 1);
   }
   const people = [...byPerson.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
@@ -1252,7 +1265,7 @@ function renderMe() {
   $('#achList').innerHTML = ACHIEVEMENTS.map(([icon, name, desc, test]) =>
     `<div class="ach ${test(d) ? '' : 'locked'}">
        <span class="ach-icon">${icon}</span>
-       <div><b>${esc(name)}</b><span>${esc(desc)}</span></div>
+       <div><b>${esc(name)}</b><span>${esc(typeof desc === 'function' ? desc() : desc)}</span></div>
      </div>`).join('');
 
   $('#whoLabel').textContent = who || 'You';

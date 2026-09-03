@@ -19,13 +19,21 @@ SOURCES = [
     # North America
     'us-west', 'us-southwest', 'us-east', 'north-america',
     # Asia
-    'asia',
+    'asia', 'indonesia',
+    # Cross-cutting collections
+    'theme-parks',
 ]
 
 FIELDS = ['continent', 'country', 'admin1', 'region', 'title', 'place',
           'category', 'difficulty', 'cost', 'duration', 'season',
           'dog_friendly', 'hidden_gem', 'pack', 'lat', 'lon',
           'verified_at', 'description']
+
+# Optional, defaulted at build time so existing entries need no edits.
+# Tags drive cross-cutting collections: every Disney resort, every theme park,
+# every Big Thing - things that span countries and don't fit a category.
+OPTIONAL = {'tags': []}
+KNOWN_TAGS = {'theme-park', 'disney', 'big-thing', 'world-heritage'}
 
 CATEGORIES = {
     'Nature', 'Beach', 'Wildlife', 'Hiking', 'Water', 'Culture', 'History',
@@ -58,6 +66,14 @@ def load():
                 for field in FIELDS:
                     if field not in rec:
                         problems.append(f'{where}: missing "{field}"')
+                for field, default in OPTIONAL.items():
+                    rec.setdefault(field, default if not isinstance(default, list) else list(default))
+                if not isinstance(rec['tags'], list):
+                    problems.append(f'{where}: tags must be a list')
+                else:
+                    for t in rec['tags']:
+                        if t not in KNOWN_TAGS:
+                            problems.append(f'{where}: unknown tag {t!r}')
                 if rec.get('continent') not in CONTINENTS:
                     problems.append(f'{where}: unknown continent {rec.get("continent")!r}')
                 if not isinstance(rec.get('country'), str) or len(rec.get('country', '')) != 2:
@@ -111,7 +127,7 @@ def main():
 
     for i, rec in enumerate(records, 1):
         rec['id'] = i
-    ordered = [{k: r[k] for k in ['id'] + FIELDS} for r in records]
+    ordered = [{k: r[k] for k in ['id'] + FIELDS + list(OPTIONAL)} for r in records]
 
     os.makedirs('data', exist_ok=True)
     with open(os.path.join('data', 'adventures.json'), 'w', encoding='utf-8') as fh:
@@ -127,6 +143,9 @@ def main():
     print('  countries:  ' + ', '.join(f'{k} {v}' for k, v in by_country.most_common()))
     print(f'  hidden gems (paid): {gems}')
     print('  dog friendly: ' + ', '.join(f'{k} {v}' for k, v in dogs.most_common()))
+    tagged = collections.Counter(t for r in records for t in r['tags'])
+    if tagged:
+        print('  tags: ' + ', '.join(f'{k} {v}' for k, v in tagged.most_common()))
     print('\nRemember to bump CACHE_VERSION in sw.js so phones pick up the new data.')
     return 0
 
