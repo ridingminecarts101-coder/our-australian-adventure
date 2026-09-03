@@ -608,7 +608,11 @@ function renderPlaces() {
     for (const name of CONTINENT_ORDER) counts[name] = countOf(a => a.continent === name);
     drawWorldMap($('#worldMap'), counts, null);
 
-    $('#continentList').innerHTML = CONTINENT_ORDER.map(name => {
+    // Most content first, so the list reorders itself as regions fill in.
+    // Empty continents fall to the bottom in their declared order.
+    const ordered = [...CONTINENT_ORDER].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+
+    $('#continentList').innerHTML = ordered.map(name => {
       const count = counts[name];
       const countries = new Set(ADV.filter(a => a.continent === name).map(a => a.country)).size;
       return placeRow({

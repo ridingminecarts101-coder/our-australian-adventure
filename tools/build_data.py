@@ -17,7 +17,7 @@ SOURCES = [
     # Europe
     'europe',
     # North America
-    'north-america',
+    'us-west', 'us-southwest', 'us-east', 'north-america',
     # Asia
     'asia',
 ]
