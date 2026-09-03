@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
 <meta name="theme-color" content="#8c3d1f">
-<meta name="description" content="A world of real adventures, ticked off together.">
+<meta name="description" content="Wayfinder — 1,200 real places worth going, ticked off together.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Our Adventure">
-<title>Our Australian Adventure</title>
+<meta name="apple-mobile-web-app-title" content="Wayfinder">
+<title>Wayfinder</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon-192.png">
@@ -19,9 +19,9 @@
 <!-- ───────────────────────── Lock screen ───────────────────────── -->
 <div id="lock" class="lock">
   <div class="lock-card">
-    <div class="lock-emblem">🇦🇺</div>
-    <h1 id="lockTitle">Adventure Checklist</h1>
-    <p class="lock-sub">Real places, ticked off together.</p>
+    <div class="lock-emblem">🧭</div>
+    <h1 id="lockTitle">Wayfinder</h1>
+    <p class="lock-sub">Real places worth going, ticked off together.</p>
     <form id="lockForm" autocomplete="on">
       <label for="passphrase">Passphrase</label>
       <input id="passphrase" type="password" inputmode="text" autocomplete="current-password"
@@ -53,6 +53,7 @@
     <div id="worldView">
       <div class="mapwrap"><canvas id="worldMap" aria-label="World map — tap a continent"></canvas></div>
       <p class="maphint">Tap a continent on the map, or pick one below.</p>
+      <button id="hereBtn" class="btn-ghost wide">📍 Near me</button>
       <div id="continentList" class="placelist"></div>
     </div>
 
@@ -133,13 +134,19 @@
     <div id="usStats" class="usstats"></div>
     <h2>Achievements</h2>
     <div id="achList" class="achlist"></div>
+    <h2>Sharing</h2>
+    <p class="muted">A group keeps one shared list between phones. Without one, your list is yours alone.</p>
+    <div id="groupPanel" class="settings"></div>
+
     <h2>Settings</h2>
     <div class="settings">
       <p>Ticks you make are shown as <strong id="whoLabel">You</strong>.
          <button id="switchWho" class="btn-ghost">Change name</button></p>
       <p id="connState" class="muted"></p>
+      <button id="notifyBtn" class="btn-ghost">Turn on seasonal reminders</button>
       <button id="refreshBtn" class="btn-ghost">Force refresh from server</button>
-      <button id="signOutBtn" class="btn-ghost danger">Sign out this phone</button>
+      <button id="signOutBtn" class="btn-ghost">Sign out this phone</button>
+      <button id="deleteAccountBtn" class="btn-ghost danger">Delete my account and all my data</button>
       <p class="fineprint">Access, opening hours, seasonal closures, permits and Traditional Owner
          requirements change. Always check before you travel.</p>
     </div>
@@ -186,6 +193,7 @@
 
 <!-- One persistent picker, reused by whichever adventure is open -->
 <input type="file" id="photoInput" accept="image/*" multiple hidden>
+<input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 

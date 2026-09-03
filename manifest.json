@@ -1,7 +1,7 @@
 {
-  "name": "Our Australian Adventure",
-  "short_name": "Our Adventure",
-  "description": "A world of real adventures, ticked off together.",
+  "name": "Wayfinder",
+  "short_name": "Wayfinder",
+  "description": "1,200 real places worth going, ticked off together.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

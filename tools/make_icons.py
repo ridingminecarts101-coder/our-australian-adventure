@@ -81,11 +81,28 @@ def write_png(path, size, rows):
 def main():
     os.makedirs('icons', exist_ok=True)
     targets = [
+        # Web / PWA
         ('icons/icon-180.png', 180, 0.0),
         ('icons/icon-192.png', 192, 0.0),
         ('icons/icon-512.png', 512, 0.0),
         ('icons/icon-512-maskable.png', 512, 0.30),   # safe zone for Android masks
+        # iOS. 1024 is the App Store icon and must have no transparency and no
+        # rounded corners - Apple applies the mask itself.
+        ('icons/ios/icon-1024.png', 1024, 0.0),
+        ('icons/ios/icon-120.png', 120, 0.0),
+        ('icons/ios/icon-152.png', 152, 0.0),
+        ('icons/ios/icon-167.png', 167, 0.0),
+        ('icons/ios/icon-76.png', 76, 0.0),
+        ('icons/ios/icon-60.png', 60, 0.0),
+        ('icons/ios/icon-40.png', 40, 0.0),
+        ('icons/ios/icon-29.png', 29, 0.0),
+        # Android adaptive foreground
+        ('icons/android/icon-432-foreground.png', 432, 0.32),
     ]
+    for path, _, _ in targets:
+        d = os.path.dirname(path)
+        if d:
+            os.makedirs(d, exist_ok=True)
     for path, size, inset in targets:
         n = write_png(path, size, render(size, inset))
         print(f'{path:34} {size}x{size}  {n:,} bytes')

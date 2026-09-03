@@ -1,4 +1,4 @@
-/* Adventure Checklist — a shared list of real places
+/* Wayfinder — a shared list of real places worth going
  *
  * How the syncing works, in short:
  *   - Every tick/rating/memory writes to a local cache FIRST, so the app
@@ -16,6 +16,9 @@ const LS = {
   who:      'oaa.who.v1',
   adv:      'oaa.adventures.v1',
   trips:    'oaa.trips.v1',
+  group:    'oaa.group.v1',
+  notify:   'oaa.notify.v1',
+  notifyLast: 'oaa.notifylast.v1',
   tripOutbox: 'oaa.tripoutbox.v1',
 };
 
@@ -172,8 +175,10 @@ async function flushOutbox() {
       rating:       item.rating ?? null,
       memory:       item.memory ?? null,
       updated_by:   item.updated_by || who,
+      ...ownership(),
     };
-    const { error } = await sb.from('progress').upsert(payload, { onConflict: 'adventure_id' });
+    const { error } = await sb.from('progress')
+      .upsert(payload, { onConflict: userId ? 'adventure_id,user_id' : 'adventure_id' });
     if (error) { stillPending.push(item); console.warn('sync failed', item.adventure_id, error.message); }
   }
   writeLS(LS.outbox, stillPending);
@@ -454,6 +459,7 @@ async function flushPhotoQueue() {
         taken_at_source: item.taken_at_source,
         width: item.width, height: item.height, bytes: item.bytes,
         uploaded_by: item.uploaded_by || who,
+        ...ownership(),
       }).select().single();
       if (ins.error) throw ins.error;
 
@@ -546,6 +552,292 @@ function renderPhotoStatus() {
   else if (queued)            msg = `Uploading ${queued} photo${s}…`;
   el.textContent = msg;
   el.classList.toggle('show', !!msg);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Device capabilities
+// ══════════════════════════════════════════════════════════════════════
+//  These are the things a website cannot do, and the reason this is worth
+//  shipping as an app rather than a bookmark. Each one degrades quietly if
+//  the permission is refused - nothing here is load-bearing.
+
+// ── Where am I? ──────────────────────────────────────────────────────
+// Per-adventure coordinates do not exist yet, so distance sorting is not
+// possible. What IS possible today is working out which continent and country
+// you are standing in, and jumping straight there - which is most of the value
+// of "near me" for an app you open while travelling.
+let lastFix = null;
+
+function locate() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error('This device has no location services.'));
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+      err => reject(new Error(
+        err.code === err.PERMISSION_DENIED
+          ? 'Location is turned off for Wayfinder.'
+          : 'Could not get a fix. Try again outside.')),
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 });
+  });
+}
+
+// The dot map's own boxes already answer "which continent is this point in",
+// so reuse them rather than shipping a second copy of the world.
+async function jumpToHere() {
+  const btn = $('#hereBtn');
+  btn.disabled = true;
+  btn.textContent = 'Finding you…';
+  try {
+    lastFix = await locate();
+    const cont = continentAt(lastFix.lat, lastFix.lon);
+    if (!cont) { toast('You appear to be at sea. Impressive.'); return; }
+    if (!countOf(a => a.continent === cont)) {
+      toast(`Nothing mapped in ${cont} yet`);
+      return;
+    }
+    goTo('continent', { continent: cont });
+    toast(`You're in ${cont}`);
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📍 Near me';
+  }
+}
+
+// ── Sharing ──────────────────────────────────────────────────────────
+async function shareAdventure(id) {
+  const a = ADV.find(x => x.id === id);
+  if (!a) return;
+  const text = `${a.title}\n${a.place}, ${countryName(a.country)}\n\n${a.description}`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: a.title, text });
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast('Copied');
+    }
+  } catch (err) {
+    if (err && err.name !== 'AbortError') toast('Could not share that');
+  }
+}
+
+async function shareTrip(tripId) {
+  const t = trips.find(x => x.id === tripId);
+  if (!t) return;
+  const items = tripAdventures(t);
+  const body = [t.name, '']
+    .concat(items.map((a, i) => `${i + 1}. ${a.title} — ${a.place}, ${countryName(a.country)}`))
+    .join('\n');
+  try {
+    if (navigator.share) await navigator.share({ title: t.name, text: body });
+    else { await navigator.clipboard.writeText(body); toast('Copied'); }
+  } catch (err) {
+    if (err && err.name !== 'AbortError') toast('Could not share that');
+  }
+}
+
+// ── Reminders ────────────────────────────────────────────────────────
+// Deliberately modest: one opt-in, one seasonal nudge. An app that pesters
+// gets its notifications switched off within a week.
+function notificationsSupported() {
+  return typeof Notification !== 'undefined';
+}
+
+async function toggleNotifications() {
+  if (!notificationsSupported()) return toast('This device does not support reminders');
+  if (Notification.permission === 'granted') {
+    writeLS(LS.notify, !readLS(LS.notify, false));
+    renderMe();
+    toast(readLS(LS.notify, false) ? 'Reminders on' : 'Reminders off');
+    return;
+  }
+  const res = await Notification.requestPermission();
+  if (res !== 'granted') { toast('Reminders stay off'); return; }
+  writeLS(LS.notify, true);
+  renderMe();
+  new Notification('Wayfinder', { body: "That's set. We'll nudge you when something is in season.", icon: 'icons/icon-192.png' });
+}
+
+// Runs on launch. Looks for shortlisted adventures whose season includes this
+// month and tells you once a week at most.
+function seasonalNudge() {
+  if (!readLS(LS.notify, false) || !notificationsSupported()) return;
+  if (Notification.permission !== 'granted') return;
+  const last = readLS(LS.notifyLast, 0);
+  if (Date.now() - last < 7 * 24 * 3600 * 1000) return;
+
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now = MON[new Date().getMonth()];
+  const due = ADV.filter(a =>
+    row(a.id).shortlisted && !isDone(a.id) && a.season && a.season.includes(now));
+  if (!due.length) return;
+
+  const pick = due[Math.floor(Math.random() * due.length)];
+  new Notification('In season now', {
+    body: `${pick.title} — ${pick.place}. Best ${pick.season}.`,
+    icon: 'icons/icon-192.png',
+    tag: 'wayfinder-season',
+  });
+  writeLS(LS.notifyLast, Date.now());
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Identity and sharing
+// ══════════════════════════════════════════════════════════════════════
+//  Every row belongs to one user. It may ALSO carry a group id, which is how
+//  two phones share one list without sharing an account. Row Level Security
+//  does the actual enforcing; these fields are what it reads.
+
+let userId = null;             // auth.users.id for this session
+let myGroups = [];             // groups this user belongs to
+let activeGroupId = null;      // the group new rows are written into
+
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // no I/O/0/1
+
+function makeJoinCode() {
+  let out = '';
+  const buf = new Uint8Array(6);
+  (crypto.getRandomValues ? crypto : { getRandomValues: a => a.forEach((_, i) => a[i] = Math.random() * 256) })
+    .getRandomValues(buf);
+  for (const b of buf) out += CODE_ALPHABET[b % CODE_ALPHABET.length];
+  return out;
+}
+
+// Stamped onto every row we write, so RLS can decide who may see it.
+function ownership() {
+  return { user_id: userId, group_id: activeGroupId };
+}
+
+async function loadGroups() {
+  if (!sb || !online || !userId) return;
+  const { data, error } = await sb
+    .from('group_members')
+    .select('group_id, display_name, groups(id, name, join_code)')
+    .eq('user_id', userId);
+  if (error) {
+    // The tables may simply not exist yet - that is a valid state, not a fault.
+    if (!/does not exist|schema cache/i.test(error.message)) console.warn('groups', error.message);
+    myGroups = [];
+    return;
+  }
+  myGroups = (data || []).map(r => r.groups).filter(Boolean);
+  const saved = localStorage.getItem(LS.group);
+  activeGroupId = myGroups.some(g => g.id === saved) ? saved
+                : (myGroups[0] ? myGroups[0].id : null);
+  if (activeGroupId) localStorage.setItem(LS.group, activeGroupId);
+}
+
+async function createGroup(name) {
+  if (!sb || !userId) return toast('Not connected');
+  const code = makeJoinCode();
+  const { data, error } = await sb.from('groups')
+    .insert({ name, join_code: code, created_by: userId }).select().single();
+  if (error) { toast('Could not create the group'); console.warn(error); return; }
+  const join = await sb.from('group_members')
+    .insert({ group_id: data.id, user_id: userId, display_name: who });
+  if (join.error) { toast('Group made, but joining it failed'); console.warn(join.error); return; }
+
+  activeGroupId = data.id;
+  localStorage.setItem(LS.group, activeGroupId);
+  await loadGroups();
+  // Everything already on this phone joins the group, otherwise the other
+  // person sees an empty list on day one.
+  await adoptExistingRowsIntoGroup();
+  renderMe();
+  toast(`Share the code ${code}`);
+}
+
+async function joinGroup(code) {
+  if (!sb || !userId) return toast('Not connected');
+  const clean = code.trim().toUpperCase();
+  const { data, error } = await sb.from('groups')
+    .select('id, name').eq('join_code', clean).maybeSingle();
+  if (error || !data) { toast('No group with that code'); return; }
+
+  const join = await sb.from('group_members')
+    .insert({ group_id: data.id, user_id: userId, display_name: who });
+  if (join.error && !/duplicate|unique/i.test(join.error.message)) {
+    toast('Could not join'); console.warn(join.error); return;
+  }
+  activeGroupId = data.id;
+  localStorage.setItem(LS.group, activeGroupId);
+  await loadGroups();
+  await pullProgress(); await pullPhotos(); await pullTrips();
+  renderAll();
+  toast(`Joined ${data.name}`);
+}
+
+async function leaveGroup(id) {
+  if (!sb || !userId) return;
+  const g = myGroups.find(x => x.id === id);
+  if (!confirm(`Leave ${g ? g.name : 'this group'}? Your own ticks stay with you; theirs stop showing.`)) return;
+  await sb.from('group_members').delete().eq('group_id', id).eq('user_id', userId);
+  if (activeGroupId === id) { activeGroupId = null; localStorage.removeItem(LS.group); }
+  await loadGroups();
+  await pullProgress(); await pullPhotos(); await pullTrips();
+  renderAll();
+}
+
+// Puts rows this user already owns into the active group.
+async function adoptExistingRowsIntoGroup() {
+  if (!sb || !userId || !activeGroupId) return;
+  for (const table of ['progress', 'photos', 'trips']) {
+    const { error } = await sb.from(table)
+      .update({ group_id: activeGroupId })
+      .eq('user_id', userId)
+      .is('group_id', null);
+    if (error) console.warn(`adopting ${table}`, error.message);
+  }
+}
+
+function renderMe_groups() {
+  const el = $('#groupPanel');
+  if (!el) return;
+  if (!sb) { el.innerHTML = '<p class="muted">Not connected, so sharing is unavailable.</p>'; return; }
+
+  const active = myGroups.find(g => g.id === activeGroupId);
+  el.innerHTML = `
+    ${active ? `
+      <p>Sharing with <strong>${esc(active.name)}</strong>.</p>
+      <p class="fineprint">Join code <code class="joincode">${esc(active.join_code)}</code> — read this
+         out to whoever should see the same list.</p>
+      <button class="btn-ghost danger" data-groupact="leave" data-id="${esc(active.id)}">Leave this group</button>
+    ` : `
+      <p class="muted">This list is yours alone at the moment.</p>
+      <button class="btn-ghost" data-groupact="create">Create a group</button>
+      <button class="btn-ghost" data-groupact="join">Join with a code</button>
+    `}
+    ${myGroups.length > 1 ? `<p class="fineprint">You belong to ${myGroups.length} groups; new ticks go into the one above.</p>` : ''}`;
+}
+
+// ── Deleting the account, which Apple requires to be possible in-app ──
+async function deleteAccount() {
+  if (!sb || !userId) return;
+  const typed = prompt('This deletes your account, every tick, every photo and every trip. '
+                     + 'It cannot be undone.\n\nType DELETE to confirm.');
+  if (typed !== 'DELETE') { toast('Cancelled'); return; }
+
+  toast('Deleting…');
+  try {
+    // Storage objects are not covered by the database cascade, so clear them first.
+    const mine = photos.filter(p => p.user_id === userId).map(p => p.storage_path);
+    if (mine.length) await sb.storage.from(BUCKET).remove(mine);
+
+    const { error } = await sb.rpc('delete_my_account');
+    if (error) throw error;
+
+    localStorage.clear();
+    try {
+      const db = await idb();
+      db.transaction('queue', 'readwrite').objectStore('queue').clear();
+    } catch { /* nothing queued */ }
+    await sb.auth.signOut();
+    location.reload();
+  } catch (err) {
+    console.warn(err);
+    toast('Could not delete the account — try again, or ask for help');
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -913,6 +1205,7 @@ async function flushTrips() {
       id: t.id, name: t.name, starts_on: t.starts_on || null, ends_on: t.ends_on || null,
       adventure_ids: t.adventure_ids || [], notes: t.notes || null,
       created_by: t.created_by || who,
+      ...ownership(),
     }, { onConflict: 'id' });
     if (error) { left.push(t); console.warn('trip sync failed', error.message); }
   }
@@ -1030,6 +1323,7 @@ function renderTripSheet(id) {
 
     <div class="sheet-actions">
       <button class="btn-primary" data-tripact="save">Save trip</button>
+      <button class="btn-ghost" data-tripact="share">↗ Share this trip</button>
       <button class="btn-ghost danger" data-tripact="delete">Delete trip</button>
     </div>`;
 }
@@ -1314,6 +1608,13 @@ function renderMe() {
      </div>`).join('');
 
   $('#whoLabel').textContent = who || 'You';
+  const nb = $('#notifyBtn');
+  if (nb) {
+    nb.textContent = readLS(LS.notify, false) && notificationsSupported()
+      && Notification.permission === 'granted'
+      ? 'Reminders are on — turn off' : 'Turn on seasonal reminders';
+  }
+  renderMe_groups();
   $('#connState').textContent = sb
     ? (online ? (realtimeOk ? 'Connected and syncing live.' : 'Connected. Live updates reconnecting.')
               : 'Offline. Changes will sync when you get signal.')
@@ -1368,6 +1669,7 @@ function renderSheet(id) {
         <button class="btn-ghost" data-act="short">${r.shortlisted ? '⭐ On shortlist' : '☆ Add to shortlist'}</button>
         <a class="btn-ghost" href="${maps}" target="_blank" rel="noopener">📍 Open in Maps</a>
       </div>
+      <button class="btn-ghost" data-act="share">↗ Share this adventure</button>
       ${TOURISM[a.admin1] ? `<a class="btn-ghost" href="${TOURISM[a.admin1]}" target="_blank" rel="noopener">
         Check current access on ${esc(a.admin1 === 'AUS' ? 'australia.com' : regionName(a) + ' tourism')}
       </a>` : ''}
@@ -1388,8 +1690,11 @@ function renderSheet(id) {
     <h3>Photos${ph.length ? ` <span class="count">${ph.length}</span>` : ''}</h3>
     <div class="strip sheet-strip" data-group-key="adv-${a.id}">
       ${ph.map((p, i) => thumbHTML(p, i)).join('')}
-      <button class="thumb add" data-act="addPhoto" aria-label="Add photos">
-        <span>+</span><small>Add</small>
+      <button class="thumb add" data-act="takePhoto" aria-label="Take a photo">
+        <span>📷</span><small>Camera</small>
+      </button>
+      <button class="thumb add" data-act="addPhoto" aria-label="Add from library">
+        <span>+</span><small>Library</small>
       </button>
     </div>
     <p class="photohint">${ph.length
@@ -1574,6 +1879,7 @@ function wireUI() {
     const act = e.target.closest('[data-tripact]');
     if (!act) return;
     if (act.dataset.tripact === 'save') saveOpenTrip();
+    if (act.dataset.tripact === 'share') shareTrip(openTripId);
     if (act.dataset.tripact === 'delete') {
       const t = trips.find(x => x.id === openTripId);
       if (t && confirm(`Delete "${t.name}"? The adventures themselves stay put.`)) removeTrip(t.id);
@@ -1609,9 +1915,15 @@ function wireUI() {
       applyPatch(openId, { memory: $('#memoryBox').value.trim() || null });
       toast('Memory saved');
     }
+    if (act.dataset.act === 'share') shareAdventure(openId);
     if (act.dataset.act === 'addPhoto') {
       photoTargetId = openId;
       $('#photoInput').click();
+    }
+    if (act.dataset.act === 'takePhoto') {
+      photoTargetId = openId;
+      // capture= asks iOS for the camera rather than the picker
+      $('#cameraInput').click();
     }
   });
 
@@ -1630,6 +1942,30 @@ function wireUI() {
     if (who) localStorage.setItem(LS.who, who); else localStorage.removeItem(LS.who);
     renderAll();
   };
+  $('#hereBtn').onclick = jumpToHere;
+  $('#notifyBtn').onclick = toggleNotifications;
+  $('#deleteAccountBtn').onclick = deleteAccount;
+
+  $('#cameraInput').addEventListener('change', async e => {
+    const files = e.target.files, target = photoTargetId;
+    e.target.value = '';
+    if (target != null && files && files.length) await addPhotos(target, files);
+  });
+
+  $('#groupPanel').addEventListener('click', async e => {
+    const b = e.target.closest('[data-groupact]');
+    if (!b) return;
+    if (b.dataset.groupact === 'create') {
+      const name = prompt('Name this group', 'Our list');
+      if (name && name.trim()) await createGroup(name.trim());
+    }
+    if (b.dataset.groupact === 'join') {
+      const code = prompt('Enter the six-character join code');
+      if (code && code.trim()) await joinGroup(code);
+    }
+    if (b.dataset.groupact === 'leave') await leaveGroup(b.dataset.id);
+  });
+
   $('#refreshBtn').onclick = async () => {
     await pullProgress(); await pullPhotos(); signedUrls.clear(); renderAll(); toast('Refreshed');
   };
@@ -1670,6 +2006,11 @@ async function trySignIn(passphrase) {
 async function enterApp() {
   $('#lock').classList.add('hidden');
   $('#app').classList.remove('hidden');
+  if (sb) {
+    const { data } = await sb.auth.getUser();
+    userId = data && data.user ? data.user.id : null;
+    await loadGroups();
+  }
   loadLocalTrips();
   pendingPhotos = await idbAll();
   renderAll();
@@ -1681,6 +2022,7 @@ async function enterApp() {
   flushOutbox();
   flushPhotoQueue();
   flushTrips();
+  seasonalNudge();
 }
 
 // ══════════════════════════════════════════════════════════════════════

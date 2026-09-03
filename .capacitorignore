@@ -1,0 +1,11 @@
+# Nothing here needs to ship inside the app bundle.
+.git
+.github
+node_modules
+ios
+android
+tools
+supabase
+data/src
+*.md
+.nojekyll

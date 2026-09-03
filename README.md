@@ -1,4 +1,4 @@
-# 🇦🇺 Our Australian Adventure
+# 🧭 Wayfinder
 
 A shared adventure checklist for Riley & Elli. 500 real Australian places and
 experiences, ticked off together — what one phone marks, the other sees.

@@ -1,0 +1,29 @@
+{
+  "appId": "app.wayfinder.mobile",
+  "appName": "Wayfinder",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "wayfinder"
+  },
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#f6efe6",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "android": {
+    "backgroundColor": "#f6efe6"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 600,
+      "backgroundColor": "#8c3d1f",
+      "showSpinner": false
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#8c3d1f"
+    }
+  }
+}

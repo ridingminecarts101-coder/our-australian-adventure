@@ -1,4 +1,4 @@
-# Setup — from here to both phones
+# Wayfinder — setup
 
 Four stages. Stages 1 and 2 only you can do (they involve signing in and setting
 a password). Stage 3 is one file. Stage 4 is the phones.

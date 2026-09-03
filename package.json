@@ -1,0 +1,30 @@
+{
+  "name": "wayfinder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Wayfinder — 1,200 real places worth going, ticked off together.",
+  "scripts": {
+    "build:data": "python tools/build_data.py",
+    "check:geo": "python tools/check_geography.py",
+    "icons": "python tools/make_icons.py",
+    "serve": "python -m http.server 8080",
+    "sync": "npm run build:data && npx cap sync",
+    "ios": "npx cap open ios",
+    "android": "npx cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/ios": "^6.2.0",
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/app": "^6.0.2",
+    "@capacitor/camera": "^6.1.2",
+    "@capacitor/geolocation": "^6.1.0",
+    "@capacitor/share": "^6.0.3",
+    "@capacitor/local-notifications": "^6.1.0",
+    "@capacitor/status-bar": "^6.0.2",
+    "@capacitor/splash-screen": "^6.0.3"
+  }
+}
