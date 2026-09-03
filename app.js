@@ -1,4 +1,4 @@
-/* Our Australian Adventure — shared checklist for Riley & Elli
+/* Adventure Checklist — a shared list of real places
  *
  * How the syncing works, in short:
  *   - Every tick/rating/memory writes to a local cache FIRST, so the app
@@ -777,6 +777,7 @@ function renderPassport() {
     continents.add(a.continent);
   }
 
+  if (who) $('#passportName').textContent = who;
   $('#passportTotals').innerHTML = `
     <div class="ptotal"><b>${visited.size}</b><span>countries</span></div>
     <div class="ptotal"><b>${continents.size}</b><span>continents</span></div>
@@ -1225,8 +1226,14 @@ function renderMe() {
   const rated = ADV.map(a => row(a.id).rating).filter(Boolean);
   const avg = rated.length ? (rated.reduce((s, n) => s + n, 0) / rated.length).toFixed(1) : '—';
   const shortlisted = [...progress.values()].filter(r => r.shortlisted && !r.completed).length;
-  const byRiley = [...progress.values()].filter(r => r.completed && r.completed_by === 'Riley').length;
-  const byElli  = [...progress.values()].filter(r => r.completed && r.completed_by === 'Elli').length;
+  // Whoever has actually ticked things, rather than two hardcoded names.
+  const byPerson = new Map();
+  for (const r of progress.values()) {
+    if (!r.completed) continue;
+    const name = r.completed_by || 'Unattributed';
+    byPerson.set(name, (byPerson.get(name) || 0) + 1);
+  }
+  const people = [...byPerson.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
 
   $('#usStats').innerHTML = `
     <div class="stat"><b>${d.done}</b><span>adventures done</span></div>
@@ -1235,8 +1242,8 @@ function renderMe() {
     <div class="stat"><b>${d.gems}</b><span>hidden gems found</span></div>
     <div class="stat"><b>${avg}</b><span>average rating</span></div>
     <div class="stat"><b>${shortlisted}</b><span>on the shortlist</span></div>
-    <div class="stat"><b>${byRiley}</b><span>ticked by Riley</span></div>
-    <div class="stat"><b>${byElli}</b><span>ticked by Elli</span></div>`;
+    ${people.map(([name, n]) =>
+      `<div class="stat"><b>${n}</b><span>ticked by ${esc(name)}</span></div>`).join('')}`;
 
   $('#achList').innerHTML = ACHIEVEMENTS.map(([icon, name, desc, test]) =>
     `<div class="ach ${test(d) ? '' : 'locked'}">
@@ -1244,7 +1251,7 @@ function renderMe() {
        <div><b>${esc(name)}</b><span>${esc(desc)}</span></div>
      </div>`).join('');
 
-  $('#whoLabel').textContent = who || 'not set';
+  $('#whoLabel').textContent = who || 'You';
   $('#connState').textContent = sb
     ? (online ? (realtimeOk ? 'Connected and syncing live.' : 'Connected. Live updates reconnecting.')
               : 'Offline. Changes will sync when you get signal.')
@@ -1554,7 +1561,13 @@ function wireUI() {
   };
 
   // Settings
-  $('#switchWho').onclick = () => { $('#whoami').classList.remove('hidden'); };
+  $('#switchWho').onclick = () => {
+    const name = prompt('What should your ticks be labelled as?', who || '');
+    if (name === null) return;
+    who = name.trim() || null;
+    if (who) localStorage.setItem(LS.who, who); else localStorage.removeItem(LS.who);
+    renderAll();
+  };
   $('#refreshBtn').onclick = async () => {
     await pullProgress(); await pullPhotos(); signedUrls.clear(); renderAll(); toast('Refreshed');
   };
@@ -1564,13 +1577,6 @@ function wireUI() {
     localStorage.removeItem(LS.progress);
     location.reload();
   };
-
-  $$('.btn-who').forEach(b => b.onclick = () => {
-    who = b.dataset.who;
-    localStorage.setItem(LS.who, who);
-    $('#whoami').classList.add('hidden');
-    renderAll();
-  });
 
   // Connectivity
   addEventListener('online',  () => { online = true;  flushOutbox(); pullProgress(); pullPhotos().then(renderAll); flushPhotoQueue(); flushTrips(); });
@@ -1602,7 +1608,6 @@ async function trySignIn(passphrase) {
 async function enterApp() {
   $('#lock').classList.add('hidden');
   $('#app').classList.remove('hidden');
-  if (!who) $('#whoami').classList.remove('hidden');
   loadLocalTrips();
   pendingPhotos = await idbAll();
   renderAll();
@@ -1620,6 +1625,7 @@ async function enterApp() {
 //  Boot
 // ══════════════════════════════════════════════════════════════════════
 async function boot() {
+  $('#lock').classList.add('hidden');
   const cfg = window.OAA_CONFIG || {};
   const configured = cfg.supabaseUrl && !/YOUR_/.test(cfg.supabaseUrl) &&
                      cfg.supabaseAnonKey && !/YOUR_/.test(cfg.supabaseAnonKey);
@@ -1637,16 +1643,21 @@ async function boot() {
   buildFilterOptions();
   wireUI();
 
-  if (!sb) {                                   // no Supabase configured yet — run local-only
-    $('#lockMsg').className = 'lock-msg';
-    $('#lockMsg').textContent = 'Not connected to the shared database yet — continuing on this phone only.';
-    setTimeout(enterApp, 900);
-    return;
-  }
+  if (!sb) return enterApp();                  // no backend configured — local only
 
   const { data: { session } } = await sb.auth.getSession();
   if (session) return enterApp();
 
+  // Anonymous first: if the project allows anonymous sign-ins, nobody has to
+  // type anything. The passphrase form is only shown when that is unavailable,
+  // which keeps existing shared-passphrase installs working.
+  if (cfg.allowAnonymous !== false) {
+    const { error } = await sb.auth.signInAnonymously();
+    if (!error) return enterApp();
+    console.info('anonymous sign-in unavailable, falling back to passphrase:', error.message);
+  }
+
+  $('#lock').classList.remove('hidden');
   $('#lockForm').onsubmit = async e => {
     e.preventDefault();
     if (await trySignIn($('#passphrase').value)) enterApp();

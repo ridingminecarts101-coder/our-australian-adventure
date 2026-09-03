@@ -12,7 +12,8 @@ import sys
 # Source files, in the order their entries should be numbered.
 SOURCES = [
     # Oceania
-    'sa', 'vic', 'nsw', 'qld', 'wa', 'tas', 'nt', 'act', 'aus', 'oceania-islands',
+    'sa', 'vic', 'nsw', 'qld', 'wa', 'tas', 'nt', 'act', 'aus',
+    'nz', 'nz-north', 'nz-south', 'oceania-islands',
     # Europe
     'europe',
     # North America

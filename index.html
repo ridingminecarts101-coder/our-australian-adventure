@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
 <meta name="theme-color" content="#8c3d1f">
-<meta name="description" content="500 Australian adventures for Riley &amp; Elli — a shared checklist across both phones.">
+<meta name="description" content="A world of real adventures, ticked off together.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Our Adventure">
@@ -20,8 +20,8 @@
 <div id="lock" class="lock">
   <div class="lock-card">
     <div class="lock-emblem">🇦🇺</div>
-    <h1>Our Australian Adventure</h1>
-    <p class="lock-sub">500 places to see before we run out of country.</p>
+    <h1 id="lockTitle">Adventure Checklist</h1>
+    <p class="lock-sub">Real places, ticked off together.</p>
     <form id="lockForm" autocomplete="on">
       <label for="passphrase">Passphrase</label>
       <input id="passphrase" type="password" inputmode="text" autocomplete="current-password"
@@ -32,25 +32,12 @@
   </div>
 </div>
 
-<!-- ───────────────────────── Who's this phone ───────────────────── -->
-<div id="whoami" class="lock hidden">
-  <div class="lock-card">
-    <div class="lock-emblem">👋</div>
-    <h1>Who's on this phone?</h1>
-    <p class="lock-sub">So we know who ticked what. You can change it later in Us.</p>
-    <div class="who-row">
-      <button class="btn-who" data-who="Riley">Riley</button>
-      <button class="btn-who" data-who="Elli">Elli</button>
-    </div>
-  </div>
-</div>
-
 <!-- ───────────────────────── App ───────────────────────────────── -->
 <div id="app" class="hidden">
 
   <header class="topbar">
     <div class="topbar-main">
-      <div class="eyebrow">RILEY &amp; ELLI</div>
+      <div class="eyebrow" id="topEyebrow">ADVENTURES</div>
       <h1 id="progressCount">0 / 500</h1>
     </div>
     <button id="randomBtn" class="btn-dice" title="Pick a random adventure" aria-label="Pick a random adventure">🎲</button>
@@ -110,7 +97,7 @@
   <section id="tab-passport" class="panel hidden">
     <div class="passport-head">
       <div class="eyebrow">ADVENTURE PASSPORT</div>
-      <h2 id="passportName">Riley &amp; Elli</h2>
+      <h2 id="passportName">Adventure Passport</h2>
       <div id="passportTotals" class="passport-totals"></div>
     </div>
     <h2>Stamps</h2>
@@ -148,8 +135,8 @@
     <div id="achList" class="achlist"></div>
     <h2>Settings</h2>
     <div class="settings">
-      <p>This phone is <strong id="whoLabel">—</strong>.
-         <button id="switchWho" class="btn-ghost">Switch</button></p>
+      <p>Ticks you make are shown as <strong id="whoLabel">You</strong>.
+         <button id="switchWho" class="btn-ghost">Change name</button></p>
       <p id="connState" class="muted"></p>
       <button id="refreshBtn" class="btn-ghost">Force refresh from server</button>
       <button id="signOutBtn" class="btn-ghost danger">Sign out this phone</button>

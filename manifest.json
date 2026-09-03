@@ -1,7 +1,7 @@
 {
   "name": "Our Australian Adventure",
   "short_name": "Our Adventure",
-  "description": "500 Australian adventures for Riley & Elli, shared across both phones.",
+  "description": "A world of real adventures, ticked off together.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

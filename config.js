@@ -16,4 +16,9 @@ window.OAA_CONFIG = {
   // The single shared account both phones sign in as. The passphrase typed on
   // the lock screen is this account's password.
   sharedEmail: 'rileylawler664@gmail.com',
+
+  // Anonymous sign-in means nobody has to type a passphrase. Enable it in
+  // Supabase under Authentication -> Sign In / Providers -> Anonymous.
+  // If it is off, the app falls back to the shared passphrase automatically.
+  allowAnonymous: true,
 };
