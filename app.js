@@ -781,29 +781,74 @@ function renderPassport() {
     continents.add(a.continent);
   }
 
-  if (who) $('#passportName').textContent = who;
+  // The eyebrow already says ADVENTURE PASSPORT, so this line is the holder,
+  // the way a real passport carries a name.
+  $('#passportName').textContent = who || 'Traveller';
+
   $('#passportTotals').innerHTML = `
-    <div class="ptotal"><b>${visited.size}</b><span>countries</span></div>
+    <div class="ptotal"><b>${visited.size}</b><span>stamps</span></div>
     <div class="ptotal"><b>${continents.size}</b><span>continents</span></div>
     <div class="ptotal"><b>${doneCount()}</b><span>adventures</span></div>`;
 
-  // Every country in the dataset gets a slot; earned ones are stamped.
-  const codes = [...new Set(ADV.map(a => a.country))]
-    .sort((x, y) => countryName(x).localeCompare(countryName(y)));
-
-  $('#stampGrid').innerHTML = codes.map(code => {
+  // A country is stamped once, on the first thing you tick there. The date is
+  // derived from the earliest completion rather than stored separately, so
+  // un-ticking that one simply moves the stamp to the next earliest.
+  const rows = [...new Set(ADV.map(a => a.country))].map(code => {
     const inC = a => a.country === code;
-    const total = countOf(inC), done = doneOf(inC);
-    const earned = done > 0;
-    const complete = total && done === total;
-    return `<button class="stamp ${earned ? 'earned' : ''} ${complete ? 'complete' : ''}"
-              data-go='${esc(JSON.stringify({ level: 'country', continent: ADV.find(inC).continent, country: code }))}'>
-      <span class="stamp-flag">${countryFlag(code)}</span>
-      <span class="stamp-name">${esc(countryName(code))}</span>
-      <span class="stamp-count">${done} / ${total}</span>
-      ${complete ? '<span class="stamp-seal">✓</span>' : ''}
+    const times = ADV.filter(a => inC(a) && isDone(a.id))
+      .map(a => row(a.id).completed_at)
+      .filter(Boolean)
+      .map(t => new Date(t))
+      .filter(d => !isNaN(d));
+    const stampedAt = times.length ? new Date(Math.min(...times)) : null;
+    return {
+      code,
+      total: countOf(inC),
+      done: doneOf(inC),
+      stampedAt,
+      // Completed the country outright - a real passport would not mark this,
+      // but it is the thing people actually want to see.
+      complete: countOf(inC) > 0 && doneOf(inC) === countOf(inC),
+    };
+  });
+
+  // Earned stamps first, in the order they were collected, like a real passport.
+  const earned = rows.filter(r => r.stampedAt).sort((a, b) => a.stampedAt - b.stampedAt);
+  const blank = rows.filter(r => !r.stampedAt)
+    .sort((a, b) => countryName(a.code).localeCompare(countryName(b.code)));
+
+  // Fixed three-letter months rather than the locale's, which gives "Sept"
+  // and "July" and makes the stamps different widths.
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const stampDate = d =>
+    `${String(d.getDate()).padStart(2, '0')} ${MON[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
+  const stampTime = d => d.toLocaleTimeString('en-AU',
+    { hour: '2-digit', minute: '2-digit', hour12: false });
+
+  const html = r => {
+    const go = JSON.stringify({ level: 'country', continent: ADV.find(a => a.country === r.code).continent, country: r.code });
+    // A fixed wobble per country, so stamps sit at slightly different angles
+    // like they were banged on by hand, but never move between renders.
+    const tilt = ((r.code.charCodeAt(0) * 7 + r.code.charCodeAt(1) * 13) % 9) - 4;
+    return `<button class="stamp ${r.stampedAt ? 'earned' : ''} ${r.complete ? 'complete' : ''}"
+              style="--tilt:${r.stampedAt ? tilt : 0}deg" data-go='${esc(go)}'>
+      <span class="stamp-flag">${countryFlag(r.code)}</span>
+      <span class="stamp-name">${esc(countryName(r.code))}</span>
+      <span class="stamp-count">${r.done} / ${r.total}</span>
+      ${r.stampedAt
+        ? `<span class="stamp-date">${stampDate(r.stampedAt)}</span>
+           <span class="stamp-time">${stampTime(r.stampedAt)}</span>`
+        : '<span class="stamp-blank">Not stamped</span>'}
+      ${r.complete ? '<span class="stamp-seal">✓</span>' : ''}
     </button>`;
-  }).join('');
+  };
+
+  $('#stampGrid').innerHTML = earned.length
+    ? earned.map(html).join('') +
+      `<div class="stamp-divider"><span>${blank.length} still to collect</span></div>` +
+      blank.map(html).join('')
+    : `<div class="empty">No stamps yet.<br>Tick anything off and the country gets its stamp.</div>` +
+      blank.map(html).join('');
 
   const contRows = CONTINENT_ORDER.filter(c => countOf(a => a.continent === c)).map(c => {
     const inC = a => a.continent === c;

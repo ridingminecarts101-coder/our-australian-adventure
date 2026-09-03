@@ -328,24 +328,56 @@ input, select, textarea { font: inherit; color: inherit; }
 .ptotal b { display: block; font-size: 24px; line-height: 1.1; }
 .ptotal span { font-size: 11px; opacity: .8; }
 
-.stampgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-@media (min-width: 520px) { .stampgrid { grid-template-columns: repeat(4, 1fr); } }
+.stampgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+@media (min-width: 460px) { .stampgrid { grid-template-columns: repeat(3, 1fr); } }
+
+/* Stamps are drawn like the real thing: a double-ruled box, banged on at a
+   slight angle, with the date it was earned. Blank ones are just outlines. */
 .stamp {
-  position: relative; display: grid; gap: 2px; justify-items: center;
-  padding: 12px 6px; border-radius: 12px; text-align: center;
-  border: 1.5px dashed var(--line); background: transparent; opacity: .55;
+  position: relative; display: grid; gap: 1px; justify-items: center;
+  padding: 12px 8px 10px; text-align: center; background: transparent;
+  border: 1.5px dashed var(--line); border-radius: 4px;
+  color: var(--muted); transform: rotate(0deg);
 }
 .stamp.earned {
-  border-style: solid; border-color: var(--eucalypt);
-  background: var(--card); opacity: 1;
+  border: 2px double var(--eucalypt); color: var(--eucalypt);
+  background: var(--card); transform: rotate(var(--tilt, 0deg));
+  box-shadow: var(--shadow);
 }
-.stamp.complete { border-color: var(--gem); }
-.stamp-flag { font-size: 24px; line-height: 1.1; filter: grayscale(1); }
+.stamp.earned::before {
+  /* inner rule, so the border reads as a stamp rather than a card */
+  content: ''; position: absolute; inset: 3px;
+  border: 1px solid currentColor; border-radius: 2px; opacity: .35;
+}
+.stamp.complete { border-color: var(--gem); color: var(--gem); }
+.stamp-flag { font-size: 22px; line-height: 1.2; filter: grayscale(1) opacity(.5); }
 .stamp.earned .stamp-flag { filter: none; }
-.stamp-name { font-size: 11.5px; font-weight: 600; line-height: 1.25; }
-.stamp-count { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stamp-name {
+  font-size: 12px; font-weight: 700; line-height: 1.2;
+  letter-spacing: .02em; color: var(--ink);
+}
+.stamp.earned .stamp-name { color: inherit; }
+.stamp-count {
+  font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.stamp.earned .stamp-count { color: inherit; opacity: .8; }
+.stamp-date {
+  margin-top: 3px; font-size: 11px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; font-variant-numeric: tabular-nums;
+}
+.stamp-time {
+  font-size: 9.5px; letter-spacing: .1em; opacity: .7; font-variant-numeric: tabular-nums;
+}
+.stamp-blank { margin-top: 3px; font-size: 10px; letter-spacing: .06em; opacity: .55; }
 .stamp-seal {
-  position: absolute; top: 4px; right: 6px; color: var(--gem); font-weight: 700; font-size: 13px;
+  position: absolute; top: 4px; right: 5px; font-weight: 700; font-size: 12px;
+}
+.stamp-divider {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 10px;
+  margin: 10px 0 2px; font-size: 11.5px; color: var(--muted);
+}
+.stamp-divider::before, .stamp-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--line);
 }
 
 /* ── Trips ───────────────────────────────────────────────────────── */
