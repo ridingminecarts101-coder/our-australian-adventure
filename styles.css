@@ -282,6 +282,40 @@ input, select, textarea { font: inherit; color: inherit; }
 .memory p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
 .memory .nomemory { color: var(--muted); font-style: italic; }
 
+/* ── World map + place navigation ────────────────────────────────── */
+.mapwrap {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 10px; box-shadow: var(--shadow);
+}
+#worldMap { display: block; width: 100%; cursor: pointer; }
+.maphint { font-size: 12.5px; color: var(--muted); margin: 8px 2px 14px; text-align: center; }
+
+.placelist { display: grid; gap: 8px; }
+.placerow {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow);
+}
+.placerow:active { background: var(--sand-2); }
+.placerow-main { flex: 1; min-width: 0; }
+.placerow-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.placerow-label { font-weight: 620; font-size: 15.5px; }
+.placerow-count { font-size: 13px; color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+.placerow-sub { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.placerow .minibar { margin-top: 8px; }
+.placerow-chev { color: var(--muted); font-size: 20px; flex: none; }
+
+.crumb {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
+  font-size: 13px; margin-bottom: 12px;
+}
+.crumb-link { color: var(--ochre); font-weight: 600; padding: 3px 0; }
+.crumb-sep { color: var(--muted); }
+.crumb-here { color: var(--muted); font-weight: 600; }
+#placeTitle { font-size: 22px; }
+#placeView .muted { margin: 4px 0 16px; }
+.badge.dog { color: var(--eucalypt); border-color: var(--eucalypt); background: transparent; }
+
 /* ── Photos ──────────────────────────────────────────────────────── */
 .photostatus {
   display: none;                 /* not a fixed height — the text wraps on narrow phones */

@@ -61,6 +61,25 @@
 
   <!-- Adventures -->
   <section id="tab-list" class="panel">
+
+    <!-- Level 0: the world -->
+    <div id="worldView">
+      <div class="mapwrap"><canvas id="worldMap" aria-label="World map — tap a continent"></canvas></div>
+      <p class="maphint">Tap a continent on the map, or pick one below.</p>
+      <div id="continentList" class="placelist"></div>
+    </div>
+
+    <!-- Levels 1–2: continent → country → region -->
+    <div id="placeView" class="hidden">
+      <div id="crumb" class="crumb"></div>
+      <h2 id="placeTitle"></h2>
+      <p id="placeSub" class="muted"></p>
+      <div id="placeList" class="placelist"></div>
+    </div>
+
+    <!-- Level 3: the adventures themselves -->
+    <div id="listView" class="hidden">
+    <div id="crumbList" class="crumb"></div>
     <div class="filters">
       <input id="search" type="search" placeholder="Search a place, region or activity…" autocomplete="off">
       <div class="chiprow" id="quickChips">
@@ -77,12 +96,14 @@
           <label>Category<select id="fCat"></select></label>
           <label>Max effort<select id="fDiff"></select></label>
           <label>Max cost<select id="fCost"></select></label>
+          <label>Dogs<select id="fDog"></select></label>
         </div>
         <button id="clearFilters" class="btn-ghost">Clear filters</button>
       </details>
     </div>
     <div id="resultCount" class="resultcount"></div>
     <div id="list" class="list"></div>
+    </div>
   </section>
 
   <!-- Map / states -->
@@ -160,6 +181,7 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script src="config.js"></script>
+<script src="world.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
 <script src="app.js" defer></script>
 </body>

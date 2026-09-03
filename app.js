@@ -42,7 +42,16 @@ let online = navigator.onLine;
 let realtimeOk = false;
 let openId = null;
 
-const filters = { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 4 };
+const filters = { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 4, dog: 'All' };
+
+// Where we are in world -> continent -> country -> region -> adventures.
+let nav = { level: 'world', continent: null, country: null, admin1: null };
+
+const DOG_LABEL = {
+  yes:   'Dogs welcome',
+  no:    'No dogs',
+  check: 'Check first',
+};
 
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -75,6 +84,17 @@ function row(id) {
   return progress.get(id) || { adventure_id: id, completed: false, shortlisted: false, rating: null, memory: null };
 }
 function isDone(id)  { return !!row(id).completed; }
+// Australian entries store a state code; everywhere else admin1 is already a name.
+function regionName(a) { return STATE_NAMES[a.admin1] || a.admin1; }
+// Place · region · country, skipping any part that just repeats the one before it.
+function metaLine(a) {
+  const parts = [a.place];
+  if (a.region && a.region !== a.place) parts.push(a.region);
+  if (!nav.country) parts.push(countryName(a.country));
+  return parts.join(' · ');
+}
+function countOf(pred) { return ADV.filter(pred).length; }
+function doneOf(pred)  { return ADV.filter(a => pred(a) && isDone(a.id)).length; }
 function doneCount() { let n = 0; for (const r of progress.values()) if (r.completed) n++; return n; }
 
 // ── Sync status line ─────────────────────────────────────────────────
@@ -513,6 +533,129 @@ function renderPhotoStatus() {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  Navigation: world -> continent -> country -> region -> adventures
+// ══════════════════════════════════════════════════════════════════════
+function goTo(level, opts = {}) {
+  nav = { level, continent: null, country: null, admin1: null, ...opts };
+  // Region filters belong to the place you drilled into, not to the place itself.
+  filters.st = 'All';
+  window.scrollTo(0, 0);
+  buildFilterOptions();
+  renderPlaces();
+  renderList();
+}
+
+function placeRow({ label, sub, count, done, flag, onClick }) {
+  const pct = count ? Math.round((done / count) * 100) : 0;
+  return `<button class="placerow" data-go='${esc(JSON.stringify(onClick))}'>
+    <div class="placerow-main">
+      <div class="placerow-top">
+        <span class="placerow-label">${flag ? flag + ' ' : ''}${esc(label)}</span>
+        <span class="placerow-count">${count ? `${done} / ${count}` : 'Coming soon'}</span>
+      </div>
+      ${sub ? `<div class="placerow-sub">${esc(sub)}</div>` : ''}
+      ${count ? `<div class="minibar"><i style="width:${pct}%"></i></div>` : ''}
+    </div>
+    ${count ? '<span class="placerow-chev">›</span>' : ''}
+  </button>`;
+}
+
+function crumbHTML() {
+  const parts = [{ label: '🌏 World', go: { level: 'world' } }];
+  if (nav.continent) parts.push({ label: nav.continent, go: { level: 'continent', continent: nav.continent } });
+  if (nav.country) parts.push({ label: countryName(nav.country), go: { level: 'country', continent: nav.continent, country: nav.country } });
+  if (nav.admin1) {
+    const a = ADV.find(x => x.admin1 === nav.admin1);
+    parts.push({ label: a ? regionName(a) : nav.admin1, go: null });
+  }
+  return parts.map((p, i) => {
+    const last = i === parts.length - 1;
+    return (last
+      ? `<span class="crumb-here">${esc(p.label)}</span>`
+      : `<button class="crumb-link" data-go='${esc(JSON.stringify(p.go))}'>${esc(p.label)}</button>`)
+      + (last ? '' : '<span class="crumb-sep">›</span>');
+  }).join('');
+}
+
+function renderPlaces() {
+  const world = $('#worldView'), place = $('#placeView'), list = $('#listView');
+  world.classList.toggle('hidden', nav.level !== 'world');
+  place.classList.toggle('hidden', nav.level !== 'continent' && nav.level !== 'country');
+  list.classList.toggle('hidden', nav.level !== 'adventures');
+
+  if (nav.level === 'world') {
+    const counts = {};
+    for (const name of CONTINENT_ORDER) counts[name] = countOf(a => a.continent === name);
+    drawWorldMap($('#worldMap'), counts, null);
+
+    $('#continentList').innerHTML = CONTINENT_ORDER.map(name => {
+      const count = counts[name];
+      const countries = new Set(ADV.filter(a => a.continent === name).map(a => a.country)).size;
+      return placeRow({
+        label: name,
+        sub: count ? `${countries} ${countries === 1 ? 'country' : 'countries'}` : 'Not mapped yet — tell us where to go next',
+        count, done: doneOf(a => a.continent === name),
+        onClick: count ? { level: 'continent', continent: name } : null,
+      });
+    }).join('');
+    return;
+  }
+
+  if (nav.level === 'continent') {
+    const inCont = a => a.continent === nav.continent;
+    const codes = [...new Set(ADV.filter(inCont).map(a => a.country))]
+      .sort((x, y) => countryName(x).localeCompare(countryName(y)));
+    $('#crumb').innerHTML = crumbHTML();
+    $('#placeTitle').textContent = nav.continent;
+    $('#placeSub').textContent =
+      `${countOf(inCont)} adventures across ${codes.length} ${codes.length === 1 ? 'country' : 'countries'}`;
+    $('#placeList').innerHTML = codes.map(code => {
+      const inC = a => inCont(a) && a.country === code;
+      const regions = new Set(ADV.filter(inC).map(a => a.admin1)).size;
+      return placeRow({
+        label: countryName(code), flag: countryFlag(code),
+        sub: `${regions} ${regions === 1 ? 'region' : 'regions'}`,
+        count: countOf(inC), done: doneOf(inC),
+        onClick: { level: 'country', continent: nav.continent, country: code },
+      });
+    }).join('');
+    return;
+  }
+
+  if (nav.level === 'country') {
+    const inC = a => a.country === nav.country;
+    const regions = [...new Set(ADV.filter(inC).map(a => a.admin1))];
+    $('#crumb').innerHTML = crumbHTML();
+    $('#placeTitle').textContent = countryFlag(nav.country) + ' ' + countryName(nav.country);
+    $('#placeSub').textContent = `${countOf(inC)} adventures`;
+
+    const rows = regions.map(code => {
+      const inR = a => inC(a) && a.admin1 === code;
+      const sample = ADV.find(inR);
+      return {
+        label: regionName(sample), code,
+        count: countOf(inR), done: doneOf(inR),
+      };
+    }).sort((a, b) => a.label.localeCompare(b.label));
+
+    $('#placeList').innerHTML =
+      placeRow({
+        label: `Everything in ${countryName(nav.country)}`,
+        sub: 'Skip the regions and see the lot',
+        count: countOf(inC), done: doneOf(inC),
+        onClick: { level: 'adventures', continent: nav.continent, country: nav.country },
+      }) +
+      rows.map(r => placeRow({
+        label: r.label, count: r.count, done: r.done,
+        onClick: { level: 'adventures', continent: nav.continent, country: nav.country, admin1: r.code },
+      })).join('');
+    return;
+  }
+
+  $('#crumbList').innerHTML = crumbHTML();
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  Filtering + rendering
 // ══════════════════════════════════════════════════════════════════════
 function filtered() {
@@ -523,12 +666,16 @@ function filtered() {
     if (filters.quick === 'done'  && !r.completed) return false;
     if (filters.quick === 'short' && !r.shortlisted) return false;
     if (filters.quick === 'gem'   && !a.hidden_gem) return false;
-    if (filters.st  !== 'All' && a.state !== filters.st) return false;
+    if (nav.continent && a.continent !== nav.continent) return false;
+    if (nav.country   && a.country   !== nav.country) return false;
+    if (nav.admin1    && a.admin1    !== nav.admin1) return false;
+    if (filters.st  !== 'All' && a.admin1 !== filters.st) return false;
     if (filters.cat !== 'All' && a.category !== filters.cat) return false;
+    if (filters.dog !== 'All' && a.dog_friendly !== filters.dog) return false;
     if (a.difficulty > filters.diff) return false;
     if (a.cost > filters.cost) return false;
     if (q) {
-      const hay = `${a.title} ${a.place} ${a.region} ${STATE_NAMES[a.state]} ${a.category} ${a.description}`.toLowerCase();
+      const hay = `${a.title} ${a.place} ${a.region} ${regionName(a)} ${countryName(a.country)} ${a.category} ${a.description}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -542,11 +689,12 @@ function cardHTML(a) {
             aria-label="${r.completed ? 'Mark not done' : 'Mark done'}">✓</button>
     <div class="card-body" data-open="${a.id}">
       <div class="card-title">${esc(a.title)}</div>
-      <div class="card-meta">${esc(a.place)} · ${esc(a.region)}</div>
+      <div class="card-meta">${esc(metaLine(a))}</div>
       <div class="badges">
         <span class="badge">${esc(a.category)}</span>
         <span class="badge">${'●'.repeat(a.difficulty)}${'○'.repeat(5 - a.difficulty)}</span>
         <span class="badge">${a.cost === 0 ? 'Free' : '$'.repeat(a.cost)}</span>
+        ${a.dog_friendly === 'yes' ? '<span class="badge dog">🐾 Dogs</span>' : ''}
         ${a.hidden_gem ? '<span class="badge gem">💎 Hidden gem</span>' : ''}
         ${r.shortlisted ? '<span class="badge star">⭐ Shortlist</span>' : ''}
       </div>
@@ -590,7 +738,7 @@ function renderStates() {
       </div>`;
     }).join('');
   };
-  $('#stateGrid').innerHTML = group(a => STATE_NAMES[a.state], Object.values(STATE_NAMES));
+  $('#stateGrid').innerHTML = group(a => `${countryFlag(a.country)} ${regionName(a)}`);
   $('#catGrid').innerHTML   = group(a => a.category);
 }
 
@@ -621,7 +769,7 @@ function renderMemories() {
       return `<div class="memory">
         <div data-open="${a.id}">
           <b>${esc(a.title)}</b>
-          <div class="card-meta">${esc(a.place)} · ${esc(STATE_NAMES[a.state])}</div>
+          <div class="card-meta">${esc(a.place)} · ${esc(regionName(a))}</div>
           <div class="badges">
             ${r.completed_by ? `<span class="badge">Ticked by ${esc(r.completed_by)}</span>` : ''}
             ${r.completed_at ? `<span class="badge">${fmtDate(r.completed_at)}</span>` : ''}
@@ -776,7 +924,9 @@ const ACHIEVEMENTS = [
   ['🏅', 'Halfway',          'Complete 250 adventures',                        d => d.done >= 250],
   ['👑', 'The Lot',          'Complete all 500 adventures',                    d => d.done >= 500],
   ['💎', 'Gem Hunters',      'Find 25 hidden gems',                            d => d.gems >= 25],
-  ['🗺️', 'State Hopper',     'An adventure in all 8 states and territories',   d => d.states >= 8],
+  ['🗺️', 'State Hopper',     'An adventure in all 8 Australian states and territories', d => d.states >= 8],
+  ['🌏', 'Continent Hopper','An adventure on three different continents',     d => d.countries >= 3],
+  ['🐾', 'Good Dog',        'Complete 15 dog-friendly adventures',            d => d.dogs >= 15],
   ['⛰️', 'Hard Yards',       'Complete 5 adventures rated 5 for effort',       d => d.hard >= 5],
   ['💸', 'Cheap Dates',      'Complete 25 free adventures',                    d => d.free >= 25],
   ['📸', 'Storytellers',     'Write 20 memories',                              d => d.memories >= 20],
@@ -784,8 +934,9 @@ const ACHIEVEMENTS = [
 ];
 
 function achievementData() {
-  const d = { done: 0, gems: 0, states: 0, hard: 0, free: 0, memories: 0, ratings: 0 };
+  const d = { done: 0, gems: 0, states: 0, countries: 0, hard: 0, free: 0, memories: 0, ratings: 0, dogs: 0 };
   const states = new Set();
+  const countries = new Set();
   for (const a of ADV) {
     const r = row(a.id);
     if (r.memory) d.memories++;
@@ -795,9 +946,12 @@ function achievementData() {
     if (a.hidden_gem) d.gems++;
     if (a.difficulty === 5) d.hard++;
     if (a.cost === 0) d.free++;
-    if (a.state !== 'AUS') states.add(a.state);
+    if (a.dog_friendly === 'yes') d.dogs++;
+    if (a.admin1 !== 'AUS') states.add(a.admin1);
+    countries.add(a.country);
   }
   d.states = states.size;
+  d.countries = countries.size;
   return d;
 }
 
@@ -812,7 +966,7 @@ function renderUs() {
   $('#usStats').innerHTML = `
     <div class="stat"><b>${d.done}</b><span>adventures done</span></div>
     <div class="stat"><b>${ADV.length - d.done}</b><span>still to go</span></div>
-    <div class="stat"><b>${d.states} / 8</b><span>states &amp; territories</span></div>
+    <div class="stat"><b>${d.countries}</b><span>countries visited</span></div>
     <div class="stat"><b>${d.gems}</b><span>hidden gems found</span></div>
     <div class="stat"><b>${avg}</b><span>average rating</span></div>
     <div class="stat"><b>${shortlisted}</b><span>on the shortlist</span></div>
@@ -834,6 +988,7 @@ function renderUs() {
 
 function renderAll() {
   renderHeader();
+  renderPlaces();
   renderList();
   renderStates();
   renderMemories();
@@ -851,11 +1006,11 @@ function renderSheet(id) {
   if (!a) return;
   const r = row(id);
   const ph = photosFor(id);
-  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.place + ', ' + STATE_NAMES[a.state] + ', Australia')}`;
+  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.place + ', ' + regionName(a) + ', ' + countryName(a.country))}`;
 
   $('#sheetBody').innerHTML = `
     <h2>${esc(a.title)}</h2>
-    <div class="sheet-place">${esc(a.place)} · ${esc(a.region)} · ${esc(STATE_NAMES[a.state])}</div>
+    <div class="sheet-place">${esc([a.place, a.region, regionName(a)].filter((v, i, arr) => v && arr.indexOf(v) === i).join(' · '))} · ${countryFlag(a.country)} ${esc(countryName(a.country))}</div>
     ${a.hidden_gem ? '<span class="badge gem">💎 Hidden gem</span>' : ''}
     <p class="sheet-desc">${esc(a.description)}</p>
 
@@ -865,7 +1020,7 @@ function renderSheet(id) {
       <div class="fact"><b>Rough cost</b><span>${esc(COST_LABEL[a.cost])}</span></div>
       <div class="fact"><b>Time needed</b><span>${esc(a.duration)}</span></div>
       <div class="fact"><b>Best time</b><span>${esc(a.season)}</span></div>
-      <div class="fact"><b>Adventure</b><span>#${a.id} of ${ADV.length}</span></div>
+      <div class="fact"><b>Dogs</b><span>${esc(DOG_LABEL[a.dog_friendly])}</span></div>
     </div>
 
     ${r.completed && r.completed_by ? `<div class="donenote">Ticked off by ${esc(r.completed_by)}${r.completed_at ? ' on ' + fmtDate(r.completed_at) : ''}.</div>` : ''}
@@ -878,9 +1033,9 @@ function renderSheet(id) {
         <button class="btn-ghost" data-act="short">${r.shortlisted ? '⭐ On shortlist' : '☆ Add to shortlist'}</button>
         <a class="btn-ghost" href="${maps}" target="_blank" rel="noopener">📍 Open in Maps</a>
       </div>
-      <a class="btn-ghost" href="${TOURISM[a.state]}" target="_blank" rel="noopener">
-        Check current access on ${esc(a.state === 'AUS' ? 'australia.com' : STATE_NAMES[a.state] + ' tourism')}
-      </a>
+      ${TOURISM[a.admin1] ? `<a class="btn-ghost" href="${TOURISM[a.admin1]}" target="_blank" rel="noopener">
+        Check current access on ${esc(a.admin1 === 'AUS' ? 'australia.com' : regionName(a) + ' tourism')}
+      </a>` : ''}
     </div>
 
     <h3>Our rating</h3>
@@ -939,8 +1094,15 @@ function toggleDone(id) {
 // ══════════════════════════════════════════════════════════════════════
 function buildFilterOptions() {
   const opt = (v, label, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(label)}</option>`;
-  $('#fState').innerHTML = opt('All', 'All Australia') +
-    Object.entries(STATE_NAMES).map(([k, v]) => opt(k, v)).join('');
+  const regions = [...new Set(ADV.filter(a =>
+      (!nav.continent || a.continent === nav.continent) &&
+      (!nav.country   || a.country   === nav.country)).map(a => a.admin1))];
+  $('#fState').innerHTML = opt('All', 'All regions') +
+    regions.map(code => [code, regionName(ADV.find(a => a.admin1 === code))])
+           .sort((a, b) => a[1].localeCompare(b[1]))
+           .map(([k, v]) => opt(k, v)).join('');
+  $('#fDog').innerHTML = opt('All', 'Any') +
+    ['yes', 'check', 'no'].map(k => opt(k, DOG_LABEL[k])).join('');
   $('#fCat').innerHTML = opt('All', 'All categories') +
     [...new Set(ADV.map(a => a.category))].sort().map(c => opt(c, c)).join('');
   $('#fDiff').innerHTML = [5, 4, 3, 2, 1].map(n => opt(n, DIFF_LABEL[n] + ' or less', n === 5)).join('');
@@ -971,10 +1133,11 @@ function wireUI() {
   $('#fCat').onchange   = e => { filters.cat = e.target.value; renderList(); };
   $('#fDiff').onchange  = e => { filters.diff = +e.target.value; renderList(); };
   $('#fCost').onchange  = e => { filters.cost = +e.target.value; renderList(); };
+  $('#fDog').onchange   = e => { filters.dog = e.target.value; renderList(); };
   $('#clearFilters').onclick = () => {
-    Object.assign(filters, { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 4 });
+    Object.assign(filters, { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 4, dog: 'All' });
     $('#search').value = ''; $('#fState').value = 'All'; $('#fCat').value = 'All';
-    $('#fDiff').value = '5'; $('#fCost').value = '4';
+    $('#fDiff').value = '5'; $('#fCost').value = '4'; $('#fDog').value = 'All';
     $$('#quickChips .chip').forEach((x, i) => x.classList.toggle('on', i === 0));
     renderList();
   };
@@ -985,6 +1148,26 @@ function wireUI() {
     $$('#groupChips .chip').forEach(x => x.classList.toggle('on', x === c));
     renderMemories();
   });
+
+  // Place rows and breadcrumbs
+  document.body.addEventListener('click', e => {
+    const go = e.target.closest('[data-go]');
+    if (!go) return;
+    let target;
+    try { target = JSON.parse(go.dataset.go); } catch { return; }
+    if (target) goTo(target.level, target);
+    else toast('Nothing here yet — that continent is on the list');
+  });
+
+  // The world map
+  const map = $('#worldMap');
+  map.addEventListener('click', e => {
+    const hit = continentFromPoint(map, e.clientX, e.clientY);
+    if (!hit) return;
+    if (countOf(a => a.continent === hit)) goTo('continent', { continent: hit });
+    else toast(`No ${hit} adventures yet`);
+  });
+  addEventListener('resize', () => { if (nav.level === 'world') renderPlaces(); });
 
   // Card taps (delegated — the list is re-rendered constantly)
   document.body.addEventListener('click', e => {
