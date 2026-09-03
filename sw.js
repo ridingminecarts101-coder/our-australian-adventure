@@ -4,7 +4,7 @@
  * from cache (and works with no signal), while a fresh copy is fetched in the
  * background and used on the next launch. Bump CACHE_VERSION when you deploy.
  */
-const CACHE_VERSION = 'oaa-v16';
+const CACHE_VERSION = 'wayfinder-v17';
 const SHELL = [
   './',
   './index.html',
@@ -59,6 +59,17 @@ self.addEventListener('fetch', event => {
       const fresh = await network;
       return fresh || cache.match('./index.html') ||
              new Response('Offline', { status: 503, statusText: 'Offline' });
+    })
+  );
+});
+
+// Tapping a reminder should open the app rather than a fresh tab.
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) if ('focus' in c) return c.focus();
+      if (self.clients.openWindow) return self.clients.openWindow('./');
     })
   );
 });

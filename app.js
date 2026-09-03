@@ -91,6 +91,14 @@ function row(id) {
 function isDone(id)  { return !!row(id).completed; }
 // Australian entries store a state code; everywhere else admin1 is already a name.
 function regionName(a) { return STATE_NAMES[a.admin1] || a.admin1; }
+// Apple Maps on iOS, Google everywhere else. Searching by name rather than by
+// coordinate, because the coordinates are honestly not in the data yet.
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function mapsUrl(a) {
+  const q = encodeURIComponent(`${a.place}, ${regionName(a)}, ${countryName(a.country)}`);
+  return IS_IOS ? `https://maps.apple.com/?q=${q}` : `https://www.google.com/maps/search/?api=1&query=${q}`;
+}
 // Place · region · country, skipping any part that just repeats the one before it.
 function metaLine(a) {
   const parts = [a.place];
@@ -644,6 +652,15 @@ function notificationsSupported() {
   return typeof Notification !== 'undefined';
 }
 
+async function showNotification(title, body, tag) {
+  const opts = { body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag };
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg && reg.showNotification) { await reg.showNotification(title, opts); return true; }
+  } catch { /* fall through */ }
+  try { new Notification(title, opts); return true; } catch { return false; }
+}
+
 async function toggleNotifications() {
   if (!notificationsSupported()) return toast('This device does not support reminders');
   if (Notification.permission === 'granted') {
@@ -656,7 +673,9 @@ async function toggleNotifications() {
   if (res !== 'granted') { toast('Reminders stay off'); return; }
   writeLS(LS.notify, true);
   renderMe();
-  new Notification('Wayfinder', { body: "That's set. We'll nudge you when something is in season.", icon: 'icons/icon-192.png' });
+  const shown = await showNotification('Wayfinder',
+    "That's set. We'll nudge you when something is in season.", 'wayfinder-hello');
+  if (!shown) toast('Reminders are on, but this device would not show a test one');
 }
 
 // Runs on launch. Looks for shortlisted adventures whose season includes this
@@ -674,11 +693,8 @@ function seasonalNudge() {
   if (!due.length) return;
 
   const pick = due[Math.floor(Math.random() * due.length)];
-  new Notification('In season now', {
-    body: `${pick.title} — ${pick.place}. Best ${pick.season}.`,
-    icon: 'icons/icon-192.png',
-    tag: 'wayfinder-season',
-  });
+  showNotification('In season now',
+    `${pick.title} — ${pick.place}. Best ${pick.season}.`, 'wayfinder-season');
   writeLS(LS.notifyLast, Date.now());
 }
 
@@ -1642,7 +1658,7 @@ function renderSheet(id) {
   if (!a) return;
   const r = row(id);
   const ph = photosFor(id);
-  const maps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.place + ', ' + regionName(a) + ', ' + countryName(a.country))}`;
+  const maps = mapsUrl(a);
 
   $('#sheetBody').innerHTML = `
     <h2>${esc(a.title)}</h2>
@@ -1667,7 +1683,7 @@ function renderSheet(id) {
       </button>
       <div class="rowbtns">
         <button class="btn-ghost" data-act="short">${r.shortlisted ? '⭐ On shortlist' : '☆ Add to shortlist'}</button>
-        <a class="btn-ghost" href="${maps}" target="_blank" rel="noopener">📍 Open in Maps</a>
+        <a class="btn-ghost" href="${maps}" target="_blank" rel="noopener">📍 ${IS_IOS ? 'Apple Maps' : 'Open in Maps'}</a>
       </div>
       <button class="btn-ghost" data-act="share">↗ Share this adventure</button>
       ${TOURISM[a.admin1] ? `<a class="btn-ghost" href="${TOURISM[a.admin1]}" target="_blank" rel="noopener">
