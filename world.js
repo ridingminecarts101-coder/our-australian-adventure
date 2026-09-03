@@ -19,6 +19,15 @@ const CONTINENT_BOXES = {
     [15, 32, -117, -87],    // Mexico
     [7, 18, -92, -77],      // Central America
     [60, 83, -55, -20],     // Greenland
+    // Caribbean. Too small to draw at this dot resolution, but they must
+    // resolve to the right continent when tapped near.
+    [17.5, 23.5, -85, -66],     // Cuba, Jamaica, Hispaniola, Puerto Rico, Cayman
+    [20.5, 27.5, -79, -70],     // Bahamas and Turks & Caicos
+    [11.8, 18.8, -65.5, -59],   // Lesser Antilles, Virgins down to Barbados
+    [10.0, 11.5, -62.0, -60.3], // Trinidad & Tobago - claimed here deliberately,
+                                // because North America is tested before South
+                                // America and Trinidad sits on the latter's shelf
+    [11.9, 13.0, -70.3, -68.1], // Aruba, Curacao, Bonaire
   ],
   'South America': [
     [0, 12, -78, -60],      // Colombia / Venezuela
@@ -37,6 +46,14 @@ const CONTINENT_BOXES = {
     [50, 59, -11, 2],       // Britain & Ireland
     [63, 67, -25, -13],     // Iceland
   ],
+  // Its own region rather than a slice of Asia. Geographically this is Western
+  // Asia; every travel guide splits it out, and so does this app.
+  'Middle East': [
+    [12, 32, 34, 60],       // Arabian Peninsula
+    [29, 38, 34, 49],       // Levant and Iraq
+    [36, 42, 30, 45],       // Anatolia - the European side falls to Europe above
+    [25, 40, 44, 63],       // Iran
+  ],
   'Africa': [
     [20, 37, -17, 12],      // Maghreb
     [20, 33, 12, 35],       // Libya / Egypt
@@ -48,7 +65,6 @@ const CONTINENT_BOXES = {
     [-26, -12, 43, 50],     // Madagascar
   ],
   'Asia': [
-    [12, 42, 35, 60],       // Middle East
     [40, 75, 40, 100],      // western Siberia
     [45, 72, 100, 180],     // eastern Siberia
     [35, 50, 45, 90],       // Central Asia
@@ -65,6 +81,15 @@ const CONTINENT_BOXES = {
     [-11, -1, 131, 156],    // New Guinea
     [-22, -15, 165, 170],   // New Caledonia / Vanuatu
     [-19, -16, 177, 180],   // Fiji
+    // The scattered Pacific nations. Same as the Caribbean above: not big
+    // enough to render, but they have to answer correctly to a tap.
+    [4.5, 10.5, 131, 172],      // Palau, Micronesia, Marshall Islands
+    [-9.5, 1.0, 166, 180],      // Nauru and Tuvalu
+    [-11.5, -5.5, 155, 168],    // Solomon Islands
+    [-22.5, -12.5, -176, -157], // Samoa, Tonga, Niue, Cook Islands
+    [-20.5, -15.0, -152, -146], // French Polynesia
+    [-3.0, 4.0, -160, -150],    // Kiribati, Line Islands
+    [-30.0, -28.0, 167.0, 168.5], // Norfolk Island
   ],
 };
 
@@ -88,6 +113,12 @@ const COUNTRIES = {
   JP: ['Japan', '🇯🇵'], KR: ['South Korea', '🇰🇷'], CN: ['China', '🇨🇳'],
   HK: ['Hong Kong', '🇭🇰'], SG: ['Singapore', '🇸🇬'], AE: ['United Arab Emirates', '🇦🇪'],
   ID: ['Indonesia', '🇮🇩'],
+  // Middle East
+  OM: ['Oman', '🇴🇲'], JO: ['Jordan', '🇯🇴'],
+  IL: ['Israel', '🇮🇱'], PS: ['Palestine', '🇵🇸'],
+  QA: ['Qatar', '🇶🇦'], SA: ['Saudi Arabia', '🇸🇦'],
+  BH: ['Bahrain', '🇧🇭'], KW: ['Kuwait', '🇰🇼'],
+  LB: ['Lebanon', '🇱🇧'], TR: ['Turkiye', '🇹🇷'],
   // Central America
   GT: ['Guatemala', '🇬🇹'], BZ: ['Belize', '🇧🇿'], CR: ['Costa Rica', '🇨🇷'],
   PA: ['Panama', '🇵🇦'], NI: ['Nicaragua', '🇳🇮'], HN: ['Honduras', '🇭🇳'],
@@ -116,13 +147,14 @@ const ISLAND_GROUP = new Set([
 // nations behind a group row hides them for no benefit.
 const ISLAND_GROUP_MIN = 3;
 
-const CONTINENT_ORDER = ['Oceania', 'Europe', 'North America',
-                         'Asia', 'South America', 'Africa'];
+const CONTINENT_ORDER = ['Oceania', 'Europe', 'North America', 'Asia',
+                         'Middle East', 'South America', 'Africa'];
 
 // Paid packs are per continent. Slug must match the `pack` field in the data.
 const PACK_SLUG = {
   'Oceania': 'oceania', 'Europe': 'europe', 'North America': 'north-america',
-  'Asia': 'asia', 'South America': 'south-america', 'Africa': 'africa',
+  'Asia': 'asia', 'Middle East': 'middle-east',
+  'South America': 'south-america', 'Africa': 'africa',
 };
 
 function countryName(code) { return (COUNTRIES[code] || [code])[0]; }

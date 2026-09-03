@@ -22,6 +22,8 @@ SOURCES = [
     'central-america', 'caribbean',
     # Asia
     'asia', 'indonesia',
+    # Middle East
+    'middle-east',
     # Cross-cutting collections
     'theme-parks',
 ]
@@ -43,7 +45,7 @@ CATEGORIES = {
     'City', 'Family', 'Scenic', 'Stargazing',
 }
 CONTINENTS = {'Oceania', 'Europe', 'North America',
-              'South America', 'Asia', 'Africa'}
+              'South America', 'Asia', 'Middle East', 'Africa'}
 DOG = {'yes', 'no', 'check'}
 
 
