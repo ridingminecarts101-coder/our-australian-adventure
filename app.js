@@ -45,6 +45,7 @@ let progress = new Map();      // adventure_id -> row
 let who = localStorage.getItem(LS.who) || null;
 let online = navigator.onLine;
 let realtimeOk = false;
+let realtimeStatus = 'not started';
 let openId = null;
 
 const filters = { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 4, dog: 'All' };
@@ -208,6 +209,14 @@ async function pullProgress() {
   renderAll();
 }
 
+async function resubscribeRealtime() {
+  if (!sb) return;
+  try { await sb.removeAllChannels(); } catch { /* nothing to remove */ }
+  realtimeOk = false;
+  realtimeStatus = 'reconnecting';
+  subscribeRealtime();
+}
+
 function subscribeRealtime() {
   if (!sb) return;
   sb.channel('progress-sync')
@@ -227,9 +236,12 @@ function subscribeRealtime() {
       saveLocalProgress();
       renderAll();
     })
-    .subscribe(status => {
+    .subscribe((status, err) => {
       realtimeOk = status === 'SUBSCRIBED';
+      realtimeStatus = status + (err ? ` (${err.message})` : '');
+      if (err) console.warn('realtime', status, err);
       refreshSyncBar();
+      renderMe();
     });
 
   sb.channel('photo-sync')
@@ -385,17 +397,35 @@ async function readExifDate(file) {
 }
 
 // ── Resize ───────────────────────────────────────────────────────────
-async function downscale(file) {
-  let bitmap;
+// iPhones set to "High Efficiency" hand over HEIC, which createImageBitmap
+// cannot decode - but Safari renders it happily in an <img>, because the OS
+// does the decoding. So fall back to that rather than losing the photo.
+async function decodeImage(file) {
   try {
     // from-image applies the EXIF orientation flag, so photos aren't sideways
-    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  } catch {
-    bitmap = await createImageBitmap(file);
-  }
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-  const w = Math.round(bitmap.width * scale);
-  const h = Math.round(bitmap.height * scale);
+    return await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch { /* older Safari ignores the options object */ }
+  try {
+    return await createImageBitmap(file);
+  } catch { /* almost certainly HEIC */ }
+
+  return await new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`Could not read ${file.type || 'that file'}`)); };
+    img.src = url;
+  });
+}
+
+async function downscale(file) {
+  const bitmap = await decodeImage(file);
+  const srcW = bitmap.width || bitmap.naturalWidth;
+  const srcH = bitmap.height || bitmap.naturalHeight;
+  if (!srcW || !srcH) throw new Error('That image had no readable dimensions.');
+  const scale = Math.min(1, MAX_EDGE / Math.max(srcW, srcH));
+  const w = Math.round(srcW * scale);
+  const h = Math.round(srcH * scale);
 
   const canvas = document.createElement('canvas');
   canvas.width = w; canvas.height = h;
@@ -438,8 +468,8 @@ async function addPhotos(adventureId, files) {
       await idbPut(item);
       renderAll();
     } catch (err) {
-      console.warn('photo failed', err);
-      toast('Could not read that photo');
+      console.warn('photo failed', file.name, file.type, err);
+      toast(err && err.message ? err.message : 'Could not read that photo');
     } finally {
       uploading--;
       renderPhotoStatus();
@@ -589,22 +619,94 @@ function locate() {
   });
 }
 
-// The dot map's own boxes already answer "which continent is this point in",
-// so reuse them rather than shipping a second copy of the world.
+// Reverse geocode to a real region rather than just a continent. The service
+// is keyless and free; if it is unreachable we fall back to the map's own
+// boxes, which can still tell you the continent from the coordinates alone.
+async function whereAmI(lat, lon) {
+  const fallback = { continent: continentAt(lat, lon) };
+  try {
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+      { signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined });
+    if (!res.ok) return fallback;
+    const j = await res.json();
+    return {
+      continent: continentAt(lat, lon),
+      country: j.countryCode || null,
+      region: j.principalSubdivision || null,
+      locality: j.locality || j.city || null,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+// What the geocoder calls a subdivision and what the data calls admin1 are
+// usually the same string. These are the ones that are not.
+const REGION_ALIAS = {
+  AU: {
+    'South Australia': 'SA', 'Victoria': 'VIC', 'New South Wales': 'NSW',
+    'Queensland': 'QLD', 'Western Australia': 'WA', 'Tasmania': 'TAS',
+    'Northern Territory': 'NT', 'Australian Capital Territory': 'ACT',
+  },
+};
+
+// New Zealand's admin1 values are its sixteen council regions, which is what
+// the geocoder returns too - so an exact match usually lands. Where it does
+// not, fall back to a country-level view rather than guessing wrongly.
+function matchRegion(country, subdivision) {
+  if (!country || !subdivision) return null;
+  const alias = (REGION_ALIAS[country] || {})[subdivision];
+  if (alias) return alias;
+
+  const inCountry = [...new Set(ADV.filter(a => a.country === country).map(a => a.admin1))];
+  const norm = x => x.toLowerCase().replace(/[^a-z]/g, '');
+  const want = norm(subdivision);
+
+  const exact = inCountry.find(c => norm(c) === want);
+  if (exact) return exact;
+
+  // Substring matching only between names long enough for it to mean
+  // something. Without the length floor, "Atlantis" contains "nt" and matches
+  // the Northern Territory, and someone in Kent gets sent to Australia.
+  const MIN = 5;
+  if (want.length < MIN) return null;
+  return inCountry.find(c => {
+    const n = norm(c);
+    return n.length >= MIN && (n.includes(want) || want.includes(n));
+  }) || null;
+}
+
 async function jumpToHere() {
   const btn = $('#hereBtn');
   btn.disabled = true;
   btn.textContent = 'Finding you…';
   try {
     lastFix = await locate();
-    const cont = continentAt(lastFix.lat, lastFix.lon);
-    if (!cont) { toast('You appear to be at sea. Impressive.'); return; }
-    if (!countOf(a => a.continent === cont)) {
-      toast(`Nothing mapped in ${cont} yet`);
+    const here = await whereAmI(lastFix.lat, lastFix.lon);
+
+    if (!here.continent) { toast('You appear to be at sea. Impressive.'); return; }
+    if (!countOf(a => a.continent === here.continent)) {
+      toast(`Nothing mapped in ${here.continent} yet`);
       return;
     }
-    goTo('continent', { continent: cont });
-    toast(`You're in ${cont}`);
+
+    const country = here.country && countOf(a => a.country === here.country) ? here.country : null;
+    const admin1 = country ? matchRegion(country, here.region) : null;
+
+    if (country && admin1) {
+      goTo('adventures', { continent: here.continent, country, admin1 });
+      const sample = ADV.find(a => a.admin1 === admin1 && a.country === country);
+      toast(`You're in ${regionName(sample)}`);
+    } else if (country) {
+      goTo('country', { continent: here.continent, country });
+      toast(here.region ? `${here.region} isn't mapped yet — here's ${countryName(country)}`
+                        : `You're in ${countryName(country)}`);
+    } else {
+      goTo('continent', { continent: here.continent });
+      toast(here.country ? `Nothing in ${here.country} yet — here's ${here.continent}`
+                         : `You're in ${here.continent}`);
+    }
   } catch (err) {
     toast(err.message);
   } finally {
@@ -614,35 +716,60 @@ async function jumpToHere() {
 }
 
 // ── Sharing ──────────────────────────────────────────────────────────
-async function shareAdventure(id) {
-  const a = ADV.find(x => x.id === id);
-  if (!a) return;
-  const text = `${a.title}\n${a.place}, ${countryName(a.country)}\n\n${a.description}`;
+// A link back into the app, so what arrives is a tappable thing rather than
+// a wall of text someone has to read and then go looking for.
+function linkTo(params) {
+  return `${location.origin}${location.pathname}?${new URLSearchParams(params)}`;
+}
+
+async function share(payload, fallbackText) {
   try {
     if (navigator.share) {
-      await navigator.share({ title: a.title, text });
+      // url is passed as its own field rather than pasted into the body, so
+      // iOS renders a link preview instead of a bare address mid-sentence.
+      await navigator.share(payload);
     } else {
-      await navigator.clipboard.writeText(text);
-      toast('Copied');
+      await navigator.clipboard.writeText(fallbackText);
+      toast('Copied to the clipboard');
     }
   } catch (err) {
     if (err && err.name !== 'AbortError') toast('Could not share that');
   }
 }
 
+async function shareAdventure(id) {
+  const a = ADV.find(x => x.id === id);
+  if (!a) return;
+  const url = linkTo({ a: id });
+  const lines = [
+    a.title,
+    `${a.place} · ${regionName(a)} · ${countryName(a.country)}`,
+    '',
+    a.description,
+    '',
+    `${a.category} · ${DIFF_LABEL[a.difficulty]} · ${COST_LABEL[a.cost]} · best ${a.season}`,
+  ];
+  const text = lines.join('\n');
+  await share({ title: `${a.title} — Wayfinder`, text, url }, `${text}\n\n${url}`);
+}
+
 async function shareTrip(tripId) {
   const t = trips.find(x => x.id === tripId);
   if (!t) return;
   const items = tripAdventures(t);
-  const body = [t.name, '']
-    .concat(items.map((a, i) => `${i + 1}. ${a.title} — ${a.place}, ${countryName(a.country)}`))
-    .join('\n');
-  try {
-    if (navigator.share) await navigator.share({ title: t.name, text: body });
-    else { await navigator.clipboard.writeText(body); toast('Copied'); }
-  } catch (err) {
-    if (err && err.name !== 'AbortError') toast('Could not share that');
-  }
+  const when = t.starts_on
+    ? fmtDate(t.starts_on) + (t.ends_on ? ' – ' + fmtDate(t.ends_on) : '')
+    : null;
+  const lines = [t.name];
+  if (when) lines.push(when);
+  lines.push('');
+  items.forEach((a, i) => {
+    lines.push(`${i + 1}. ${a.title}`);
+    lines.push(`   ${a.place} · ${countryName(a.country)}`);
+  });
+  const text = lines.join('\n');
+  const url = linkTo({ trip: t.id });
+  await share({ title: `${t.name} — Wayfinder`, text, url }, `${text}\n\n${url}`);
 }
 
 // ── Reminders ────────────────────────────────────────────────────────
@@ -661,6 +788,21 @@ async function showNotification(title, body, tag) {
   try { new Notification(title, opts); return true; } catch { return false; }
 }
 
+// The real nudge can be months away, so make it possible to see one now.
+async function previewReminder() {
+  if (!notificationsSupported() || Notification.permission !== 'granted') {
+    return toast('Turn reminders on first');
+  }
+  const pool = ADV.filter(a => row(a.id).shortlisted && !isDone(a.id));
+  const pick = (pool.length ? pool : ADV.filter(a => a.hidden_gem))
+    [Math.floor(Math.random() * (pool.length || ADV.filter(a => a.hidden_gem).length))];
+  if (!pick) return toast('Nothing to preview');
+  const ok = await showNotification('In season now',
+    `${pick.title} — ${pick.place}. Best ${pick.season}.`, 'wayfinder-preview');
+  toast(ok ? (pool.length ? 'Sent' : 'Sent — that was a sample, shortlist things for real ones')
+           : 'This device would not show it');
+}
+
 async function toggleNotifications() {
   if (!notificationsSupported()) return toast('This device does not support reminders');
   if (Notification.permission === 'granted') {
@@ -673,8 +815,12 @@ async function toggleNotifications() {
   if (res !== 'granted') { toast('Reminders stay off'); return; }
   writeLS(LS.notify, true);
   renderMe();
-  const shown = await showNotification('Wayfinder',
-    "That's set. We'll nudge you when something is in season.", 'wayfinder-hello');
+  const shortlisted = [...progress.values()].filter(r => r.shortlisted && !r.completed).length;
+  const shown = await showNotification('Reminders are on',
+    shortlisted
+      ? `We'll nudge you when one of your ${shortlisted} shortlisted adventures comes into season.`
+      : "Shortlist a few adventures and we'll nudge you when they come into season.",
+    'wayfinder-hello');
   if (!shown) toast('Reminders are on, but this device would not show a test one');
 }
 
@@ -869,12 +1015,12 @@ function goTo(level, opts = {}) {
   renderList();
 }
 
-function placeRow({ label, sub, count, done, flag, onClick }) {
+function placeRow({ label, sub, count, done, flag, swatch, onClick }) {
   const pct = count ? Math.round((done / count) * 100) : 0;
   return `<button class="placerow" data-go='${esc(JSON.stringify(onClick))}'>
     <div class="placerow-main">
       <div class="placerow-top">
-        <span class="placerow-label">${flag ? flag + ' ' : ''}${esc(label)}</span>
+        <span class="placerow-label">${swatch ? `<i class="swatch" style="background:${esc(swatch)}"></i>` : ''}${flag ? flag + ' ' : ''}${esc(label)}</span>
         <span class="placerow-count">${count ? `${done} / ${count}` : 'Coming soon'}</span>
       </div>
       ${sub ? `<div class="placerow-sub">${esc(sub)}</div>` : ''}
@@ -925,6 +1071,7 @@ function renderPlaces() {
       const countries = new Set(ADV.filter(a => a.continent === name).map(a => a.country)).size;
       return placeRow({
         label: name,
+        swatch: count ? CONTINENT_COLOUR[name] : null,
         sub: count ? `${countries} ${countries === 1 ? 'country' : 'countries'}` : 'Not mapped yet — tell us where to go next',
         count, done: doneOf(a => a.continent === name),
         onClick: count ? { level: 'continent', continent: name } : null,
@@ -1614,8 +1761,10 @@ function renderMe() {
     <div class="stat"><b>${d.gems}</b><span>hidden gems found</span></div>
     <div class="stat"><b>${avg}</b><span>average rating</span></div>
     <div class="stat"><b>${shortlisted}</b><span>on the shortlist</span></div>
-    ${people.map(([name, n]) =>
-      `<div class="stat"><b>${n}</b><span>ticked by ${esc(name)}</span></div>`).join('')}`;
+    ${activeGroupId && people.length > 1
+      ? people.map(([name, n]) =>
+          `<div class="stat"><b>${n}</b><span>ticked by ${esc(name)}</span></div>`).join('')
+      : ''}`;
 
   $('#achList').innerHTML = ACHIEVEMENTS.map(([icon, name, desc, test]) =>
     `<div class="ach ${test(d) ? '' : 'locked'}">
@@ -1631,6 +1780,13 @@ function renderMe() {
       ? 'Reminders are on — turn off' : 'Turn on seasonal reminders';
   }
   renderMe_groups();
+  const rt = $('#realtimeState');
+  if (rt) {
+    rt.textContent = !sb ? 'Live updates: off (no connection)'
+      : realtimeOk ? 'Live updates: connected'
+      : `Live updates: ${realtimeStatus}`;
+    rt.className = 'muted' + (sb && !realtimeOk ? ' warn' : '');
+  }
   $('#connState').textContent = sb
     ? (online ? (realtimeOk ? 'Connected and syncing live.' : 'Connected. Live updates reconnecting.')
               : 'Offline. Changes will sync when you get signal.')
@@ -1960,6 +2116,7 @@ function wireUI() {
   };
   $('#hereBtn').onclick = jumpToHere;
   $('#notifyBtn').onclick = toggleNotifications;
+  $('#previewNotifyBtn').onclick = previewReminder;
   $('#deleteAccountBtn').onclick = deleteAccount;
 
   $('#cameraInput').addEventListener('change', async e => {
@@ -2030,6 +2187,7 @@ async function enterApp() {
   loadLocalTrips();
   pendingPhotos = await idbAll();
   renderAll();
+  openDeepLink();
   await pullProgress();
   await pullPhotos();
   await pullTrips();
@@ -2039,6 +2197,16 @@ async function enterApp() {
   flushPhotoQueue();
   flushTrips();
   seasonalNudge();
+}
+
+// A shared link lands directly on the adventure or trip it names.
+function openDeepLink() {
+  const q = new URLSearchParams(location.search);
+  const a = q.get('a'), t = q.get('trip');
+  if (a && ADV.some(x => x.id === +a)) openSheet(+a);
+  else if (t && trips.some(x => x.id === t)) openTripSheet(t);
+  else return;
+  history.replaceState(null, '', location.pathname);
 }
 
 // ══════════════════════════════════════════════════════════════════════

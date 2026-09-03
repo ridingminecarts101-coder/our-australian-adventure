@@ -150,6 +150,18 @@ const ISLAND_GROUP_MIN = 3;
 const CONTINENT_ORDER = ['Oceania', 'Europe', 'North America', 'Asia',
                          'Middle East', 'South America', 'Africa'];
 
+// One muted colour per continent. Deliberately desaturated - the map is a
+// navigation control sitting under a list, not the loudest thing on screen.
+const CONTINENT_COLOUR = {
+  'Oceania':       '#4f8a6b',   // eucalypt green
+  'Europe':        '#5b7fa6',   // slate blue
+  'North America': '#b0713c',   // clay
+  'Asia':          '#9a5a86',   // mulberry
+  'Middle East':   '#c19a3e',   // sand gold
+  'South America': '#5f9aa0',   // teal
+  'Africa':        '#a2603f',   // terracotta
+};
+
 // Paid packs are per continent. Slug must match the `pack` field in the data.
 const PACK_SLUG = {
   'Oceania': 'oceania', 'Europe': 'europe', 'North America': 'north-america',
@@ -207,8 +219,9 @@ function drawWorldMap(canvas, counts, selected) {
       if (!cont) continue;
 
       const has = (counts[cont] || 0) > 0;
-      ctx.fillStyle = cont === selected ? active : (has ? land : empty);
-      ctx.globalAlpha = cont === selected ? 1 : (has ? 0.9 : 0.42);
+      ctx.fillStyle = cont === selected ? active
+                    : (has ? (CONTINENT_COLOUR[cont] || land) : empty);
+      ctx.globalAlpha = cont === selected ? 1 : (has ? 0.92 : 0.3);
       ctx.beginPath();
       ctx.arc(col * cw + cw / 2, row * ch + ch / 2, r, 0, Math.PI * 2);
       ctx.fill();
