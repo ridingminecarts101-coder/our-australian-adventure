@@ -563,6 +563,9 @@ function placeRow({ label, sub, count, done, flag, onClick }) {
 function crumbHTML() {
   const parts = [{ label: '🌏 World', go: { level: 'world' } }];
   if (nav.continent) parts.push({ label: nav.continent, go: { level: 'continent', continent: nav.continent } });
+  if (nav.level === 'islands' || (nav.country && ISLAND_GROUP.has(nav.country))) {
+    parts.push({ label: '🏝️ Island nations', go: { level: 'islands', continent: nav.continent } });
+  }
   if (nav.country) parts.push({ label: countryName(nav.country), go: { level: 'country', continent: nav.continent, country: nav.country } });
   if (nav.admin1) {
     const a = ADV.find(x => x.admin1 === nav.admin1);
@@ -580,7 +583,8 @@ function crumbHTML() {
 function renderPlaces() {
   const world = $('#worldView'), place = $('#placeView'), list = $('#listView');
   world.classList.toggle('hidden', nav.level !== 'world');
-  place.classList.toggle('hidden', nav.level !== 'continent' && nav.level !== 'country');
+  place.classList.toggle('hidden',
+    !['continent', 'country', 'islands'].includes(nav.level));
   list.classList.toggle('hidden', nav.level !== 'adventures');
 
   if (nav.level === 'world') {
@@ -601,15 +605,17 @@ function renderPlaces() {
     return;
   }
 
-  if (nav.level === 'continent') {
+  if (nav.level === 'continent' || nav.level === 'islands') {
+    const islandsOnly = nav.level === 'islands';
     const inCont = a => a.continent === nav.continent;
-    const codes = [...new Set(ADV.filter(inCont).map(a => a.country))]
+    const all = [...new Set(ADV.filter(inCont).map(a => a.country))];
+    const mainland = all.filter(c => !ISLAND_GROUP.has(c))
       .sort((x, y) => countryName(x).localeCompare(countryName(y)));
-    $('#crumb').innerHTML = crumbHTML();
-    $('#placeTitle').textContent = nav.continent;
-    $('#placeSub').textContent =
-      `${countOf(inCont)} adventures across ${codes.length} ${codes.length === 1 ? 'country' : 'countries'}`;
-    $('#placeList').innerHTML = codes.map(code => {
+    const islands = all.filter(c => ISLAND_GROUP.has(c))
+      .sort((x, y) => countryName(x).localeCompare(countryName(y)));
+    const codes = islandsOnly ? islands : mainland;
+
+    const countryRow = code => {
       const inC = a => inCont(a) && a.country === code;
       const regions = new Set(ADV.filter(inC).map(a => a.admin1)).size;
       return placeRow({
@@ -618,7 +624,31 @@ function renderPlaces() {
         count: countOf(inC), done: doneOf(inC),
         onClick: { level: 'country', continent: nav.continent, country: code },
       });
-    }).join('');
+    };
+
+    $('#crumb').innerHTML = crumbHTML();
+    if (islandsOnly) {
+      const inIslands = a => inCont(a) && ISLAND_GROUP.has(a.country);
+      $('#placeTitle').textContent = '🏝️ Island nations';
+      $('#placeSub').textContent =
+        `${countOf(inIslands)} adventures across ${islands.length} nations and territories`;
+      $('#placeList').innerHTML = codes.map(countryRow).join('');
+      return;
+    }
+
+    const inIslands = a => inCont(a) && ISLAND_GROUP.has(a.country);
+    const islandCount = countOf(inIslands);
+    $('#placeTitle').textContent = nav.continent;
+    $('#placeSub').textContent =
+      `${countOf(inCont)} adventures across ${all.length} ${all.length === 1 ? 'country' : 'countries'}`;
+    $('#placeList').innerHTML = codes.map(countryRow).join('') +
+      (islandCount ? placeRow({
+        label: 'Island nations', flag: '🏝️',
+        sub: islands.map(countryName).slice(0, 4).join(', ') +
+             (islands.length > 4 ? ` and ${islands.length - 4} more` : ''),
+        count: islandCount, done: doneOf(inIslands),
+        onClick: { level: 'islands', continent: nav.continent },
+      }) : '');
     return;
   }
 

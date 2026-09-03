@@ -69,7 +69,14 @@ const CONTINENT_BOXES = {
 };
 
 const COUNTRIES = {
-  AU: ['Australia', '🇦🇺'], NZ: ['New Zealand', '🇳🇿'],
+  AU: ['Australia', '🇦🇺'], NZ: ['New Zealand', '🇳🇿'], ID: ['Indonesia', '🇮🇩'],
+  FJ: ['Fiji', '🇫🇯'], PF: ['French Polynesia', '🇵🇫'], VU: ['Vanuatu', '🇻🇺'],
+  NC: ['New Caledonia', '🇳🇨'], WS: ['Samoa', '🇼🇸'], TO: ['Tonga', '🇹🇴'],
+  CK: ['Cook Islands', '🇨🇰'], SB: ['Solomon Islands', '🇸🇧'],
+  PG: ['Papua New Guinea', '🇵🇬'], PW: ['Palau', '🇵🇼'], NU: ['Niue', '🇳🇺'],
+  NF: ['Norfolk Island', '🇳🇫'], FM: ['Micronesia', '🇫🇲'],
+  MH: ['Marshall Islands', '🇲🇭'], KI: ['Kiribati', '🇰🇮'],
+  TV: ['Tuvalu', '🇹🇻'], NR: ['Nauru', '🇳🇷'], TL: ['Timor-Leste', '🇹🇱'],
   GB: ['United Kingdom', '🇬🇧'], IE: ['Ireland', '🇮🇪'], FR: ['France', '🇫🇷'],
   IT: ['Italy', '🇮🇹'], ES: ['Spain', '🇪🇸'], PT: ['Portugal', '🇵🇹'],
   DE: ['Germany', '🇩🇪'], CH: ['Switzerland', '🇨🇭'], AT: ['Austria', '🇦🇹'],
@@ -78,6 +85,15 @@ const COUNTRIES = {
   PL: ['Poland', '🇵🇱'], US: ['United States', '🇺🇸'], CA: ['Canada', '🇨🇦'],
   MX: ['Mexico', '🇲🇽'],
 };
+
+// Small island nations are collected behind one row rather than listed beside
+// Australia — a country with three adventures shouldn't sit at the same level
+// as one with five hundred. Papua New Guinea is deliberately NOT here: it's a
+// major country that simply hasn't been filled in yet.
+const ISLAND_GROUP = new Set([
+  'FJ', 'PF', 'VU', 'NC', 'WS', 'TO', 'CK', 'SB', 'PW', 'NU',
+  'NF', 'FM', 'MH', 'KI', 'TV', 'NR', 'TL',
+]);
 
 const CONTINENT_ORDER = ['Oceania', 'Europe', 'North America',
                          'Asia', 'South America', 'Africa'];

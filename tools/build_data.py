@@ -12,7 +12,7 @@ import sys
 # Source files, in the order their entries should be numbered.
 SOURCES = [
     # Oceania
-    'sa', 'vic', 'nsw', 'qld', 'wa', 'tas', 'nt', 'act', 'aus',
+    'sa', 'vic', 'nsw', 'qld', 'wa', 'tas', 'nt', 'act', 'aus', 'oceania-islands',
     # Europe
     'europe',
     # North America
@@ -82,10 +82,16 @@ def load():
 
                 records.append(rec)
 
-    for key in ('place', 'title'):
-        for value, count in collections.Counter(r.get(key) for r in records).items():
-            if count > 1:
-                problems.append(f'duplicate {key}: {value!r} appears {count} times')
+    # Place names repeat legitimately across countries - there is a Kingston in
+    # Tasmania and another on Norfolk Island - so scope that check per country.
+    for (country, place), count in collections.Counter(
+            (r.get('country'), r.get('place')) for r in records).items():
+        if count > 1:
+            problems.append(f'duplicate place in {country}: {place!r} appears {count} times')
+    # Titles are descriptive, so a global collision usually means duplicated work.
+    for title, count in collections.Counter(r.get('title') for r in records).items():
+        if count > 1:
+            problems.append(f'duplicate title: {title!r} appears {count} times')
 
     return records, problems
 
