@@ -88,6 +88,18 @@ const COUNTRIES = {
   JP: ['Japan', '🇯🇵'], KR: ['South Korea', '🇰🇷'], CN: ['China', '🇨🇳'],
   HK: ['Hong Kong', '🇭🇰'], SG: ['Singapore', '🇸🇬'], AE: ['United Arab Emirates', '🇦🇪'],
   ID: ['Indonesia', '🇮🇩'],
+  // Central America
+  GT: ['Guatemala', '🇬🇹'], BZ: ['Belize', '🇧🇿'], CR: ['Costa Rica', '🇨🇷'],
+  PA: ['Panama', '🇵🇦'], NI: ['Nicaragua', '🇳🇮'], HN: ['Honduras', '🇭🇳'],
+  SV: ['El Salvador', '🇸🇻'],
+  // Caribbean
+  CU: ['Cuba', '🇨🇺'], JM: ['Jamaica', '🇯🇲'], BS: ['Bahamas', '🇧🇸'],
+  DO: ['Dominican Republic', '🇩🇴'], PR: ['Puerto Rico', '🇵🇷'],
+  BB: ['Barbados', '🇧🇧'], TT: ['Trinidad & Tobago', '🇹🇹'],
+  LC: ['Saint Lucia', '🇱🇨'], DM: ['Dominica', '🇩🇲'], KY: ['Cayman Islands', '🇰🇾'],
+  TC: ['Turks & Caicos', '🇹🇨'], AW: ['Aruba', '🇦🇼'], AG: ['Antigua & Barbuda', '🇦🇬'],
+  GD: ['Grenada', '🇬🇩'], VG: ['British Virgin Islands', '🇻🇬'],
+  VI: ['US Virgin Islands', '🇻🇮'], HT: ['Haiti', '🇭🇹'],
 };
 
 // Small island nations are collected behind one row rather than listed beside
@@ -97,6 +109,8 @@ const COUNTRIES = {
 const ISLAND_GROUP = new Set([
   'FJ', 'PF', 'VU', 'NC', 'WS', 'TO', 'CK', 'SB', 'PW', 'NU',
   'NF', 'FM', 'MH', 'KI', 'TV', 'NR', 'TL', 'MV', 'SC', 'MU',
+  // Caribbean
+  'BB', 'LC', 'DM', 'KY', 'TC', 'AW', 'AG', 'GD', 'VG', 'VI', 'BS', 'TT',
 ]);
 // Below this many, they're just listed as ordinary countries — collapsing two
 // nations behind a group row hides them for no benefit.

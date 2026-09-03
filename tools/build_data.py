@@ -17,7 +17,9 @@ SOURCES = [
     # Europe
     'europe',
     # North America
-    'us-west', 'us-southwest', 'us-east', 'north-america',
+    'us-west', 'us-southwest', 'us-east',
+    'canada', 'mexico',
+    'central-america', 'caribbean',
     # Asia
     'asia', 'indonesia',
     # Cross-cutting collections

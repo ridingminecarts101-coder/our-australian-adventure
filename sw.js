@@ -4,7 +4,7 @@
  * from cache (and works with no signal), while a fresh copy is fetched in the
  * background and used on the next launch. Bump CACHE_VERSION when you deploy.
  */
-const CACHE_VERSION = 'oaa-v12';
+const CACHE_VERSION = 'oaa-v13';
 const SHELL = [
   './',
   './index.html',
