@@ -92,8 +92,11 @@ const COUNTRIES = {
 // major country that simply hasn't been filled in yet.
 const ISLAND_GROUP = new Set([
   'FJ', 'PF', 'VU', 'NC', 'WS', 'TO', 'CK', 'SB', 'PW', 'NU',
-  'NF', 'FM', 'MH', 'KI', 'TV', 'NR', 'TL',
+  'NF', 'FM', 'MH', 'KI', 'TV', 'NR', 'TL', 'MV', 'SC', 'MU',
 ]);
+// Below this many, they're just listed as ordinary countries — collapsing two
+// nations behind a group row hides them for no benefit.
+const ISLAND_GROUP_MIN = 3;
 
 const CONTINENT_ORDER = ['Oceania', 'Europe', 'North America',
                          'Asia', 'South America', 'Africa'];

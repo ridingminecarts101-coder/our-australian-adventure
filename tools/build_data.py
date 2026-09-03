@@ -17,6 +17,8 @@ SOURCES = [
     'europe',
     # North America
     'north-america',
+    # Asia
+    'asia',
 ]
 
 FIELDS = ['continent', 'country', 'admin1', 'region', 'title', 'place',

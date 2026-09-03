@@ -106,10 +106,18 @@
     </div>
   </section>
 
-  <!-- Map / states -->
-  <section id="tab-states" class="panel hidden">
-    <h2>Progress by state</h2>
-    <div id="stateGrid" class="stategrid"></div>
+  <!-- Passport -->
+  <section id="tab-passport" class="panel hidden">
+    <div class="passport-head">
+      <div class="eyebrow">ADVENTURE PASSPORT</div>
+      <h2 id="passportName">Riley &amp; Elli</h2>
+      <div id="passportTotals" class="passport-totals"></div>
+    </div>
+    <h2>Stamps</h2>
+    <p class="muted">A country earns its stamp the first time you complete something in it.</p>
+    <div id="stampGrid" class="stampgrid"></div>
+    <h2>Continents</h2>
+    <div id="continentProgress" class="stategrid"></div>
     <h2>By category</h2>
     <div id="catGrid" class="stategrid"></div>
   </section>
@@ -128,8 +136,13 @@
   </section>
 
   <!-- Us -->
-  <section id="tab-us" class="panel hidden">
-    <h2>Us</h2>
+  <section id="tab-me" class="panel hidden">
+    <h2>Trips</h2>
+    <p class="muted">Bundle adventures into a plan. Add anything from its page, or from your shortlist.</p>
+    <div id="tripList" class="list"></div>
+    <button id="newTripBtn" class="btn-primary">＋ New trip</button>
+
+    <h2>Our numbers</h2>
     <div id="usStats" class="usstats"></div>
     <h2>Achievements</h2>
     <div id="achList" class="achlist"></div>
@@ -147,9 +160,9 @@
 
   <nav class="tabbar">
     <button class="tab active" data-tab="tab-list"><span>🧭</span>Adventures</button>
-    <button class="tab" data-tab="tab-states"><span>🗺️</span>States</button>
+    <button class="tab" data-tab="tab-passport"><span>🛂</span>Passport</button>
     <button class="tab" data-tab="tab-memories"><span>📸</span>Memories</button>
-    <button class="tab" data-tab="tab-us"><span>❤️</span>Us</button>
+    <button class="tab" data-tab="tab-me"><span>❤️</span>Me</button>
   </nav>
 </div>
 
@@ -159,6 +172,15 @@
   <div class="sheet-card">
     <button class="sheet-close" data-close aria-label="Close">✕</button>
     <div id="sheetBody"></div>
+  </div>
+</div>
+
+<!-- ───────────────────────── Trip sheet ─────────────────────── -->
+<div id="tripSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Trip">
+  <div class="sheet-backdrop" data-tripclose></div>
+  <div class="sheet-card">
+    <button class="sheet-close" data-tripclose aria-label="Close">✕</button>
+    <div id="tripBody"></div>
   </div>
 </div>
 

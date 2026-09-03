@@ -316,6 +316,78 @@ input, select, textarea { font: inherit; color: inherit; }
 #placeView .muted { margin: 4px 0 16px; }
 .badge.dog { color: var(--eucalypt); border-color: var(--eucalypt); background: transparent; }
 
+/* ── Passport ────────────────────────────────────────────────────── */
+.passport-head {
+  background: var(--ochre); color: #fff; border-radius: var(--radius);
+  padding: 16px; margin-bottom: 20px;
+}
+.passport-head .eyebrow { color: rgba(255,255,255,.75); }
+.passport-head h2 { color: #fff; font-size: 21px; margin: 4px 0 14px; }
+.passport-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ptotal { text-align: center; }
+.ptotal b { display: block; font-size: 24px; line-height: 1.1; }
+.ptotal span { font-size: 11px; opacity: .8; }
+
+.stampgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (min-width: 520px) { .stampgrid { grid-template-columns: repeat(4, 1fr); } }
+.stamp {
+  position: relative; display: grid; gap: 2px; justify-items: center;
+  padding: 12px 6px; border-radius: 12px; text-align: center;
+  border: 1.5px dashed var(--line); background: transparent; opacity: .55;
+}
+.stamp.earned {
+  border-style: solid; border-color: var(--eucalypt);
+  background: var(--card); opacity: 1;
+}
+.stamp.complete { border-color: var(--gem); }
+.stamp-flag { font-size: 24px; line-height: 1.1; filter: grayscale(1); }
+.stamp.earned .stamp-flag { filter: none; }
+.stamp-name { font-size: 11.5px; font-weight: 600; line-height: 1.25; }
+.stamp-count { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stamp-seal {
+  position: absolute; top: 4px; right: 6px; color: var(--gem); font-weight: 700; font-size: 13px;
+}
+
+/* ── Trips ───────────────────────────────────────────────────────── */
+.trip {
+  display: block; width: 100%; text-align: left;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 13px; box-shadow: var(--shadow);
+}
+.trip-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.trip-top b { font-size: 16px; }
+.trip-top span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.trip .minibar { margin-top: 10px; }
+#newTripBtn { margin-top: 12px; }
+
+.daterow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.daterow label { font-size: 12px; font-weight: 600; color: var(--muted); display: grid; gap: 4px; }
+.daterow input {
+  padding: 10px; font-size: 16px; border-radius: 10px;
+  border: 1.5px solid var(--line); background: var(--card);
+}
+.tripgroup { margin-bottom: 14px; }
+.tripgroup-head {
+  font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.tripitem {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 10px; padding: 9px 10px; margin-bottom: 6px;
+}
+.tripitem.done .card-title { color: var(--muted); text-decoration: line-through; }
+.tripitem-body { flex: 1; min-width: 0; }
+.tripitem-remove { color: var(--muted); font-size: 14px; padding: 4px 6px; flex: none; }
+
+.trippicker { display: flex; flex-wrap: wrap; gap: 7px; }
+.trippick {
+  font-size: 13.5px; font-weight: 600; padding: 8px 13px; border-radius: 999px;
+  border: 1.5px solid var(--line); background: var(--card); color: var(--ink-2);
+}
+.trippick.on { background: var(--eucalypt); border-color: var(--eucalypt); color: #fff; }
+.trippick.new { border-style: dashed; }
+
 /* ── Photos ──────────────────────────────────────────────────────── */
 .photostatus {
   display: none;                 /* not a fixed height — the text wraps on narrow phones */

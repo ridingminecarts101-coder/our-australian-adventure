@@ -95,6 +95,13 @@ signed links instead of leaving them open to anyone who guesses the address.
   when you're back in range. The queue survives closing the app.
 - Viewing photos needs a connection — the signed links can't be fetched offline.
 
+### 1.6 Add trip planning (optional, 30 sec)
+
+SQL Editor → New query → paste `supabase/schema-trips.sql` → Run.
+
+Creates a `trips` table so a plan made on one phone shows up on the other.
+Without it, trips still work but stay on the phone that made them.
+
 ---
 
 ## Stage 2 — GitHub Pages (5 min)
@@ -175,7 +182,7 @@ account should not say "Waiting for verification".
 yet. Check Actions/Pages in GitHub, then hard-refresh.
 
 **One phone doesn't see the other's changes**
-Both must be signed in and online. Go to **Us** → **Force refresh from server**.
+Both must be signed in and online. Go to **Me** → **Force refresh from server**.
 If it says "Live updates reconnecting", realtime didn't attach — re-run the last
 block of `schema.sql`.
 
@@ -196,9 +203,6 @@ python tools/build_data.py
 
 ## What's deliberately not here
 
-- **Photos.** Supabase's free tier gives 1 GB of storage, which is maybe 300
-  phone photos. Worth adding later via Supabase Storage, but it's a real feature
-  rather than a small one, and it needs its own security rules.
-- **Two separate logins.** Not needed for two people sharing one list.
+- **Two separate logins.** Not needed while it's the two of you sharing one list.
 - **A map view.** Would need 500 accurate coordinates. Better to add real ones
   gradually than to generate 500 plausible-looking wrong ones.

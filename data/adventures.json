@@ -11509,48 +11509,6 @@
  },
  {
   "id": 549,
-  "continent": "Oceania",
-  "country": "TL",
-  "admin1": "Atauro",
-  "region": "Atauro",
-  "title": "Dive off Atauro Island",
-  "place": "Atauro Island",
-  "category": "Water",
-  "difficulty": 4,
-  "cost": 2,
-  "duration": "Multi-day",
-  "season": "May-Nov",
-  "dog_friendly": "check",
-  "hidden_gem": true,
-  "pack": "oceania",
-  "lat": null,
-  "lon": null,
-  "verified_at": "2026-09-02",
-  "description": "Surveys here recorded the highest average reef fish diversity yet measured anywhere in the world, an hour by ferry from Dili."
- },
- {
-  "id": 550,
-  "continent": "Oceania",
-  "country": "TL",
-  "admin1": "Lautem",
-  "region": "Jaco",
-  "title": "Cross to uninhabited Jaco Island",
-  "place": "Jaco Island",
-  "category": "Island",
-  "difficulty": 4,
-  "cost": 2,
-  "duration": "Full day",
-  "season": "May-Nov",
-  "dog_friendly": "no",
-  "hidden_gem": true,
-  "pack": "oceania",
-  "lat": null,
-  "lon": null,
-  "verified_at": "2026-09-02",
-  "description": "Considered sacred, so nobody stays overnight - local fishermen take you across the strait at the far eastern tip of Timor-Leste."
- },
- {
-  "id": 551,
   "continent": "Europe",
   "country": "GB",
   "admin1": "Scotland",
@@ -11571,7 +11529,7 @@
   "description": "A landslip landscape of pinnacles and hidden plateaus on Skye's Trotternish ridge, reached by a single-track road."
  },
  {
-  "id": 552,
+  "id": 550,
   "continent": "Europe",
   "country": "GB",
   "admin1": "England",
@@ -11592,7 +11550,7 @@
   "description": "England's most-loved fell walk - a short, steep ridge with the whole lake laid out beneath you. Dogs are welcome on the fells."
  },
  {
-  "id": 553,
+  "id": 551,
   "continent": "Europe",
   "country": "GB",
   "admin1": "Northern Ireland",
@@ -11613,7 +11571,7 @@
   "description": "Around 40,000 interlocking hexagonal columns left by a 60-million-year-old lava flow, at the foot of the Antrim cliffs."
  },
  {
-  "id": 554,
+  "id": 552,
   "continent": "Europe",
   "country": "GB",
   "admin1": "Wales",
@@ -11634,7 +11592,7 @@
   "description": "The hardest and quietest of the six routes up Snowdon, starting almost at sea level and finishing on loose scree."
  },
  {
-  "id": 555,
+  "id": 553,
   "continent": "Europe",
   "country": "FR",
   "admin1": "Normandy",
@@ -11655,7 +11613,7 @@
   "description": "An abbey on a tidal island where the sea can come in faster than a person walks - the tide table is genuinely part of the visit."
  },
  {
-  "id": 556,
+  "id": 554,
   "continent": "Europe",
   "country": "FR",
   "admin1": "Provence",
@@ -11676,7 +11634,7 @@
   "description": "Europe's deepest canyon, 700m at its steepest, filled with water an improbable shade of green from glacial rock flour."
  },
  {
-  "id": 557,
+  "id": 555,
   "continent": "Europe",
   "country": "FR",
   "admin1": "Auvergne-Rhone-Alpes",
@@ -11697,7 +11655,7 @@
   "description": "3,842m in twenty minutes, with a glass box called the Step into the Void hanging over a 1,000m drop."
  },
  {
-  "id": 558,
+  "id": 556,
   "continent": "Europe",
   "country": "IT",
   "admin1": "Trentino-Alto Adige",
@@ -11718,7 +11676,7 @@
   "description": "A 10km circuit around three vertical limestone towers, past WWI tunnels cut into the rock. Dogs are common on Italian trails."
  },
  {
-  "id": 559,
+  "id": 557,
   "continent": "Europe",
   "country": "IT",
   "admin1": "Liguria",
@@ -11739,7 +11697,7 @@
   "description": "Five fishing villages stacked on cliffs, linked by coastal path and a train. Sections close after landslides - check before you set out."
  },
  {
-  "id": 560,
+  "id": 558,
   "continent": "Europe",
   "country": "IT",
   "admin1": "Basilicata",
@@ -11760,7 +11718,7 @@
   "description": "Continuously inhabited for around 9,000 years, evacuated as a slum in the 1950s, and now a World Heritage city of restored cave dwellings."
  },
  {
-  "id": 561,
+  "id": 559,
   "continent": "Europe",
   "country": "ES",
   "admin1": "Andalusia",
@@ -11781,7 +11739,7 @@
   "description": "The high point of Moorish architecture in Spain - timed entry to the palaces sells out weeks ahead, so book before you book flights."
  },
  {
-  "id": 562,
+  "id": 560,
   "continent": "Europe",
   "country": "ES",
   "admin1": "Galicia",
@@ -11802,7 +11760,7 @@
   "description": "Sarria to Santiago is the minimum distance that earns a Compostela certificate - about five days, and busy in summer."
  },
  {
-  "id": 563,
+  "id": 561,
   "continent": "Europe",
   "country": "ES",
   "admin1": "Asturias",
@@ -11823,7 +11781,7 @@
   "description": "A path blasted into a limestone gorge wall for a hydro scheme, 12km each way with a long drop and no handrail."
  },
  {
-  "id": 564,
+  "id": 562,
   "continent": "Europe",
   "country": "PT",
   "admin1": "Norte",
@@ -11844,7 +11802,7 @@
   "description": "The oldest demarcated wine region on earth, terraced into schist above the river - the line from Porto runs right along the water."
  },
  {
-  "id": 565,
+  "id": 563,
   "continent": "Europe",
   "country": "PT",
   "admin1": "Lisboa",
@@ -11865,7 +11823,7 @@
   "description": "A hilltop of Romantic palaces in the mist above Lisbon, with a 10th-century castle wall you can walk the length of."
  },
  {
-  "id": 566,
+  "id": 564,
   "continent": "Europe",
   "country": "PT",
   "admin1": "Algarve",
@@ -11886,7 +11844,7 @@
   "description": "A domed cave with a circular hole in the roof and its own beach. Swimming to it is dangerous and now restricted - go by boat or kayak."
  },
  {
-  "id": 567,
+  "id": 565,
   "continent": "Europe",
   "country": "DE",
   "admin1": "Saxony",
@@ -11907,7 +11865,7 @@
   "description": "An 1851 sandstone bridge strung between rock towers 190m above the Elbe, in a national park most visitors to Germany never reach."
  },
  {
-  "id": 568,
+  "id": 566,
   "continent": "Europe",
   "country": "DE",
   "admin1": "Rhineland-Palatinate",
@@ -11928,7 +11886,7 @@
   "description": "65km of World Heritage river with around 40 hilltop castles, vineyards on both banks and the Lorelei rock. Dogs travel free on most boats."
  },
  {
-  "id": 569,
+  "id": 567,
   "continent": "Europe",
   "country": "DE",
   "admin1": "Berlin",
@@ -11949,7 +11907,7 @@
   "description": "1.3km of surviving wall painted by 118 artists in 1990 - the longest open-air gallery in the world, and free."
  },
  {
-  "id": 570,
+  "id": 568,
   "continent": "Europe",
   "country": "CH",
   "admin1": "Bern",
@@ -11970,7 +11928,7 @@
   "description": "72 waterfalls drop into one glacial valley, including Staubbach falling almost 300m clear of the cliff. Tolkien's Rivendell came from here."
  },
  {
-  "id": 571,
+  "id": 569,
   "continent": "Europe",
   "country": "CH",
   "admin1": "Valais",
@@ -11991,7 +11949,7 @@
   "description": "Eight hours, 291 bridges and 91 tunnels, billed as the slowest express train in the world. Dogs travel on a half-fare ticket."
  },
  {
-  "id": 572,
+  "id": 570,
   "continent": "Europe",
   "country": "CH",
   "admin1": "Valais",
@@ -12012,7 +11970,7 @@
   "description": "The largest glacier in the Alps at around 20km long - and visibly, measurably shorter each time anyone goes back."
  },
  {
-  "id": 573,
+  "id": 571,
   "continent": "Europe",
   "country": "AT",
   "admin1": "Upper Austria",
@@ -12033,7 +11991,7 @@
   "description": "A lakeside village built on 7,000 years of salt mining, and now so overwhelmed by visitors that staying the night is the only way to see it quiet."
  },
  {
-  "id": 574,
+  "id": 572,
   "continent": "Europe",
   "country": "AT",
   "admin1": "Carinthia",
@@ -12054,7 +12012,7 @@
   "description": "48km of hairpins to 2,504m below Austria's highest peak. Closed by snow for half the year, and the toll is per vehicle."
  },
  {
-  "id": 575,
+  "id": 573,
   "continent": "Europe",
   "country": "AT",
   "admin1": "Vienna",
@@ -12075,7 +12033,7 @@
   "description": "The Riesenrad has been turning since 1897 and is one of the oldest working Ferris wheels anywhere - the park around it is free."
  },
  {
-  "id": 576,
+  "id": 574,
   "continent": "Europe",
   "country": "NL",
   "admin1": "South Holland",
@@ -12096,7 +12054,7 @@
   "description": "Nineteen 18th-century windmills built to drain a polder that sits below sea level - still the largest concentration in the Netherlands."
  },
  {
-  "id": 577,
+  "id": 575,
   "continent": "Europe",
   "country": "NL",
   "admin1": "Gelderland",
@@ -12117,7 +12075,7 @@
   "description": "A national park that keeps around 1,800 white bikes free for visitors, with a Van Gogh collection in the middle of the heath."
  },
  {
-  "id": 578,
+  "id": 576,
   "continent": "Europe",
   "country": "NL",
   "admin1": "North Holland",
@@ -12138,7 +12096,7 @@
   "description": "A World Heritage ring of 17th-century canals, best understood from a small boat rather than the pavement."
  },
  {
-  "id": 579,
+  "id": 577,
   "continent": "Europe",
   "country": "NO",
   "admin1": "Vestland",
@@ -12159,7 +12117,7 @@
   "description": "A rock tongue jutting 700m above a lake, at the end of a 28km return walk that takes most people ten to twelve hours."
  },
  {
-  "id": 580,
+  "id": 578,
   "continent": "Europe",
   "country": "NO",
   "admin1": "Nordland",
@@ -12180,7 +12138,7 @@
   "description": "Granite peaks rising straight from the sea above the Arctic Circle, where the sun does not set from late May to mid July."
  },
  {
-  "id": 581,
+  "id": 579,
   "continent": "Europe",
   "country": "NO",
   "admin1": "More og Romsdal",
@@ -12201,7 +12159,7 @@
   "description": "A 15km World Heritage fjord with abandoned farms clinging to ledges and a seven-strand waterfall dropping 250m."
  },
  {
-  "id": 582,
+  "id": 580,
   "continent": "Europe",
   "country": "IS",
   "admin1": "Southern Highlands",
@@ -12222,7 +12180,7 @@
   "description": "Rhyolite mountains in yellows and reds around a natural hot spring, reached by a highland road that needs a proper 4x4 and river crossings."
  },
  {
-  "id": 583,
+  "id": 581,
   "continent": "Europe",
   "country": "IS",
   "admin1": "Eastern Region",
@@ -12243,7 +12201,7 @@
   "description": "A glacial lagoon that did not exist a century ago, growing as the glacier retreats - the bergs wash up on the black sand opposite."
  },
  {
-  "id": 584,
+  "id": 582,
   "continent": "Europe",
   "country": "IS",
   "admin1": "Westfjords",
@@ -12264,7 +12222,7 @@
   "description": "The least visited corner of Iceland - a 100m tiered waterfall, puffin cliffs at Latrabjarg, and roads that close for winter."
  },
  {
-  "id": 585,
+  "id": 583,
   "continent": "Europe",
   "country": "GR",
   "admin1": "Thessaly",
@@ -12285,7 +12243,7 @@
   "description": "Six working monasteries on top of sandstone pillars, originally reached only by rope ladder and net. Modest dress is enforced."
  },
  {
-  "id": 586,
+  "id": 584,
   "continent": "Europe",
   "country": "GR",
   "admin1": "South Aegean",
@@ -12306,7 +12264,7 @@
   "description": "10km along the rim of a flooded volcanic caldera. Do it early - there is no shade and the afternoon sun is brutal."
  },
  {
-  "id": 587,
+  "id": 585,
   "continent": "Europe",
   "country": "GR",
   "admin1": "Crete",
@@ -12327,7 +12285,7 @@
   "description": "16km downhill through a national park gorge that narrows to three metres, ending at a village you can only leave by boat."
  },
  {
-  "id": 588,
+  "id": 586,
   "continent": "Europe",
   "country": "IE",
   "admin1": "Clare",
@@ -12348,7 +12306,7 @@
   "description": "214m of Atlantic cliff with puffins on the ledges from April - the coastal walk from Doolin avoids the visitor centre crowds entirely."
  },
  {
-  "id": 589,
+  "id": 587,
   "continent": "Europe",
   "country": "IE",
   "admin1": "Kerry",
@@ -12369,7 +12327,7 @@
   "description": "A 6th-century monastery of stone beehive huts up 600 steps on an Atlantic crag. Landings are strictly capped and cancelled in any swell."
  },
  {
-  "id": 590,
+  "id": 588,
   "continent": "Europe",
   "country": "IE",
   "admin1": "Galway",
@@ -12390,7 +12348,7 @@
   "description": "A 16km loop out of Clifden over bog and quartzite hills, with the Twelve Bens inland and the Atlantic on the other side."
  },
  {
-  "id": 591,
+  "id": 589,
   "continent": "Europe",
   "country": "CZ",
   "admin1": "Prague",
@@ -12411,7 +12369,7 @@
   "description": "A 1357 stone bridge lined with baroque statues. By nine it is shoulder to shoulder; at six it is yours and the fog is on the river."
  },
  {
-  "id": 592,
+  "id": 590,
   "continent": "Europe",
   "country": "CZ",
   "admin1": "Usti nad Labem",
@@ -12432,7 +12390,7 @@
   "description": "The largest natural sandstone arch in Europe, in a national park that was badly burnt in 2022 and is visibly recovering."
  },
  {
-  "id": 593,
+  "id": 591,
   "continent": "Europe",
   "country": "CZ",
   "admin1": "South Bohemia",
@@ -12453,7 +12411,7 @@
   "description": "A medieval town wrapped in a river bend beneath a castle with live bears in the moat - and you can paddle straight through the middle of it."
  },
  {
-  "id": 594,
+  "id": 592,
   "continent": "Europe",
   "country": "HR",
   "admin1": "Lika-Senj",
@@ -12474,7 +12432,7 @@
   "description": "Sixteen terraced lakes joined by waterfalls, over 18km of boardwalk. Croatia's oldest national park, and it sells timed tickets in summer."
  },
  {
-  "id": 595,
+  "id": 593,
   "continent": "Europe",
   "country": "HR",
   "admin1": "Dubrovnik-Neretva",
@@ -12495,7 +12453,7 @@
   "description": "2km of intact city wall up to 25m high, looping the old town. Go at opening or an hour before close - the midday heat up there is fierce."
  },
  {
-  "id": 596,
+  "id": 594,
   "continent": "Europe",
   "country": "HR",
   "admin1": "Sibenik-Knin",
@@ -12516,7 +12474,7 @@
   "description": "89 mostly bare limestone islands in a national park with almost no permanent residents - Shaw called them a labour of gods."
  },
  {
-  "id": 597,
+  "id": 595,
   "continent": "Europe",
   "country": "PL",
   "admin1": "Lesser Poland",
@@ -12537,7 +12495,7 @@
   "description": "A 9km walk up a sealed road to a glacial lake under 2,000m peaks. Dogs are banned in the Polish Tatra National Park."
  },
  {
-  "id": 598,
+  "id": 596,
   "continent": "Europe",
   "country": "PL",
   "admin1": "Podlaskie",
@@ -12558,7 +12516,7 @@
   "description": "The last large stretch of primeval lowland forest in Europe, and home to the biggest free-roaming European bison population."
  },
  {
-  "id": 599,
+  "id": 597,
   "continent": "Europe",
   "country": "PL",
   "admin1": "Pomerania",
@@ -12579,7 +12537,7 @@
   "description": "A 13th-century Teutonic Order fortress covering 21 hectares - by land area the largest castle anywhere, and rebuilt after near-total wartime destruction."
  },
  {
-  "id": 600,
+  "id": 598,
   "continent": "North America",
   "country": "US",
   "admin1": "California",
@@ -12600,7 +12558,7 @@
   "description": "Granite walls a kilometre high above a glacial valley. US national parks restrict dogs to paved areas and campgrounds only."
  },
  {
-  "id": 601,
+  "id": 599,
   "continent": "North America",
   "country": "US",
   "admin1": "Arizona",
@@ -12621,7 +12579,7 @@
   "description": "Going down is optional, coming back up is not - rangers pull people off the Bright Angel Trail every summer. Go in spring or autumn."
  },
  {
-  "id": 602,
+  "id": 600,
   "continent": "North America",
   "country": "US",
   "admin1": "Wyoming",
@@ -12642,7 +12600,7 @@
   "description": "The world's first national park, sitting on an active supervolcano. The overlook trail beats the boardwalk for seeing the colours."
  },
  {
-  "id": 603,
+  "id": 601,
   "continent": "North America",
   "country": "US",
   "admin1": "Utah",
@@ -12663,7 +12621,7 @@
   "description": "Walking up the Virgin River between 300m walls that close to nine metres apart. Closed whenever flash flood risk is high - check daily."
  },
  {
-  "id": 604,
+  "id": 602,
   "continent": "North America",
   "country": "US",
   "admin1": "Utah",
@@ -12684,7 +12642,7 @@
   "description": "For about twenty minutes at dawn the underside of the arch glows orange from light bouncing off the canyon below."
  },
  {
-  "id": 605,
+  "id": 603,
   "continent": "North America",
   "country": "US",
   "admin1": "Maine",
@@ -12705,7 +12663,7 @@
   "description": "From October to March this is the first place in the continental US to catch the sun. Acadia is unusually dog-friendly for a national park."
  },
  {
-  "id": 606,
+  "id": 604,
   "continent": "North America",
   "country": "US",
   "admin1": "Louisiana",
@@ -12726,7 +12684,7 @@
   "description": "Where locals go when tourists go to Bourbon Street - live jazz in a dozen rooms within three blocks, most nights of the year."
  },
  {
-  "id": 607,
+  "id": 605,
   "continent": "North America",
   "country": "US",
   "admin1": "Arizona",
@@ -12747,7 +12705,7 @@
   "description": "Decommissioned in 1985 and replaced by interstates, but long segments survive as business routes through towns the freeway bypassed."
  },
  {
-  "id": 608,
+  "id": 606,
   "continent": "North America",
   "country": "US",
   "admin1": "California",
@@ -12768,7 +12726,7 @@
   "description": "Coast redwoods reach over 110m. The tallest known tree's location is deliberately unpublished to protect the ground around its roots."
  },
  {
-  "id": 609,
+  "id": 607,
   "continent": "North America",
   "country": "US",
   "admin1": "California",
@@ -12789,7 +12747,7 @@
   "description": "140km of coast road on the edge of the Santa Lucia range. Landslides close sections for months at a time - check before committing."
  },
  {
-  "id": 610,
+  "id": 608,
   "continent": "North America",
   "country": "US",
   "admin1": "Alaska",
@@ -12810,7 +12768,7 @@
   "description": "One 148km road into six million acres, and private vehicles are barred beyond mile 15. Grizzly, caribou, moose and wolf all along it."
  },
  {
-  "id": 611,
+  "id": 609,
   "continent": "North America",
   "country": "US",
   "admin1": "Hawaii",
@@ -12831,7 +12789,7 @@
   "description": "One of the most active volcanoes on earth. Whether there is anything to see depends entirely on the current eruption - check the USGS status first."
  },
  {
-  "id": 612,
+  "id": 610,
   "continent": "North America",
   "country": "US",
   "admin1": "Montana",
@@ -12852,7 +12810,7 @@
   "description": "80km over Logan Pass, only fully open for about ten weeks a year, and now requiring a timed entry reservation in peak season."
  },
  {
-  "id": 613,
+  "id": 611,
   "continent": "North America",
   "country": "US",
   "admin1": "New Mexico",
@@ -12873,7 +12831,7 @@
   "description": "275 square miles of white gypsum sand you can toboggan down. Dogs are allowed on leash almost everywhere here, unusually."
  },
  {
-  "id": 614,
+  "id": 612,
   "continent": "North America",
   "country": "US",
   "admin1": "South Dakota",
@@ -12894,7 +12852,7 @@
   "description": "A wooden ladder up a cliff face leads to a ledge over the White River valley, through eroded sediment laid down 75 million years ago."
  },
  {
-  "id": 615,
+  "id": 613,
   "continent": "North America",
   "country": "US",
   "admin1": "Washington",
@@ -12915,7 +12873,7 @@
   "description": "A temperate rainforest getting up to 4 metres of rain a year, with moss hanging off every branch - and glaciers and coast in the same park."
  },
  {
-  "id": 616,
+  "id": 614,
   "continent": "North America",
   "country": "US",
   "admin1": "Florida",
@@ -12936,7 +12894,7 @@
   "description": "A river 100km wide and 15cm deep, and the only place where alligators and crocodiles share territory. Go in the dry season for the wildlife."
  },
  {
-  "id": 617,
+  "id": 615,
   "continent": "North America",
   "country": "US",
   "admin1": "New York",
@@ -12957,7 +12915,7 @@
   "description": "A disused elevated freight line turned 2.3km linear park through Manhattan's west side. Free, and dogs are not permitted."
  },
  {
-  "id": 618,
+  "id": 616,
   "continent": "North America",
   "country": "CA",
   "admin1": "Alberta",
@@ -12978,7 +12936,7 @@
   "description": "Rock flour suspended in glacial meltwater gives that colour. Private vehicles are now banned on the Moraine Lake road - shuttle only."
  },
  {
-  "id": 619,
+  "id": 617,
   "continent": "North America",
   "country": "CA",
   "admin1": "Alberta",
@@ -12999,7 +12957,7 @@
   "description": "232km past more than 100 glaciers between Lake Louise and Jasper - routinely called one of the great drives anywhere."
  },
  {
-  "id": 620,
+  "id": 618,
   "continent": "North America",
   "country": "CA",
   "admin1": "Alberta",
@@ -13020,7 +12978,7 @@
   "description": "One of the largest accessible dark sky preserves in the world, with a decent chance of aurora on clear winter nights."
  },
  {
-  "id": 621,
+  "id": 619,
   "continent": "North America",
   "country": "CA",
   "admin1": "New Brunswick",
@@ -13041,7 +12999,7 @@
   "description": "The highest tides on earth, up to 16m. You walk on the ocean floor at low tide and kayak over the same spot six hours later."
  },
  {
-  "id": 622,
+  "id": 620,
   "continent": "North America",
   "country": "CA",
   "admin1": "Nova Scotia",
@@ -13062,7 +13020,7 @@
   "description": "298km around Cape Breton's highlands, through Acadian and Gaelic communities, at its best when the maples turn in early October."
  },
  {
-  "id": 623,
+  "id": 621,
   "continent": "North America",
   "country": "CA",
   "admin1": "Manitoba",
@@ -13083,7 +13041,7 @@
   "description": "Bears gather here waiting for Hudson Bay to freeze. There is no road in - you arrive by train or plane, and go out in a tundra buggy."
  },
  {
-  "id": 624,
+  "id": 622,
   "continent": "North America",
   "country": "CA",
   "admin1": "British Columbia",
@@ -13104,7 +13062,7 @@
   "description": "Standing mortuary poles at SGang Gwaay, guarded by Haida Watchmen and deliberately left to return to the earth. Access is permitted and limited."
  },
  {
-  "id": 625,
+  "id": 623,
   "continent": "North America",
   "country": "CA",
   "admin1": "Ontario",
@@ -13125,7 +13083,7 @@
   "description": "Around 2,800 cubic metres a second go over the Horseshoe. The Canadian side has the view; the boat gets you into the spray."
  },
  {
-  "id": 626,
+  "id": 624,
   "continent": "North America",
   "country": "CA",
   "admin1": "Quebec",
@@ -13146,7 +13104,7 @@
   "description": "The only walled city north of Mexico, founded 1608, and the most convincingly European place in North America."
  },
  {
-  "id": 627,
+  "id": 625,
   "continent": "North America",
   "country": "CA",
   "admin1": "Yukon",
@@ -13167,7 +13125,7 @@
   "description": "Around 900km of gravel from Dawson City to Tuktoyaktuk on the Arctic Ocean. Carry two spare tyres - this is not an exaggeration."
  },
  {
-  "id": 628,
+  "id": 626,
   "continent": "North America",
   "country": "MX",
   "admin1": "Yucatan",
@@ -13188,7 +13146,7 @@
   "description": "Thousands of limestone sinkholes over a flooded cave system, sacred to the Maya and the peninsula's only natural fresh water."
  },
  {
-  "id": 629,
+  "id": 627,
   "continent": "North America",
   "country": "MX",
   "admin1": "Yucatan",
@@ -13209,7 +13167,7 @@
   "description": "Clap at the base of El Castillo and the staircase returns a chirp said to imitate the quetzal. Twice a year a serpent shadow runs down the steps."
  },
  {
-  "id": 630,
+  "id": 628,
   "continent": "North America",
   "country": "MX",
   "admin1": "Chihuahua",
@@ -13230,7 +13188,7 @@
   "description": "A canyon system deeper and four times larger than the Grand Canyon, crossed by a railway with 37 bridges and 86 tunnels."
  },
  {
-  "id": 631,
+  "id": 629,
   "continent": "North America",
   "country": "MX",
   "admin1": "Oaxaca",
@@ -13251,7 +13209,7 @@
   "description": "Seven moles, tlayudas, mezcal and chapulines - widely held to be the best regional cooking in Mexico, and it is not close."
  },
  {
-  "id": 632,
+  "id": 630,
   "continent": "North America",
   "country": "MX",
   "admin1": "Baja California Sur",
@@ -13272,7 +13230,7 @@
   "description": "Grey whales calve here and mothers routinely push their calves up to the boats to be touched - one of the strangest wildlife encounters anywhere."
  },
  {
-  "id": 633,
+  "id": 631,
   "continent": "North America",
   "country": "MX",
   "admin1": "Michoacan",
@@ -13293,7 +13251,7 @@
   "description": "Hundreds of millions of monarchs arrive after a 4,000km migration and cover the oyamel firs so densely the branches bend."
  },
  {
-  "id": 634,
+  "id": 632,
   "continent": "North America",
   "country": "MX",
   "admin1": "Quintana Roo",
@@ -13314,7 +13272,7 @@
   "description": "Part of the Mesoamerican Barrier Reef, the second largest on earth, with green turtles grazing the seagrass close to shore."
  },
  {
-  "id": 635,
+  "id": 633,
   "continent": "North America",
   "country": "US",
   "admin1": "Nevada",
@@ -13335,7 +13293,7 @@
   "description": "Some of the darkest skies left in the continental US, plus bristlecone pines that were already thousands of years old when Rome fell."
  },
  {
-  "id": 636,
+  "id": 634,
   "continent": "North America",
   "country": "US",
   "admin1": "Oregon",
@@ -13356,7 +13314,7 @@
   "description": "The deepest lake in the US at 594m, filling a caldera left when Mount Mazama collapsed about 7,700 years ago. Fed only by rain and snow."
  },
  {
-  "id": 637,
+  "id": 635,
   "continent": "North America",
   "country": "US",
   "admin1": "Tennessee",
@@ -13375,5 +13333,47 @@
   "lon": null,
   "verified_at": "2026-09-02",
   "description": "For about two weeks each June, one firefly species here flashes in unison. Access is by lottery, and it is worth entering."
+ },
+ {
+  "id": 636,
+  "continent": "Asia",
+  "country": "TL",
+  "admin1": "Atauro",
+  "region": "Atauro",
+  "title": "Dive off Atauro Island",
+  "place": "Atauro Island",
+  "category": "Water",
+  "difficulty": 4,
+  "cost": 2,
+  "duration": "Multi-day",
+  "season": "May-Nov",
+  "dog_friendly": "check",
+  "hidden_gem": true,
+  "pack": "asia",
+  "lat": null,
+  "lon": null,
+  "verified_at": "2026-09-02",
+  "description": "Surveys here recorded the highest average reef fish diversity yet measured anywhere in the world, an hour by ferry from Dili."
+ },
+ {
+  "id": 637,
+  "continent": "Asia",
+  "country": "TL",
+  "admin1": "Lautem",
+  "region": "Jaco",
+  "title": "Cross to uninhabited Jaco Island",
+  "place": "Jaco Island",
+  "category": "Island",
+  "difficulty": 4,
+  "cost": 2,
+  "duration": "Full day",
+  "season": "May-Nov",
+  "dog_friendly": "no",
+  "hidden_gem": true,
+  "pack": "asia",
+  "lat": null,
+  "lon": null,
+  "verified_at": "2026-09-02",
+  "description": "Considered sacred, so nobody stays overnight - local fishermen take you across the strait at the far eastern tip of Timor-Leste."
  }
 ]

@@ -15,6 +15,8 @@ const LS = {
   outbox:   'oaa.outbox.v1',
   who:      'oaa.who.v1',
   adv:      'oaa.adventures.v1',
+  trips:    'oaa.trips.v1',
+  tripOutbox: 'oaa.tripoutbox.v1',
 };
 
 const STATE_NAMES = {
@@ -227,6 +229,20 @@ function subscribeRealtime() {
       }
       renderMemories();
       if (openId !== null) renderSheet(openId);
+    })
+    .subscribe();
+
+  sb.channel('trip-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, payload => {
+      if (readLS(LS.tripOutbox, []).some(t => t.id === (payload.new || payload.old).id)) return;
+      if (payload.eventType === 'DELETE') trips = trips.filter(t => t.id !== payload.old.id);
+      else if (payload.new) {
+        const i = trips.findIndex(t => t.id === payload.new.id);
+        if (i >= 0) trips[i] = payload.new; else trips.push(payload.new);
+      }
+      saveLocalTrips();
+      renderTrips();
+      if (openTripId) renderTripSheet(openTripId);
     })
     .subscribe();
 }
@@ -749,27 +765,246 @@ function renderHeader() {
   $('#progressFill').style.width = `${(done / Math.max(ADV.length, 1)) * 100}%`;
 }
 
-function renderStates() {
-  const group = (keyFn, order) => {
-    const map = new Map();
-    for (const a of ADV) {
-      const k = keyFn(a);
-      const m = map.get(k) || { total: 0, done: 0 };
-      m.total++; if (isDone(a.id)) m.done++;
-      map.set(k, m);
-    }
-    const keys = order || [...map.keys()].sort();
-    return keys.filter(k => map.has(k)).map(k => {
-      const m = map.get(k);
-      const pct = Math.round((m.done / m.total) * 100);
-      return `<div class="staterow">
-        <div class="staterow-top"><span>${esc(k)}</span><span>${m.done} / ${m.total}</span></div>
-        <div class="minibar"><i style="width:${pct}%"></i></div>
-      </div>`;
-    }).join('');
-  };
-  $('#stateGrid').innerHTML = group(a => `${countryFlag(a.country)} ${regionName(a)}`);
-  $('#catGrid').innerHTML   = group(a => a.category);
+// ══════════════════════════════════════════════════════════════════════
+//  Passport
+// ══════════════════════════════════════════════════════════════════════
+function renderPassport() {
+  const visited = new Set();
+  const continents = new Set();
+  for (const a of ADV) {
+    if (!isDone(a.id)) continue;
+    visited.add(a.country);
+    continents.add(a.continent);
+  }
+
+  $('#passportTotals').innerHTML = `
+    <div class="ptotal"><b>${visited.size}</b><span>countries</span></div>
+    <div class="ptotal"><b>${continents.size}</b><span>continents</span></div>
+    <div class="ptotal"><b>${doneCount()}</b><span>adventures</span></div>`;
+
+  // Every country in the dataset gets a slot; earned ones are stamped.
+  const codes = [...new Set(ADV.map(a => a.country))]
+    .sort((x, y) => countryName(x).localeCompare(countryName(y)));
+
+  $('#stampGrid').innerHTML = codes.map(code => {
+    const inC = a => a.country === code;
+    const total = countOf(inC), done = doneOf(inC);
+    const earned = done > 0;
+    const complete = total && done === total;
+    return `<button class="stamp ${earned ? 'earned' : ''} ${complete ? 'complete' : ''}"
+              data-go='${esc(JSON.stringify({ level: 'country', continent: ADV.find(inC).continent, country: code }))}'>
+      <span class="stamp-flag">${countryFlag(code)}</span>
+      <span class="stamp-name">${esc(countryName(code))}</span>
+      <span class="stamp-count">${done} / ${total}</span>
+      ${complete ? '<span class="stamp-seal">✓</span>' : ''}
+    </button>`;
+  }).join('');
+
+  const contRows = CONTINENT_ORDER.filter(c => countOf(a => a.continent === c)).map(c => {
+    const inC = a => a.continent === c;
+    const total = countOf(inC), done = doneOf(inC);
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    return `<div class="staterow">
+      <div class="staterow-top"><span>${esc(c)}</span><span>${done} / ${total}</span></div>
+      <div class="minibar"><i style="width:${pct}%"></i></div>
+    </div>`;
+  }).join('');
+  $('#continentProgress').innerHTML = contRows;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Trips
+// ══════════════════════════════════════════════════════════════════════
+let trips = [];
+let openTripId = null;
+
+function loadLocalTrips() { trips = readLS(LS.trips, []); }
+function saveLocalTrips() { writeLS(LS.trips, trips); }
+
+function newTripId() {
+  return crypto.randomUUID ? crypto.randomUUID()
+                           : 'local-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+}
+
+function upsertTrip(trip) {
+  const i = trips.findIndex(t => t.id === trip.id);
+  trip.updated_at = new Date().toISOString();
+  if (i >= 0) trips[i] = trip; else trips.push(trip);
+  saveLocalTrips();
+  queueTripSync(trip);
+  renderTrips();
+  if (openTripId === trip.id) renderTripSheet(trip.id);
+}
+
+function removeTrip(id) {
+  trips = trips.filter(t => t.id !== id);
+  saveLocalTrips();
+  if (sb && online) sb.from('trips').delete().eq('id', id).then(({ error }) => {
+    if (error) console.warn('trip delete failed', error.message);
+  });
+  closeTripSheet();
+  renderTrips();
+}
+
+function queueTripSync(trip) {
+  const q = readLS(LS.tripOutbox, []).filter(t => t.id !== trip.id);
+  q.push(trip);
+  writeLS(LS.tripOutbox, q);
+  flushTrips();
+}
+
+async function flushTrips() {
+  if (!sb || !online) return;
+  const q = readLS(LS.tripOutbox, []);
+  if (!q.length) return;
+  const left = [];
+  for (const t of q) {
+    const { error } = await sb.from('trips').upsert({
+      id: t.id, name: t.name, starts_on: t.starts_on || null, ends_on: t.ends_on || null,
+      adventure_ids: t.adventure_ids || [], notes: t.notes || null,
+      created_by: t.created_by || who,
+    }, { onConflict: 'id' });
+    if (error) { left.push(t); console.warn('trip sync failed', error.message); }
+  }
+  writeLS(LS.tripOutbox, left);
+}
+
+async function pullTrips() {
+  if (!sb || !online) return;
+  const { data, error } = await sb.from('trips').select('*').order('created_at');
+  if (error) { console.warn('trip pull failed', error.message); return; }
+  const pending = new Set(readLS(LS.tripOutbox, []).map(t => t.id));
+  const byId = new Map(trips.map(t => [t.id, t]));
+  for (const t of data || []) if (!pending.has(t.id)) byId.set(t.id, t);
+  trips = [...byId.values()];
+  saveLocalTrips();
+}
+
+function tripAdventures(trip) {
+  return (trip.adventure_ids || []).map(id => ADV.find(a => a.id === id)).filter(Boolean);
+}
+
+function tripInsideAdventure(id) {
+  return trips.filter(t => (t.adventure_ids || []).includes(id));
+}
+
+function toggleTripMember(tripId, adventureId) {
+  const trip = trips.find(t => t.id === tripId);
+  if (!trip) return;
+  const ids = trip.adventure_ids || [];
+  trip.adventure_ids = ids.includes(adventureId)
+    ? ids.filter(x => x !== adventureId)
+    : [...ids, adventureId];
+  upsertTrip(trip);
+}
+
+function renderTrips() {
+  const el = $('#tripList');
+  if (!el) return;
+  if (!trips.length) {
+    el.innerHTML = `<div class="empty">No trips yet.<br>Make one, then add adventures to it from their page.</div>`;
+    return;
+  }
+  el.innerHTML = trips.map(t => {
+    const items = tripAdventures(t);
+    const done = items.filter(a => isDone(a.id)).length;
+    const countries = [...new Set(items.map(a => a.country))];
+    const when = t.starts_on
+      ? fmtDate(t.starts_on) + (t.ends_on ? ' – ' + fmtDate(t.ends_on) : '')
+      : 'No dates set';
+    return `<button class="trip" data-trip="${esc(t.id)}">
+      <div class="trip-top">
+        <b>${esc(t.name)}</b>
+        <span>${done} / ${items.length}</span>
+      </div>
+      <div class="card-meta">${esc(when)}</div>
+      <div class="badges">
+        ${countries.slice(0, 6).map(c => `<span class="badge">${countryFlag(c)} ${esc(countryName(c))}</span>`).join('')}
+        ${countries.length > 6 ? `<span class="badge">+${countries.length - 6}</span>` : ''}
+      </div>
+      ${items.length ? `<div class="minibar"><i style="width:${Math.round((done / items.length) * 100)}%"></i></div>` : ''}
+    </button>`;
+  }).join('');
+}
+
+function openTripSheet(id) {
+  openTripId = id;
+  renderTripSheet(id);
+  $('#tripSheet').classList.remove('hidden');
+}
+function closeTripSheet() {
+  openTripId = null;
+  $('#tripSheet').classList.add('hidden');
+}
+
+function renderTripSheet(id) {
+  const t = trips.find(x => x.id === id);
+  if (!t) return closeTripSheet();
+  const items = tripAdventures(t);
+  const done = items.filter(a => isDone(a.id)).length;
+
+  // Group the itinerary by country so a multi-country trip reads sensibly.
+  const groups = new Map();
+  for (const a of items) {
+    if (!groups.has(a.country)) groups.set(a.country, []);
+    groups.get(a.country).push(a);
+  }
+
+  $('#tripBody').innerHTML = `
+    <h2>${esc(t.name)}</h2>
+    <p class="sheet-place">${items.length} adventure${items.length === 1 ? '' : 's'} · ${done} done</p>
+
+    <h3>Dates</h3>
+    <div class="daterow">
+      <label>From<input type="date" id="tripStart" value="${esc(t.starts_on || '')}"></label>
+      <label>To<input type="date" id="tripEnd" value="${esc(t.ends_on || '')}"></label>
+    </div>
+
+    <h3>Itinerary</h3>
+    ${items.length ? [...groups.entries()].map(([code, list]) => `
+      <div class="tripgroup">
+        <div class="tripgroup-head">${countryFlag(code)} ${esc(countryName(code))}</div>
+        ${list.map(a => `<div class="tripitem ${isDone(a.id) ? 'done' : ''}">
+          <button class="tick ${isDone(a.id) ? 'on' : ''}" data-toggle="${a.id}" aria-label="Mark done">✓</button>
+          <div class="tripitem-body" data-open="${a.id}">
+            <div class="card-title">${esc(a.title)}</div>
+            <div class="card-meta">${esc(a.place)} · ${esc(a.region)}</div>
+          </div>
+          <button class="tripitem-remove" data-tripremove="${a.id}" aria-label="Remove from trip">✕</button>
+        </div>`).join('')}
+      </div>`).join('')
+      : `<p class="muted">Nothing added yet. Open any adventure and use <b>Add to a trip</b>.</p>`}
+
+    <h3>Notes</h3>
+    <textarea id="tripNotes" placeholder="Ferry times, who's booking what…">${esc(t.notes || '')}</textarea>
+
+    <div class="sheet-actions">
+      <button class="btn-primary" data-tripact="save">Save trip</button>
+      <button class="btn-ghost danger" data-tripact="delete">Delete trip</button>
+    </div>`;
+}
+
+function saveOpenTrip() {
+  const t = trips.find(x => x.id === openTripId);
+  if (!t) return;
+  t.starts_on = $('#tripStart').value || null;
+  t.ends_on = $('#tripEnd').value || null;
+  t.notes = $('#tripNotes').value.trim() || null;
+  upsertTrip(t);
+  toast('Trip saved');
+}
+
+// The picker shown from an adventure's own page.
+function renderTripPicker(adventureId) {
+  const inTrips = new Set(tripInsideAdventure(adventureId).map(t => t.id));
+  return `<div class="trippicker">
+    ${trips.length ? trips.map(t => `
+      <button class="trippick ${inTrips.has(t.id) ? 'on' : ''}" data-tripadd="${esc(t.id)}">
+        <span>${inTrips.has(t.id) ? '✓' : '＋'}</span> ${esc(t.name)}
+      </button>`).join('')
+      : '<p class="muted">No trips yet.</p>'}
+    <button class="trippick new" data-tripnew="${adventureId}"><span>＋</span> New trip…</button>
+  </div>`;
 }
 
 let memoryGrouping = 'adventure';
@@ -985,7 +1220,7 @@ function achievementData() {
   return d;
 }
 
-function renderUs() {
+function renderMe() {
   const d = achievementData();
   const rated = ADV.map(a => row(a.id).rating).filter(Boolean);
   const avg = rated.length ? (rated.reduce((s, n) => s + n, 0) / rated.length).toFixed(1) : '—';
@@ -1020,9 +1255,10 @@ function renderAll() {
   renderHeader();
   renderPlaces();
   renderList();
-  renderStates();
+  renderPassport();
+  renderTrips();
   renderMemories();
-  renderUs();
+  renderMe();
   if (openId !== null) renderSheet(openId);
   renderPhotoStatus();
   refreshSyncBar();
@@ -1067,6 +1303,9 @@ function renderSheet(id) {
         Check current access on ${esc(a.admin1 === 'AUS' ? 'australia.com' : regionName(a) + ' tourism')}
       </a>` : ''}
     </div>
+
+    <h3>Add to a trip</h3>
+    ${renderTripPicker(a.id)}
 
     <h3>Our rating</h3>
     <div class="stars">
@@ -1225,6 +1464,53 @@ function wireUI() {
     if (e.target.closest('[data-close]')) { closeSheet(); return; }
   });
 
+  // Trips
+  $('#newTripBtn').onclick = () => {
+    const name = prompt('Name this trip', 'New trip');
+    if (!name || !name.trim()) return;
+    const trip = { id: newTripId(), name: name.trim(), starts_on: null, ends_on: null,
+                   adventure_ids: [], notes: null, created_by: who };
+    upsertTrip(trip);
+    openTripSheet(trip.id);
+  };
+
+  document.body.addEventListener('click', e => {
+    const open = e.target.closest('[data-trip]');
+    if (open) { openTripSheet(open.dataset.trip); return; }
+    if (e.target.closest('[data-tripclose]')) { closeTripSheet(); return; }
+
+    const rm = e.target.closest('[data-tripremove]');
+    if (rm && openTripId) { toggleTripMember(openTripId, +rm.dataset.tripremove); return; }
+
+    const add = e.target.closest('[data-tripadd]');
+    if (add && openId !== null) {
+      toggleTripMember(add.dataset.tripadd, openId);
+      const t = trips.find(x => x.id === add.dataset.tripadd);
+      toast(tripInsideAdventure(openId).some(x => x.id === add.dataset.tripadd)
+        ? `Added to ${t.name}` : `Removed from ${t.name}`);
+      return;
+    }
+
+    const mk = e.target.closest('[data-tripnew]');
+    if (mk) {
+      const name = prompt('Name this trip', 'New trip');
+      if (!name || !name.trim()) return;
+      const trip = { id: newTripId(), name: name.trim(), starts_on: null, ends_on: null,
+                     adventure_ids: [+mk.dataset.tripnew], notes: null, created_by: who };
+      upsertTrip(trip);
+      toast(`Added to ${trip.name}`);
+      return;
+    }
+
+    const act = e.target.closest('[data-tripact]');
+    if (!act) return;
+    if (act.dataset.tripact === 'save') saveOpenTrip();
+    if (act.dataset.tripact === 'delete') {
+      const t = trips.find(x => x.id === openTripId);
+      if (t && confirm(`Delete "${t.name}"? The adventures themselves stay put.`)) removeTrip(t.id);
+    }
+  });
+
   // Photo picker
   $('#photoInput').addEventListener('change', async e => {
     const files = e.target.files;
@@ -1287,7 +1573,7 @@ function wireUI() {
   });
 
   // Connectivity
-  addEventListener('online',  () => { online = true;  flushOutbox(); pullProgress(); pullPhotos().then(renderAll); flushPhotoQueue(); });
+  addEventListener('online',  () => { online = true;  flushOutbox(); pullProgress(); pullPhotos().then(renderAll); flushPhotoQueue(); flushTrips(); });
   addEventListener('offline', () => { online = false; refreshSyncBar(); });
   addEventListener('visibilitychange', () => {
     if (!document.hidden) { flushOutbox(); pullProgress(); pullPhotos().then(renderAll); flushPhotoQueue(); }
@@ -1317,14 +1603,17 @@ async function enterApp() {
   $('#lock').classList.add('hidden');
   $('#app').classList.remove('hidden');
   if (!who) $('#whoami').classList.remove('hidden');
+  loadLocalTrips();
   pendingPhotos = await idbAll();
   renderAll();
   await pullProgress();
   await pullPhotos();
+  await pullTrips();
   renderAll();
   subscribeRealtime();
   flushOutbox();
   flushPhotoQueue();
+  flushTrips();
 }
 
 // ══════════════════════════════════════════════════════════════════════
