@@ -131,7 +131,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .chiprow { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
 .chiprow::-webkit-scrollbar { display: none; }
 .chip {
-  flex: none; padding: 8px 14px; font-size: 14px; font-weight: 600;
+  /* 44px, like every other control. Chips are the most-tapped thing in the
+     app and were the smallest. */
+  flex: none; min-height: 44px; padding: 8px 14px; font-size: 14px; font-weight: 600;
   border-radius: 999px; border: 1.5px solid var(--line);
   background: var(--card); color: var(--ink-2); white-space: nowrap;
 }
@@ -158,10 +160,16 @@ input, select, textarea { font: inherit; color: inherit; }
 .card.done { background: var(--sand-2); }
 .card.done .card-title { color: var(--muted); text-decoration: line-through; }
 .tick {
-  flex: none; width: 30px; height: 30px; margin-top: 1px;
+  /* Stays a 30px circle, because a 44px one looks like a button rather than a
+     checkbox. The touch target is expanded to 44px with an invisible overlay
+     instead - the thing a thumb has to hit is not the thing the eye sees. */
+  flex: none; width: 30px; height: 30px; margin-top: 1px; position: relative;
   border-radius: 50%; border: 2px solid var(--line);
   background: transparent; font-size: 15px; color: transparent;
   display: grid; place-items: center;
+}
+.tick::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 50%;
 }
 .tick.on { background: var(--eucalypt); border-color: var(--eucalypt); color: #fff; }
 .card-body { flex: 1; min-width: 0; }
@@ -320,7 +328,11 @@ input, select, textarea { font: inherit; color: inherit; }
   display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
   font-size: 13px; margin-bottom: 12px;
 }
-.crumb-link { color: var(--ochre); font-weight: 600; padding: 3px 0; }
+.crumb-link {
+  color: var(--ochre); font-weight: 600; padding: 3px 0; position: relative;
+}
+/* Same trick: the crumb reads as text, but is reachable as a control. */
+.crumb-link::after { content: ''; position: absolute; inset: -12px -6px; }
 .crumb-sep { color: var(--muted); }
 .crumb-here { color: var(--muted); font-weight: 600; }
 #placeTitle { font-size: 22px; }

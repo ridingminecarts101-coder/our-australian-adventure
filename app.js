@@ -91,7 +91,12 @@ function row(id) {
 }
 function isDone(id)  { return !!row(id).completed; }
 // Australian entries store a state code; everywhere else admin1 is already a name.
-function regionName(a) { return STATE_NAMES[a.admin1] || a.admin1; }
+// STATE_NAMES holds Australian abbreviations, so it is only consulted for
+// Australian entries. Applying it globally would rename a US "WA" to Western
+// Australia the day one is added - not broken today, but one entry away.
+function regionName(a) {
+  return (a.country === 'AU' && STATE_NAMES[a.admin1]) || a.admin1;
+}
 // Apple Maps on iOS, Google everywhere else. Searching by name rather than by
 // coordinate, because the coordinates are honestly not in the data yet.
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -1837,8 +1842,16 @@ function renderTripSheet(id) {
 function saveOpenTrip() {
   const t = trips.find(x => x.id === openTripId);
   if (!t) return;
-  t.starts_on = $('#tripStart').value || null;
-  t.ends_on = $('#tripEnd').value || null;
+  const starts = $('#tripStart').value || null;
+  const ends = $('#tripEnd').value || null;
+  // A trip that finishes before it starts was accepted and then displayed as
+  // a nonsense range. Say so rather than storing it - the person has almost
+  // certainly typed one of the two into the wrong box.
+  if (starts && ends && ends < starts) {
+    return toast('That trip ends before it starts');
+  }
+  t.starts_on = starts;
+  t.ends_on = ends;
   t.notes = $('#tripNotes').value.trim() || null;
   upsertTrip(t);
   toast('Trip saved');
@@ -2288,13 +2301,19 @@ function toggleDone(id) {
 // ══════════════════════════════════════════════════════════════════════
 function buildFilterOptions() {
   const opt = (v, label, sel) => `<option value="${esc(v)}"${sel ? ' selected' : ''}>${esc(label)}</option>`;
-  const regions = [...new Set(ADV.filter(a =>
-      (!nav.continent || a.continent === nav.continent) &&
-      (!nav.country   || a.country   === nav.country)).map(a => a.admin1))];
+  // One pass. The old shape scanned the whole list again for every region to
+  // find a sample to name it by, which at world level is 583 scans of 2,300
+  // entries - and it could pick a sample from a different country, since two
+  // countries can share a region name.
+  const seen = new Map();
+  for (const a of ADV) {
+    if (nav.continent && a.continent !== nav.continent) continue;
+    if (nav.country && a.country !== nav.country) continue;
+    if (!seen.has(a.admin1)) seen.set(a.admin1, regionName(a));
+  }
   $('#fState').innerHTML = opt('All', 'All regions') +
-    regions.map(code => [code, regionName(ADV.find(a => a.admin1 === code))])
-           .sort((a, b) => a[1].localeCompare(b[1]))
-           .map(([k, v]) => opt(k, v)).join('');
+    [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+                       .map(([k, v]) => opt(k, v)).join('');
   $('#fDog').innerHTML = opt('All', 'Any') +
     ['yes', 'check', 'no'].map(k => opt(k, DOG_LABEL[k])).join('');
   $('#fCat').innerHTML = opt('All', 'All categories') +
