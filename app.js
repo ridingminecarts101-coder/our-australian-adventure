@@ -1516,9 +1516,9 @@ function renderTripPicker(adventureId) {
 
 let memoryGrouping = 'adventure';
 
-function thumbHTML(p, i) {
+function thumbHTML(p) {
   const src = photoSrc(p);
-  return `<button class="thumb${p.pending ? ' pending' : ''}" data-photo="${esc(p.id)}" data-idx="${i}"
+  return `<button class="thumb${p.pending ? ' pending' : ''}" data-photo="${esc(p.id)}"
             aria-label="View photo">
     ${src ? `<img src="${esc(src)}" alt="" loading="lazy">` : '<span class="thumb-wait"></span>'}
     ${p.pending ? '<span class="thumb-badge">&uarr;</span>' : ''}
@@ -1550,7 +1550,7 @@ function renderMemories() {
           </div>
           <p class="${r.memory ? '' : 'nomemory'}">${esc(r.memory || 'No memory written yet — tap to add one.')}</p>
         </div>
-        ${ph.length ? `<div class="strip" data-group-key="adv-${a.id}">${ph.map((p, i) => thumbHTML(p, i)).join('')}</div>` : ''}
+        ${ph.length ? `<div class="strip" data-group-key="adv-${a.id}">${ph.map(p => thumbHTML(p)).join('')}</div>` : ''}
       </div>`;
     }).join('') : `<div class="empty">No adventures ticked off yet.<br>Go and make some. ❤️</div>`;
     hydrateThumbs();
@@ -1605,7 +1605,7 @@ function renderMemories() {
         <span>${items.length} photo${items.length === 1 ? '' : 's'}</span>
       </div>
       <div class="grid" data-group-key="${esc(k)}">
-        ${items.map((p, i) => thumbHTML(p, i)).join('')}
+        ${items.map(p => thumbHTML(p)).join('')}
       </div>
     </section>`;
   }).join('');
@@ -1861,7 +1861,7 @@ function renderSheet(id) {
 
     <h3>Photos${ph.length ? ` <span class="count">${ph.length}</span>` : ''}</h3>
     <div class="strip sheet-strip" data-group-key="adv-${a.id}">
-      ${ph.map((p, i) => thumbHTML(p, i)).join('')}
+      ${ph.map(p => thumbHTML(p)).join('')}
       <button class="thumb add" data-act="takePhoto" aria-label="Take a photo">
         <span>📷</span><small>Camera</small>
       </button>
@@ -1927,6 +1927,14 @@ function buildFilterOptions() {
 function wireUI() {
   // Tabs
   $$('.tab').forEach(b => b.onclick = () => {
+    // Tapping the tab you are already on takes you back to the top of it.
+    // For Adventures that means the world map, however deep you had drilled -
+    // otherwise the only way out of a region is to walk back up the crumbs.
+    const already = b.classList.contains('active');
+    if (already && b.dataset.tab === 'tab-list' && nav.level !== 'world') {
+      goTo('world');
+      return;
+    }
     $$('.tab').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
     $$('.panel').forEach(p => p.classList.add('hidden'));
@@ -2153,7 +2161,16 @@ function wireUI() {
   addEventListener('online',  () => { online = true;  flushOutbox(); pullProgress(); pullPhotos().then(renderAll); flushPhotoQueue(); flushTrips(); });
   addEventListener('offline', () => { online = false; refreshSyncBar(); });
   addEventListener('visibilitychange', () => {
-    if (!document.hidden) { flushOutbox(); pullProgress(); pullPhotos().then(renderAll); flushPhotoQueue(); }
+    if (document.hidden) return;
+    flushOutbox();
+    pullProgress();
+    pullPhotos().then(renderAll);
+    flushPhotoQueue();
+    flushTrips();
+    // iOS tears down websockets when an app is backgrounded, and the channel
+    // does not reliably come back on its own - which is why two phones stop
+    // agreeing after one has been in a pocket. Rebuild it if it is not live.
+    if (sb && !realtimeOk) resubscribeRealtime();
   });
 }
 

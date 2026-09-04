@@ -1,4 +1,4 @@
-/* Our Australian Adventure — mobile-first, built for an iPhone home-screen PWA */
+/* Wayfinder — mobile-first, built for an iPhone home-screen PWA */
 
 :root {
   --ochre:      #8c3d1f;
@@ -53,7 +53,7 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 input, select, textarea { font: inherit; color: inherit; }
 
-/* ── Lock / who screens ─────────────────────────────────────────── */
+/* ── Lock screen ────────────────────────────────────────────────── */
 .lock {
   position: fixed; inset: 0; z-index: 50;
   display: flex; align-items: center; justify-content: center;
@@ -81,13 +81,6 @@ input, select, textarea { font: inherit; color: inherit; }
 .lock-card input:focus { outline: 2px solid var(--ochre); outline-offset: 1px; }
 .lock-msg { min-height: 20px; margin: 12px 0 0; font-size: 14px; color: var(--danger); }
 .lock-msg.ok { color: var(--eucalypt); }
-.who-row { display: flex; gap: 12px; }
-.btn-who {
-  flex: 1; padding: 18px 12px; font-size: 17px; font-weight: 650;
-  border-radius: 14px; background: var(--sand-2);
-  border: 1.5px solid var(--line); color: var(--ink);
-}
-.btn-who:active { background: var(--ochre); color: #fff; border-color: var(--ochre); }
 
 .btn-primary {
   width: 100%; padding: 14px; font-size: 17px; font-weight: 650;

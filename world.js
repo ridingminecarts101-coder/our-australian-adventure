@@ -185,6 +185,22 @@ function continentAt(lat, lon) {
  * Draws into a canvas sized to its container. `counts` maps continent
  * name -> number of adventures, so empty continents can be drawn muted.
  */
+// Which continent owns a land dot. The boxes are deliberately coarse, so a
+// coastal dot can sit just outside every one of them; step outwards until a
+// box claims it rather than dropping the dot on the floor.
+function continentForDot(lat, lon) {
+  const hit = continentAt(lat, lon);
+  if (hit) return hit;
+  for (const pad of [1.6, 3.2, 4.8]) {
+    for (const [dLat, dLon] of [[0, pad], [0, -pad], [pad, 0], [-pad, 0],
+                                [pad, pad], [pad, -pad], [-pad, pad], [-pad, -pad]]) {
+      const near = continentAt(lat + dLat, lon + dLon);
+      if (near) return near;
+    }
+  }
+  return null;
+}
+
 function drawWorldMap(canvas, counts, selected) {
   const css = getComputedStyle(document.documentElement);
   const land   = css.getPropertyValue('--eucalypt').trim() || '#3f6b52';
@@ -194,7 +210,7 @@ function drawWorldMap(canvas, counts, selected) {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = Math.max(rect.width, 1);
-  const h = w * 0.52;                       // trims most of the empty polar rows
+  const h = w * (LAND.rows / LAND.cols) * 1.02;   // a hair of breathing room
   canvas.width = w * dpr;
   canvas.height = h * dpr;
   canvas.style.height = h + 'px';
@@ -203,25 +219,23 @@ function drawWorldMap(canvas, counts, selected) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
-  const STEP = 2.5;                          // degrees per dot
-  const LAT_TOP = 78, LAT_BOTTOM = -58;      // crop the poles
-  const cols = 360 / STEP;
-  const rows = (LAT_TOP - LAT_BOTTOM) / STEP;
-  const cw = w / cols;
-  const ch = h / rows;
-  const r = Math.max(Math.min(cw, ch) * 0.38, 0.6);
+  const cw = w / LAND.cols;
+  const ch = h / LAND.rows;
+  const r = Math.max(Math.min(cw, ch) * 0.40, 0.5);
 
-  for (let row = 0; row < rows; row++) {
-    const lat = LAT_TOP - row * STEP - STEP / 2;
-    for (let col = 0; col < cols; col++) {
-      const lon = -180 + col * STEP + STEP / 2;
-      const cont = continentAt(lat, lon);
-      if (!cont) continue;
+  for (let row = 0; row < LAND.rows; row++) {
+    const lat = LAND.top - row * LAND.step - LAND.step / 2;
+    for (let col = 0; col < LAND.cols; col++) {
+      if (!landAt(row, col)) continue;          // ocean stays blank
+      const lon = -180 + col * LAND.step + LAND.step / 2;
+      const cont = continentForDot(lat, lon);
+      const has = cont && (counts[cont] || 0) > 0;
 
-      const has = (counts[cont] || 0) > 0;
-      ctx.fillStyle = cont === selected ? active
+      // Land we have nothing for still gets a dot, faintly. Without it the
+      // world has holes in it and the shape stops reading as a map.
+      ctx.fillStyle = cont && cont === selected ? active
                     : (has ? (CONTINENT_COLOUR[cont] || land) : empty);
-      ctx.globalAlpha = cont === selected ? 1 : (has ? 0.92 : 0.3);
+      ctx.globalAlpha = cont === selected ? 1 : (has ? 0.92 : 0.28);
       ctx.beginPath();
       ctx.arc(col * cw + cw / 2, row * ch + ch / 2, r, 0, Math.PI * 2);
       ctx.fill();
@@ -233,9 +247,8 @@ function drawWorldMap(canvas, counts, selected) {
 // Turn a click on the canvas back into a continent.
 function continentFromPoint(canvas, clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
-  const STEP = 2.5, LAT_TOP = 78, LAT_BOTTOM = -58;
   const lon = ((clientX - rect.left) / rect.width) * 360 - 180;
-  const lat = LAT_TOP - ((clientY - rect.top) / rect.height) * (LAT_TOP - LAT_BOTTOM);
+  const lat = LAND.top - ((clientY - rect.top) / rect.height) * (LAND.top - LAND.bottom);
 
   // Exact hit first, then a small tolerance so narrow landmasses stay tappable.
   const exact = continentAt(lat, lon);
