@@ -87,6 +87,49 @@ def stamp_counts(total):
         print('  updated the count in index.html')
 
 
+IDS = os.path.join('data', 'ids.json')
+
+
+def assign_ids(records):
+    """Hand each record the id it has always had.
+
+    Ids used to be the position in the merged list, so adding a source file
+    renumbered everything after it and silently repointed people's saved ticks
+    at different adventures. They now come from data/ids.json, keyed on
+    country|place, which is already unique. New entries take the next number;
+    nothing that exists ever moves.
+    """
+    reg = json.load(io.open(IDS, encoding='utf-8'))
+    ids, nxt = reg['ids'], reg['next']
+
+    fresh, moved = [], []
+    for rec in records:
+        key = f"{rec['country']}|{rec['place']}"
+        if key in ids:
+            rec['id'] = ids[key]
+        else:
+            rec['id'] = nxt
+            ids[key] = nxt
+            fresh.append(key)
+            nxt += 1
+
+    # An entry that disappears keeps its number reserved, so a later entry
+    # cannot inherit somebody's tick on a place that no longer exists.
+    gone = sorted(set(ids) - {f"{r['country']}|{r['place']}" for r in records})
+
+    reg['ids'] = dict(sorted(ids.items()))
+    reg['next'] = nxt
+    io.open(IDS, 'w', encoding='utf-8', newline='\n').write(
+        json.dumps(reg, ensure_ascii=False, indent=1) + '\n')
+
+    if fresh:
+        print(f'  {len(fresh)} new id(s) issued, now up to {nxt - 1}')
+    if gone:
+        print(f'  {len(gone)} id(s) retired and reserved: '
+              + ', '.join(gone[:4]) + ('…' if len(gone) > 4 else ''))
+    return records
+
+
 def load():
     records, problems = [], []
     for name in SOURCES:
@@ -181,8 +224,7 @@ def main():
             print(f'  ... and {len(problems) - 40} more', file=sys.stderr)
         return 1
 
-    for i, rec in enumerate(records, 1):
-        rec['id'] = i
+    assign_ids(records)
     ordered = [{k: r[k] for k in ['id'] + FIELDS + list(OPTIONAL)} for r in records]
 
     os.makedirs('data', exist_ok=True)

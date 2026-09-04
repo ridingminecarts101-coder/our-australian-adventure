@@ -323,6 +323,22 @@ def check_field_health(rows):
         report('problem', 'unconsidered fields',
                f'{len(flat)} regions have a field with no variation', flat[:8])
 
+    # Ids are what progress, photos and trips are stored against. If one moves,
+    # somebody's ticks quietly point at a different place. This used to happen
+    # on most deploys; data/ids.json now freezes them, and this proves it.
+    reg = json.load(io.open(os.path.join('data', 'ids.json'), encoding='utf-8'))
+    ids = reg['ids']
+    drifted = [f'{a["id"]} != {ids.get(a["country"] + "|" + a["place"])}  {a["title"][:40]}'
+               for a in rows
+               if ids.get(f'{a["country"]}|{a["place"]}') != a['id']]
+    if drifted:
+        report('problem', 'ids have moved',
+               f'{len(drifted)} adventures no longer match the frozen id registry',
+               drifted[:6])
+    dupe_ids = [i for i, n in collections.Counter(a['id'] for a in rows).items() if n > 1]
+    if dupe_ids:
+        report('problem', 'duplicate ids', f'{len(dupe_ids)}', [str(i) for i in dupe_ids[:6]])
+
     undated = [a for a in rows if not a.get('verified_at')]
     if undated:
         report('problem', 'no verification date', f'{len(undated)} entries', [])
