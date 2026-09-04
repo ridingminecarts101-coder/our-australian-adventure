@@ -83,7 +83,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .lock-msg.ok { color: var(--eucalypt); }
 
 .btn-primary {
-  width: 100%; padding: 14px; font-size: 17px; font-weight: 650;
+  /* 44px is Apple's minimum touch target and roughly where a thumb stops
+     missing. The padding alone came a couple of pixels short. */
+  width: 100%; min-height: 44px; padding: 14px; font-size: 17px; font-weight: 650;
   border-radius: 12px; background: var(--ochre); color: #fff;
 }
 .btn-primary:disabled { opacity: .55; }
@@ -221,7 +223,8 @@ input, select, textarea { font: inherit; color: inherit; }
   padding-bottom: var(--safe-bottom);
 }
 .tab {
-  display: grid; gap: 2px; justify-items: center;
+  display: grid; gap: 2px; justify-items: center; align-content: center;
+  min-height: 44px;
   padding: 8px 4px 6px; font-size: 10.5px; font-weight: 600; color: var(--muted);
 }
 .tab span { font-size: 20px; line-height: 1.1; }

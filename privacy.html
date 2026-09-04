@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wayfinder — Privacy</title>
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root { color-scheme: light dark; --ink:#241c17; --paper:#f6efe6; --muted:#6b5d52;
+          --line:#e0d4c6; --ochre:#8c3d1f; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#f3ece4; --paper:#191512; --muted:#a2938a; --line:#33291f; --ochre:#d0714a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 22px 80px; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 34px 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  p, li { color: var(--ink); }
+  li { margin-bottom: 6px; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 4px; font-size: 15px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  a { color: var(--ochre); }
+  .note { border-left: 3px solid var(--ochre); padding: 2px 0 2px 14px; color: var(--muted); }
+  footer { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy</h1>
+  <p class="sub">Wayfinder · last updated 4 September 2026</p>
+
+  <p>Wayfinder is a travel checklist. It keeps the places you want to go, the ones
+     you have been to, and the photos you attach to them. This page says exactly
+     what that means for your data, in plain terms.</p>
+
+  <h2>What is stored</h2>
+  <table>
+    <tr><th>Data</th><th>Why</th><th>Where</th></tr>
+    <tr><td>Which adventures you have ticked, shortlisted, rated or written a note on</td>
+        <td>It is the point of the app</td><td>Your device, and our database if you are online</td></tr>
+    <tr><td>Photos you attach, and the date taken read from the photo</td>
+        <td>To show them against the adventure</td><td>Your device, and our file storage</td></tr>
+    <tr><td>Trips you plan</td><td>To group adventures together</td>
+        <td>Your device, and our database</td></tr>
+    <tr><td>A display name, if you set one</td><td>So a shared list can say who ticked what</td>
+        <td>Our database</td></tr>
+    <tr><td>An anonymous account identifier</td><td>To keep your list yours</td>
+        <td>Our database</td></tr>
+  </table>
+
+  <h2>What is not</h2>
+  <ul>
+    <li>No name, email address or phone number is required to use the app.</li>
+    <li>No advertising, no ad identifiers, no tracking across other apps or sites.</li>
+    <li>No analytics service. Nobody is watching what you tap.</li>
+    <li>Your data is not sold, rented or shared with anyone.</li>
+  </ul>
+
+  <h2>Location</h2>
+  <p>The <em>Near me</em> button asks for your location only at the moment you press
+     it. The coordinates are used once, to work out which region you are in, and are
+     not stored or sent anywhere except to a geocoding service that turns them into a
+     place name. The app works entirely without ever granting it.</p>
+
+  <h2>Photos</h2>
+  <p>Photos are read only when you choose them. They are resized on your device before
+     upload, and stored in a private bucket that is not publicly listable — the app
+     fetches them through short-lived signed links. They are visible to you and, if
+     you are in a shared group, to the other people in that group. Nobody else.</p>
+
+  <h2>Sharing a list</h2>
+  <p>A group is how two or more phones keep one list. Joining needs a code that
+     somebody in the group reads out to you. While you are in a group, the others can
+     see the ticks, photos, trips and display name in it. Leaving a group stops that,
+     and removes only you.</p>
+
+  <h2>Notifications</h2>
+  <p>Optional, off unless you turn them on, and generated on your own device. They
+     fire at most once a week and only for shortlisted adventures that are in season.
+     No notification content leaves your phone.</p>
+
+  <h2>Deleting everything</h2>
+  <p>Me → <strong>Delete my account and all my data</strong>. It removes your account,
+     every tick, every trip and every photo file, immediately and permanently. There is
+     no soft delete and no recovery, so be sure. You do not need to email anyone or
+     wait for a reply.</p>
+
+  <h2>Who runs it</h2>
+  <p>Wayfinder is an independent app. The database and file storage are hosted by
+     Supabase, and the app itself is served by GitHub Pages; both process data on our
+     behalf as infrastructure providers.</p>
+
+  <h2>Children</h2>
+  <p>Wayfinder is not directed at children under 13 and does not knowingly collect
+     data from them.</p>
+
+  <h2>Travel advice is not our advice</h2>
+  <p class="note">Some countries carry a travel warning inside the app. It is a
+     convenience, not a source of truth, and it can be out of date. Always check your
+     own government's current advice before booking anything. Opening hours, access,
+     permits, seasonal closures and Traditional Owner requirements also change; check
+     before you travel.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes materially, the date at the top changes with it, and the
+     app will say so on next launch.</p>
+
+  <footer>
+    Questions: <a href="mailto:rambodog555@gmail.com">rambodog555@gmail.com</a> ·
+    <a href="./">Open Wayfinder</a> · <a href="support.html">Support</a>
+  </footer>
+</main>
+</body>
+</html>

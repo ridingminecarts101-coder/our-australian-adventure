@@ -180,6 +180,7 @@ async function flushOutbox() {
       completed:    !!item.completed,
       completed_at: item.completed ? (item.completed_at || new Date().toISOString()) : null,
       completed_by: item.completed ? (item.completed_by || who) : null,
+      completed_by_id: item.completed ? (item.completed_by_id || userId) : null,
       shortlisted:  !!item.shortlisted,
       rating:       item.rating ?? null,
       memory:       item.memory ?? null,
@@ -187,7 +188,14 @@ async function flushOutbox() {
       ...ownership(),
     };
     const { error } = await sb.from('progress')
-      .upsert(payload, { onConflict: userId ? 'adventure_id,user_id' : 'adventure_id' });
+      // (adventure_id, scope_id) is the unique pair once the cutover has run;
+      // before that the table is keyed on adventure_id alone. Try the new
+      // shape and fall back, so the app works either side of the migration.
+      .upsert(payload, { onConflict: 'adventure_id,scope_id' });
+    if (error && /no unique|constraint matching|scope_id/i.test(error.message || '')) {
+      const retry = await sb.from('progress').upsert(payload, { onConflict: 'adventure_id' });
+      if (!retry.error) { continue; }
+    }
     if (error) { stillPending.push(item); console.warn('sync failed', item.adventure_id, error.message); }
   }
   writeLS(LS.outbox, stillPending);
@@ -204,7 +212,20 @@ async function pullProgress() {
 
   // Anything sitting in the outbox is newer than the server — don't stomp it.
   const pendingIds = new Set(readLS(LS.outbox, []).map(o => o.adventure_id));
-  for (const r of data) if (!pendingIds.has(r.adventure_id)) progress.set(r.adventure_id, r);
+  // You can hold a personal row and a group row for the same adventure - one
+  // from before you joined, one from after. The group's is the shared truth,
+  // so it wins; otherwise the list would flicker between the two.
+  const best = new Map();
+  for (const r of data) {
+    if (pendingIds.has(r.adventure_id)) continue;
+    const prev = best.get(r.adventure_id);
+    if (!prev) { best.set(r.adventure_id, r); continue; }
+    const mine = r.group_id && r.group_id === activeGroupId;
+    const theirs = prev.group_id && prev.group_id === activeGroupId;
+    if (mine && !theirs) best.set(r.adventure_id, r);
+    else if (mine === theirs && (r.updated_at || '') > (prev.updated_at || '')) best.set(r.adventure_id, r);
+  }
+  for (const [id, r] of best) progress.set(id, r);
   saveLocalProgress();
   renderAll();
 }
@@ -228,9 +249,9 @@ function subscribeRealtime() {
         if (readLS(LS.outbox, []).some(o => o.adventure_id === r.adventure_id)) return;
         const before = row(r.adventure_id);
         progress.set(r.adventure_id, r);
-        if (r.completed && !before.completed && r.completed_by && r.completed_by !== who) {
+        if (r.completed && !before.completed && r.completed_by_id !== userId) {
           const a = ADV.find(x => x.id === r.adventure_id);
-          if (a) toast(`${r.completed_by} ticked off “${a.title}”`);
+          if (a) toast(`${nameOf(r.completed_by_id, r.completed_by)} ticked off “${a.title}”`);
         }
       }
       saveLocalProgress();
@@ -243,6 +264,15 @@ function subscribeRealtime() {
       refreshSyncBar();
       renderMe();
     });
+
+  // Someone renaming themselves has to reach the other phones straight away,
+  // or "ticked by" goes stale again in a different way.
+  sb.channel('member-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, async () => {
+      await loadMembers();
+      renderAll();
+    })
+    .subscribe();
 
   sb.channel('photo-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'photos' }, payload => {
@@ -478,6 +508,33 @@ async function addPhotos(adventureId, files) {
   flushPhotoQueue();
 }
 
+/* Move photo objects uploaded before paths carried a scope.
+ *
+ * Runs once in the background after sign-in. A failure is not worth
+ * interrupting anyone over: the storage policy still allows the old shape,
+ * so an unmoved object keeps working, it is just readable by any signed-in
+ * account rather than only by the group.
+ */
+async function migrateLegacyPhotos() {
+  if (!sb || !online || !userId) return;
+  const scope = activeGroupId || userId;
+  const legacy = photos.filter(p => p.user_id === userId && /^\d+\//.test(p.storage_path || ''));
+  if (!legacy.length) return;
+
+  let moved = 0;
+  for (const p of legacy) {
+    const to = `${scope}/${p.storage_path}`;
+    const { error } = await sb.storage.from(BUCKET).move(p.storage_path, to);
+    if (error) { console.warn('photo move', error.message); continue; }
+    const upd = await sb.from('photos').update({ storage_path: to }).eq('id', p.id);
+    if (upd.error) { console.warn('photo path', upd.error.message); continue; }
+    signedUrls.delete(p.storage_path);
+    p.storage_path = to;
+    moved++;
+  }
+  if (moved) { console.info(`moved ${moved} photo(s) under ${scope}`); renderAll(); }
+}
+
 async function flushPhotoQueue() {
   if (!sb || !online || flushPhotoQueue.busy) { renderPhotoStatus(); return; }
   if (!pendingPhotos.length) { renderPhotoStatus(); return; }
@@ -485,7 +542,13 @@ async function flushPhotoQueue() {
 
   for (const item of [...pendingPhotos]) {
     try {
-      const path = `${item.adventure_id}/${item.id}.jpg`;
+      // <scope>/<adventure>/<id>.jpg — the first segment is what the storage
+      // policy checks, so a stranger cannot read someone else's memories by
+      // guessing a path. Older objects have no prefix; migrateLegacyPhotos
+      // moves them across once, in the background.
+      const scope = activeGroupId || userId;
+      const path = scope ? `${scope}/${item.adventure_id}/${item.id}.jpg`
+                         : `${item.adventure_id}/${item.id}.jpg`;
       const up = await sb.storage.from(BUCKET)
         .upload(path, item.blob, { contentType: 'image/jpeg', upsert: true });
       if (up.error) throw up.error;
@@ -854,6 +917,19 @@ function seasonalNudge() {
 let userId = null;             // auth.users.id for this session
 let myGroups = [];             // groups this user belongs to
 let activeGroupId = null;      // the group new rows are written into
+let members = new Map();       // user_id -> display name, for everyone in the group
+
+/* Names used to be frozen into completed_by at the moment of ticking, so
+ * renaming yourself never changed anything you had already done, and a new
+ * phone showed whatever the old ones had typed. Names now live in
+ * group_members and are resolved at render time, so a rename is immediate
+ * and applies to everything that person has ever ticked.
+ */
+function nameOf(id, fallback) {
+  if (id && members.has(id)) return members.get(id);
+  if (id && id === userId) return who || 'You';
+  return fallback || 'Someone';
+}
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // no I/O/0/1
 
@@ -888,6 +964,34 @@ async function loadGroups() {
   activeGroupId = myGroups.some(g => g.id === saved) ? saved
                 : (myGroups[0] ? myGroups[0].id : null);
   if (activeGroupId) localStorage.setItem(LS.group, activeGroupId);
+  await loadMembers();
+}
+
+// Everyone in the active group, so ticks can be attributed to a person
+// rather than to a string that was copied at the time.
+async function loadMembers() {
+  members = new Map();
+  if (!sb || !activeGroupId) return;
+  const { data, error } = await sb.from('group_members')
+    .select('user_id, display_name').eq('group_id', activeGroupId);
+  if (error) {
+    // Before the cutover you can only read your own membership. Not fatal:
+    // names simply fall back to whatever was stored on the row.
+    if (!/does not exist|schema cache/i.test(error.message)) console.warn('members', error.message);
+    return;
+  }
+  for (const m of data || []) if (m.display_name) members.set(m.user_id, m.display_name);
+  await pushMyName();
+}
+
+// Keep this phone's name on the server so the others can see it.
+async function pushMyName() {
+  if (!sb || !userId || !activeGroupId || !who) return;
+  if (members.get(userId) === who) return;
+  const { error } = await sb.from('group_members')
+    .update({ display_name: who }).eq('group_id', activeGroupId).eq('user_id', userId);
+  if (error) { console.warn('name', error.message); return; }
+  members.set(userId, who);
 }
 
 async function createGroup(name) {
@@ -925,6 +1029,9 @@ async function joinGroup(code) {
   activeGroupId = data.id;
   localStorage.setItem(LS.group, activeGroupId);
   await loadGroups();
+  // Anything this phone did before joining comes with it, otherwise the
+  // person who just joined appears to have done nothing.
+  await adoptExistingRowsIntoGroup();
   await pullProgress(); await pullPhotos(); await pullTrips();
   renderAll();
   toast(`Joined ${data.name}`);
@@ -1592,7 +1699,7 @@ function renderMemories() {
           <b>${esc(a.title)}</b>
           <div class="card-meta">${esc(a.place)} · ${esc(regionName(a))}</div>
           <div class="badges">
-            ${r.completed_by ? `<span class="badge">Ticked by ${esc(r.completed_by)}</span>` : ''}
+            ${r.completed_by || r.completed_by_id ? `<span class="badge">Ticked by ${esc(nameOf(r.completed_by_id, r.completed_by))}</span>` : ''}
             ${r.completed_at ? `<span class="badge">${fmtDate(r.completed_at)}</span>` : ''}
             ${r.rating ? `<span class="badge star">${'★'.repeat(r.rating)}</span>` : ''}
             ${ph.length ? `<span class="badge">📷 ${ph.length}</span>` : ''}
@@ -1798,7 +1905,7 @@ function renderMe() {
   const byPerson = new Map();
   for (const r of progress.values()) {
     if (!r.completed) continue;
-    const name = r.completed_by || who || 'You';
+    const name = nameOf(r.completed_by_id, r.completed_by || who || 'You');
     byPerson.set(name, (byPerson.get(name) || 0) + 1);
   }
   const people = [...byPerson.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
@@ -1880,7 +1987,7 @@ function renderSheet(id) {
       <div class="fact"><b>Dogs</b><span>${esc(DOG_LABEL[a.dog_friendly])}</span></div>
     </div>
 
-    ${r.completed && r.completed_by ? `<div class="donenote">Ticked off by ${esc(r.completed_by)}${r.completed_at ? ' on ' + fmtDate(r.completed_at) : ''}.</div>` : ''}
+    ${r.completed && (r.completed_by || r.completed_by_id) ? `<div class="donenote">Ticked off by ${esc(nameOf(r.completed_by_id, r.completed_by))}${r.completed_at ? ' on ' + fmtDate(r.completed_at) : ''}.</div>` : ''}
 
     <div class="sheet-actions">
       <button class="btn-primary ${r.completed ? 'doneState' : ''}" data-act="toggle">
@@ -1946,6 +2053,7 @@ function toggleDone(id) {
     completed: nowDone,
     completed_at: nowDone ? new Date().toISOString() : null,
     completed_by: nowDone ? who : null,
+    completed_by_id: nowDone ? userId : null,
   });
   if (nowDone) {
     const a = ADV.find(x => x.id === id);
@@ -2185,6 +2293,7 @@ function wireUI() {
     if (name === null) return;
     who = name.trim() || null;
     if (who) localStorage.setItem(LS.who, who); else localStorage.removeItem(LS.who);
+    pushMyName().then(renderAll);
     renderAll();
   };
   $('#hereBtn').onclick = jumpToHere;
@@ -2279,6 +2388,7 @@ async function enterApp() {
   flushPhotoQueue();
   flushTrips();
   seasonalNudge();
+  migrateLegacyPhotos();
 }
 
 // A shared link lands directly on the adventure or trip it names.

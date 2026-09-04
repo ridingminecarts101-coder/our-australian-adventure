@@ -57,6 +57,11 @@
     pendingPhotos = [];
     photos = [];
     goTo('world');
+    // Draw every panel, not just the one on screen. Tab buttons only toggle
+    // visibility, so a suite that opens the Me tab reads whatever was last
+    // rendered - which on a page that never finished signing in is nothing,
+    // and the suite fails for a reason that has nothing to do with the app.
+    renderAll();
     await wait(60);
   }
 
@@ -507,7 +512,25 @@
   };
   window.selftestSuites = Object.keys(SUITES);
 
+  // Two runs at once share R and reset() each other's state mid-suite, which
+  // produces failures attributed to whichever suite happened to be running.
+  // They are not real, and chasing one wastes an afternoon.
+  let running = false;
+
   window.runDiagnostics = async function (opts = {}) {
+    if (running) {
+      return { error: 'a diagnostic run is already in progress',
+               advice: 'wait for it to finish, or reload the page to abandon it' };
+    }
+    running = true;
+    try {
+      return await runSuites(opts);
+    } finally {
+      running = false;
+    }
+  };
+
+  async function runSuites(opts) {
     R.pass.length = 0; R.fail.length = 0; R.warn.length = 0;
     const t0 = performance.now();
     await reset();
@@ -523,5 +546,5 @@
       FAIL: R.fail, WARN: R.warn, metrics: R.metric,
       PASS: opts.verbose ? R.pass : `${R.pass.length} assertions passed`,
     };
-  };
+  }
 })();

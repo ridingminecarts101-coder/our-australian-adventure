@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wayfinder — Support</title>
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root { color-scheme: light dark; --ink:#241c17; --paper:#f6efe6; --muted:#6b5d52;
+          --line:#e0d4c6; --ochre:#8c3d1f; --card:#fffaf3; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#f3ece4; --paper:#191512; --muted:#a2938a; --line:#33291f;
+            --ochre:#d0714a; --card:#211b16; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 22px 80px; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 32px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 26px; }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 12px 14px; margin-bottom: 8px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { margin: 8px 0 2px; }
+  a { color: var(--ochre); }
+  code { background: rgba(140,61,31,.12); padding: 1px 5px; border-radius: 5px;
+         font-size: 14px; }
+  footer { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Support</h1>
+  <p class="sub">Wayfinder — real places worth going, ticked off together.</p>
+
+  <p>Email <a href="mailto:rambodog555@gmail.com">rambodog555@gmail.com</a>. Say which
+     phone you are on and what you were doing, and you will get a real reply.</p>
+
+  <h2>Common questions</h2>
+
+  <details>
+    <summary>How do two phones share one list?</summary>
+    <p>On the first phone: Me → Sharing → <strong>Create a group</strong>. It shows a
+       join code. On the other phone: Me → Sharing → <strong>Join with a code</strong>,
+       and type it in. Everything already on either phone comes with it.</p>
+  </details>
+
+  <details>
+    <summary>A third person joined and things went strange</summary>
+    <p>That was a real bug, fixed in the September 2026 update. Before it, every phone
+       signed in as the same account, so the app could not tell three people apart —
+       and one person leaving the group removed it for everybody. Update the app and
+       the group will behave.</p>
+  </details>
+
+  <details>
+    <summary>“Ticked by” shows the wrong name</summary>
+    <p>Set your name under Me → Settings → <strong>Change name</strong>. It now applies
+       to everything you have ever ticked, on every phone in the group, straight away.</p>
+  </details>
+
+  <details>
+    <summary>My two phones disagree about what is ticked</summary>
+    <p>Ticks sync live, but a phone that has been in a pocket for a while can drop the
+       connection. Opening the app reconnects it. If they still disagree, Me → Settings
+       → <strong>Force refresh from server</strong>.</p>
+  </details>
+
+  <details>
+    <summary>A photo will not attach</summary>
+    <p>iPhone photos in HEIC format are handled, but a very large photo on a slow
+       connection can take a moment. It is queued on the device and uploads by itself —
+       you can close the app. Photos are resized before upload, so they will not eat
+       your data allowance.</p>
+  </details>
+
+  <details>
+    <summary>Does it work without signal?</summary>
+    <p>Yes. The whole list works offline, and anything you tick is queued and sent when
+       you are back online. Photos queue the same way.</p>
+  </details>
+
+  <details>
+    <summary>How do I delete everything?</summary>
+    <p>Me → <strong>Delete my account and all my data</strong>. It is immediate and
+       permanent — every tick, trip and photo. No email, no waiting.</p>
+  </details>
+
+  <details>
+    <summary>A place in the app has closed, moved or is wrong</summary>
+    <p>Email the adventure name and what changed. Access, opening hours, permits and
+       seasonal closures move around, and corrections are welcome.</p>
+  </details>
+
+  <details>
+    <summary>Why does a country say “do not travel”?</summary>
+    <p>Some countries carry a warning where the honest advice is not when to go but
+       whether to. It is a convenience and it can be out of date — always check your
+       own government's current travel advice before booking.</p>
+  </details>
+
+  <footer>
+    <a href="privacy.html">Privacy</a> · <a href="./">Open Wayfinder</a> ·
+    <a href="mailto:rambodog555@gmail.com">rambodog555@gmail.com</a>
+  </footer>
+</main>
+</body>
+</html>

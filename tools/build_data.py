@@ -5,8 +5,10 @@ Run from the repo root:  python tools/build_data.py
 Edit the per-region .jsonl files, run this, commit the result.
 """
 import collections
+import io
 import json
 import os
+import re
 import sys
 
 # Source files, in the order their entries should be numbered.
@@ -60,6 +62,28 @@ CATEGORIES = {
 CONTINENTS = {'Oceania', 'Europe', 'North America',
               'South America', 'Asia', 'Middle East', 'Africa'}
 DOG = {'yes', 'no', 'check'}
+
+
+def stamp_counts(total):
+    """Keep the human-facing counts in step with the data.
+
+    The manifest and the page description both quote a number of adventures.
+    Written by hand they go stale the moment a country is added, and a store
+    listing that undersells the app by eight hundred entries is a poor look.
+    """
+    phrase = f'{total // 100 * 100:,}+ real places worth going, ticked off together.'
+    m = io.open('manifest.json', encoding='utf-8').read()
+    m2 = re.sub(r'"description": "[^"]*"', f'"description": "{phrase}"', m)
+    if m2 != m:
+        io.open('manifest.json', 'w', encoding='utf-8', newline=chr(10)).write(m2)
+        print('  updated the count in manifest.json')
+
+    h = io.open('index.html', encoding='utf-8').read()
+    h2 = re.sub(r'(name="description" content="Wayfinder — )[^"]*',
+                lambda mo: mo.group(1) + phrase, h)
+    if h2 != h:
+        io.open('index.html', 'w', encoding='utf-8', newline=chr(10)).write(h2)
+        print('  updated the count in index.html')
 
 
 def load():
@@ -155,6 +179,7 @@ def main():
     dogs = collections.Counter(r['dog_friendly'] for r in records)
     gems = sum(1 for r in records if r['hidden_gem'])
 
+    stamp_counts(len(records))
     print(f'{len(records)} adventures written to data/adventures.json')
     print('  continents: ' + ', '.join(f'{k} {v}' for k, v in by_continent.most_common()))
     print('  countries:  ' + ', '.join(f'{k} {v}' for k, v in by_country.most_common()))
