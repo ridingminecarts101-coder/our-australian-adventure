@@ -625,6 +625,31 @@
     R.metric.renderAllMs = ms;
     chk('a full render stays under 150ms', ms < 150, `${ms}ms`);
 
+    // Seasons. The old test read a range as a list: "Apr-Oct".includes("Jun")
+    // is false, so June matched nothing that ran April to October, and
+    // year-round matched no month at all. In January it found twenty
+    // adventures in season out of the 1,367 that were.
+    const seasonCases = [
+      ['Apr-Oct', 5, true], ['Apr-Oct', 0, false],
+      ['Nov-Mar', 0, true], ['Nov-Mar', 5, false],
+      ['Year-round', 3, true], ['Jun-Jul', 5, true], ['Jun-Jul', 7, false],
+      ['Dec-Feb', 11, true], ['Oct', 9, true], ['Oct', 2, false],
+    ];
+    const wrong = seasonCases.filter(([sn, m, want]) => inSeason(sn, m) !== want);
+    chk('season ranges are read as ranges', wrong.length === 0,
+        wrong.map(([sn, m]) => `${sn}@${m}`).join(', '));
+    chk('a wrapping range covers the new year', inSeason('Nov-Mar', 0));
+    chk('every month has things in season',
+        [...Array(12).keys()].every(m => ADV.some(a => inSeason(a.season, m))));
+    chk('every season parses as a month or a range',
+        ADV.every(a => /^(Year-round|[A-Z][a-z]{2}(-[A-Z][a-z]{2})?)$/.test(a.season)),
+        ADV.filter(a => !/^(Year-round|[A-Z][a-z]{2}(-[A-Z][a-z]{2})?)$/.test(a.season))
+           .slice(0, 3).map(a => a.season).join(', '));
+
+    // Ids are what saved progress is stored against.
+    chk('no two adventures share an id',
+        new Set(ADV.map(a => a.id)).size === ADV.length);
+
     // User content is escaped.
     const payload = '<img src=x onerror="window.__xssProbe=1">';
     window.__xssProbe = 0;

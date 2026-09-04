@@ -63,6 +63,7 @@ CATEGORIES = {
 CONTINENTS = {'Oceania', 'Europe', 'North America',
               'South America', 'Asia', 'Middle East', 'Africa'}
 DOG = {'yes', 'no', 'check'}
+MONTHS_RE = '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)'
 
 
 def stamp_counts(total):
@@ -165,6 +166,13 @@ def load():
                     problems.append(f'{where}: country must be a 2-letter ISO code')
                 if rec.get('category') not in CATEGORIES:
                     problems.append(f'{where}: unknown category {rec.get("category")!r}')
+                # A season has to be a month, a month range, or year-round.
+                # Opening days were being written here, which made an entry
+                # invisible to the seasonal reminder or matched every month.
+                season = str(rec.get('season', ''))
+                if not re.fullmatch(r'Year-round|%s|%s-%s' % (MONTHS_RE, MONTHS_RE, MONTHS_RE),
+                                    season):
+                    problems.append(f'{where}: season {season!r} is not a month range')
                 if rec.get('dog_friendly') not in DOG:
                     problems.append(f'{where}: dog_friendly must be yes/no/check')
                 if not isinstance(rec.get('difficulty'), int) or not 1 <= rec['difficulty'] <= 5:

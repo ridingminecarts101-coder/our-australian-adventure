@@ -244,14 +244,36 @@ async function pullProgress() {
 
 async function resubscribeRealtime() {
   if (!sb) return;
-  try { await sb.removeAllChannels(); } catch { /* nothing to remove */ }
+  try { await sb.removeAllChannels(); } catch { /* subscribeRealtime clears up */ }
   realtimeOk = false;
   realtimeStatus = 'reconnecting';
-  subscribeRealtime();
+  try {
+    subscribeRealtime();
+  } catch (e) {
+    // Never let a failed reconnect take the caller down with it. The status
+    // line is what tells somebody sync is not running.
+    console.warn('resubscribe', e);
+    realtimeStatus = 'reconnect failed: ' + (e && e.message);
+    refreshSyncBar();
+  }
 }
+
+const RT_CHANNELS = ['progress-sync', 'member-sync', 'photo-sync', 'trip-sync'];
 
 function subscribeRealtime() {
   if (!sb) return;
+  // Supabase hands back the EXISTING channel for a topic, and refuses new
+  // listeners on one that has already subscribed - it throws. So calling this
+  // twice used to kill the caller, and a reconnect where removeAllChannels()
+  // had not fully settled would throw here and leave realtime dead with
+  // nothing on screen to say so. That is exactly what "the two phones stopped
+  // agreeing" looks like. Clearing first makes it safe to call at any time.
+  for (const ch of sb.getChannels()) {
+    if (RT_CHANNELS.includes(ch.topic.replace(/^realtime:/, ''))) {
+      try { sb.removeChannel(ch); } catch { /* already gone */ }
+    }
+  }
+
   sb.channel('progress-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'progress' }, payload => {
       const r = payload.new;
@@ -872,12 +894,16 @@ async function previewReminder() {
   if (!notificationsSupported() || Notification.permission !== 'granted') {
     return toast('Turn reminders on first');
   }
-  const pool = ADV.filter(a => row(a.id).shortlisted && !isDone(a.id));
-  const pick = (pool.length ? pool : ADV.filter(a => a.hidden_gem))
-    [Math.floor(Math.random() * (pool.length || ADV.filter(a => a.hidden_gem).length))];
+  // The sample used to be drawn from hidden gems, which put paid text into a
+  // notification. Anything unlocked and in season makes a better example
+  // anyway, because it shows what a real one will look like.
+  const pool = ADV.filter(a => row(a.id).shortlisted && !isDone(a.id) && !isLocked(a));
+  const sample = ADV.filter(a => !isLocked(a) && inSeason(a.season));
+  const from = pool.length ? pool : sample;
+  const pick = from[Math.floor(Math.random() * from.length)];
   if (!pick) return toast('Nothing to preview');
   const ok = await showNotification('In season now',
-    `${pick.title} — ${pick.place}. Best ${pick.season}.`, 'wayfinder-preview');
+    `${safeTitle(pick)} — ${pick.place}. Best ${pick.season}.`, 'wayfinder-preview');
   toast(ok ? (pool.length ? 'Sent' : 'Sent — that was a sample, shortlist things for real ones')
            : 'This device would not show it');
 }
@@ -905,21 +931,45 @@ async function toggleNotifications() {
 
 // Runs on launch. Looks for shortlisted adventures whose season includes this
 // month and tells you once a week at most.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/* Is this adventure in season in the given month?
+ *
+ * The old test was `a.season.includes(thisMonth)`, which reads a RANGE as a
+ * list. "Apr-Oct".includes("Jun") is false, so June never matched anything
+ * that ran April to October, and "Year-round" matched no month at all. In
+ * January it found 20 adventures in season out of 1,367 that actually were.
+ *
+ * Ranges wrap: "Nov-Mar" is November, December, January, February, March.
+ */
+function inSeason(season, month = new Date().getMonth()) {
+  if (!season) return true;
+  if (/year.?round/i.test(season)) return true;
+  const parts = String(season).split('-').map(x => x.trim());
+  if (parts.length !== 2) return MONTHS[month] === parts[0];
+  const from = MONTHS.indexOf(parts[0]);
+  const to = MONTHS.indexOf(parts[1]);
+  if (from < 0 || to < 0) return true;          // unrecognised, do not hide it
+  return from <= to ? (month >= from && month <= to)
+                    : (month >= from || month <= to);
+}
+
 function seasonalNudge() {
   if (!readLS(LS.notify, false) || !notificationsSupported()) return;
   if (Notification.permission !== 'granted') return;
   const last = readLS(LS.notifyLast, 0);
   if (Date.now() - last < 7 * 24 * 3600 * 1000) return;
 
-  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const now = MON[new Date().getMonth()];
+  // Locked gems are excluded: a notification is no place to put paid text,
+  // and it would be a strange thing to be nudged about.
   const due = ADV.filter(a =>
-    row(a.id).shortlisted && !isDone(a.id) && a.season && a.season.includes(now));
+    row(a.id).shortlisted && !isDone(a.id) && !isLocked(a) && inSeason(a.season));
   if (!due.length) return;
 
   const pick = due[Math.floor(Math.random() * due.length)];
   showNotification('In season now',
-    `${pick.title} — ${pick.place}. Best ${pick.season}.`, 'wayfinder-season');
+    `${safeTitle(pick)} — ${pick.place}. Best ${pick.season}.`, 'wayfinder-season');
   writeLS(LS.notifyLast, Date.now());
 }
 
