@@ -16,6 +16,12 @@ SOURCES = [
     'nz', 'nz-north', 'nz-south', 'oceania-islands',
     # Europe
     'europe',
+    'europe-fr',
+    'europe-it',
+    'europe-es',
+    'europe-gb',
+    'europe-de',
+    'europe-gr',
     # North America
     'us-west', 'us-southwest', 'us-east',
     'canada', 'mexico',
