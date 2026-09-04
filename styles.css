@@ -559,3 +559,47 @@ input, select, textarea { font: inherit; color: inherit; }
 .advisory-box.care  .advisory-head { color: #d9b45e; }
 .advisory-box p { margin: 0 0 6px; font-size: 13.5px; line-height: 1.45; }
 .advisory-box .fineprint { margin-bottom: 0; }
+
+/* ── Hidden gem packs ─────────────────────────────────────────────────
+ * A locked card stays readable. Greying it out to the point of illegibility
+ * would hide the thing being sold, which helps nobody.
+ */
+.storelist { display: grid; gap: 8px; margin-bottom: 10px; }
+.packrow {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.packrow b { display: block; font-size: 15px; }
+.packrow span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.packrow.owned { opacity: .7; }
+.btn-buy {
+  /* 44px minimum, same as every other control - a price button is exactly
+     the one you do not want people mis-tapping. */
+  flex: none; min-height: 44px; padding: 10px 16px; border-radius: 999px;
+  background: var(--ochre); color: #fff; font-weight: 700; font-size: 14px;
+}
+.packowned { flex: none; font-size: 13px; font-weight: 700; color: var(--eucalypt); }
+
+/* A locked gem is blurred rather than hidden: you can see there is something
+ * there and roughly how much of it, which is the honest way to sell it. The
+ * blur is on the text only - the badges stay sharp so the row still reads.
+ * user-select is off so the title cannot be lifted out by selecting it.
+ */
+.card.locked .card-title,
+.card.locked .card-meta {
+  filter: blur(4.5px);
+  user-select: none; -webkit-user-select: none;
+  pointer-events: none;
+}
+.card.locked { position: relative; }
+.card.locked .card-body::after {
+  content: '🔒 Locked';
+  position: absolute; left: 50%; top: 20px; transform: translateX(-50%);
+  font-size: 12px; font-weight: 700; letter-spacing: .02em;
+  color: var(--ochre); background: var(--card);
+  padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.card.locked .tick { opacity: .3; }
+.badge.gem { white-space: nowrap; }

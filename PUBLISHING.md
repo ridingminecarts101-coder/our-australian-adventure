@@ -59,6 +59,22 @@ If it comes back `blocked`, it tells you which setting is still off.
 
 ---
 
+## What is sold, and what is never behind the paywall
+
+Hidden gems are the paid content: 806 of the 2,015 entries. Everything else is
+free forever.
+
+**Locked gems do not count towards anything.** A region with 71 adventures of
+which 30 are unbought gems asks for 41, not 71. Progress, stamps, achievements
+and "The Lot" all measure what you can actually reach. Buying a pack raises the
+target and folds the gems in. Nobody who declines to pay can ever be stopped
+from finishing — that would be a hostile design and it would fail review.
+
+Locked gems still appear in the list, blurred, with their region, category,
+difficulty and cost visible. You can see there is something there and roughly
+what kind of thing it is; what is withheld is which place and why it is worth
+the detour.
+
 ## App Store Connect — the answers you will be asked for
 
 **Privacy nutrition label.** The honest answers:
@@ -143,12 +159,30 @@ In order. Nothing here can be done from code.
    required, iPad if you ship for iPad. The world map, a continent zoom, an
    adventure with a photo, the passport and a trip make a good five.
 9. **Add the `Info.plist` permission strings** listed above.
-10. **Decide on the paid packs.** Hidden gems are flagged per continent, six
-    SKUs, but no in-app purchase code exists yet — the app currently shows
-    everything. Either wire up StoreKit or ship free for v1 and add it later.
-11. **Set the support and privacy URLs** in App Store Connect to the two pages
+10. **Create the in-app purchases** in App Store Connect and Google Play.
+    Six products, all **non-consumable**, ids exactly as below:
+
+    | Product id | Shown as | Price |
+    |---|---|---|
+    | `app.wayfinder.mobile.gems.all` | Every hidden gem | $7.99 |
+    | `app.wayfinder.mobile.gems.oceania` | Oceania gems (270) | $1.99 |
+    | `app.wayfinder.mobile.gems.europe` | Europe gems (225) | $1.99 |
+    | `app.wayfinder.mobile.gems.north_america` | North America gems (171) | $1.99 |
+    | `app.wayfinder.mobile.gems.asia` | Asia gems (106) | $1.99 |
+    | `app.wayfinder.mobile.gems.middle_east` | Middle East gems (34) | $1.99 |
+
+    Turn **Family Sharing on** for all six — this is a household app and it
+    costs nothing to allow. Do not create South America or Africa yet; they
+    have no gems and an empty pack fails review.
+
+11. **Install a purchases plugin** and the code will use it automatically —
+    `store.js` looks for `Capacitor.Plugins.Purchases` and falls back to the
+    simulator when it is absent. Any plugin exposing `getProducts`,
+    `purchase` and `restorePurchases` will do; adjust the three call sites in
+    `Billing` if the shape differs.
+12. **Set the support and privacy URLs** in App Store Connect to the two pages
     above, once you know the final domain.
-12. **Google Play**, if you want it: a separate 25 USD one-off, its own console,
+13. **Google Play**, if you want it: a separate 25 USD one-off, its own console,
     and a Data Safety form that asks the same questions as the table above.
 
 ---
@@ -159,8 +193,10 @@ In order. Nothing here can be done from code.
   left empty rather than invented. Pins on the map, distance sorting and
   "nearest to me" all need a geocoding pass first. *Near me* currently resolves
   your region by name, which works, but cannot sort by distance.
-- **No in-app purchases.** The hidden-gem packs are flagged in the data and
-  priced in the plan, but nothing charges for them yet.
+- **Billing is not wired to a real store.** The purchase flow, entitlements,
+  locking and restore all work and are tested, but on a phone they need a
+  Capacitor purchases plugin (see below). In a browser it runs a clearly
+  labelled simulator.
 - **Legacy photo paths.** Photos uploaded before this release live at
   `<adventure>/<id>.jpg` with no owner prefix. The app moves them under the
   right scope by itself on next launch; until it has, the storage policy still

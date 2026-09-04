@@ -107,8 +107,20 @@ function metaLine(a) {
   if (!nav.country) parts.push(countryName(a.country));
   return parts.join(' · ');
 }
-function countOf(pred) { return ADV.filter(pred).length; }
-function doneOf(pred)  { return ADV.filter(a => pred(a) && isDone(a.id)).length; }
+/* Counting deliberately ignores locked gems.
+ *
+ * If a region has 71 adventures and 30 of them are gems you have not bought,
+ * the target is 41, not 71. Otherwise nobody who declines to pay could ever
+ * finish a region, earn its stamp, or unlock an achievement - the app would
+ * hold completion hostage, which is a rotten thing to do and would fail
+ * review besides. Buying a pack raises the target and the gems join in.
+ *
+ * Display is separate: locked gems still appear in the list, blurred.
+ */
+function countable(a)  { return !isLocked(a); }
+function countableTotal() { return ADV.reduce((n, a) => n + (countable(a) ? 1 : 0), 0); }
+function countOf(pred) { return ADV.filter(a => countable(a) && pred(a)).length; }
+function doneOf(pred)  { return ADV.filter(a => countable(a) && pred(a) && isDone(a.id)).length; }
 function doneCount() { let n = 0; for (const r of progress.values()) if (r.completed) n++; return n; }
 
 // ── Sync status line ─────────────────────────────────────────────────
@@ -1060,6 +1072,48 @@ async function adoptExistingRowsIntoGroup() {
   }
 }
 
+/* The shop, such as it is. Counts come from the data, so a pack can never
+ * claim more than it holds, and an owned pack stops advertising itself.
+ */
+function renderStore() {
+  const el = $('#storePanel');
+  if (!el) return;
+  const counts = packStats(ADV);
+  const packs = sellablePacks(ADV);
+  const hasAll = ownsPack('all');
+
+  el.innerHTML = packs.map(p => {
+    const n = counts[p.slug] || 0;
+    const got = ownsPack(p.slug);
+    const sub = p.slug === 'all'
+      ? `${n} gems across every continent${p.blurb ? ' · ' + p.blurb : ''}`
+      : `${n} gems`;
+    return `<div class="packrow${got ? ' owned' : ''}">
+      <div>
+        <b>${esc(p.name)}</b>
+        <span>${esc(sub)}</span>
+      </div>
+      ${got ? '<span class="packowned">Unlocked</span>'
+            : `<button class="btn-buy" data-buy="${esc(p.slug)}">${esc(p.price)}</button>`}
+    </div>`;
+  }).join('') + (hasAll ? '' :
+    '<p class="fineprint">Every pack is a single payment, kept forever. ' +
+    'Buying all of them costs less than any three separately, and covers ' +
+    'continents added later.</p>');
+}
+
+// Buying, from wherever the button was pressed.
+async function buyPack(slug) {
+  const res = await Billing.buy(slug);
+  if (!res.ok) {
+    if (res.reason !== 'cancelled') toast(`Purchase failed — ${res.reason}`);
+    return;
+  }
+  toast(res.simulated ? 'Unlocked (simulated)' : 'Unlocked. Enjoy.');
+  renderAll();
+  if (openId !== null) renderSheet(openId);
+}
+
 function renderMe_groups() {
   const el = $('#groupPanel');
   if (!el) return;
@@ -1138,6 +1192,22 @@ function renderAdvisory(code) {
     <p>${esc(adv.note)}</p>
     <p class="fineprint">Conditions change faster than this app does. Check your
        government's current travel advice before you book anything.</p>`;
+}
+
+/* A locked gem is still listed, still counted, and still says where it is -
+ * hiding it entirely would mean nobody knows what they are missing, and
+ * quietly dropping it from the totals would make the numbers lie. What is
+ * withheld is the specifics: which place, and why it is worth the detour.
+ */
+function lockedTitle(a) {
+  const pack = packFor(a.continent);
+  return `Hidden gem in ${regionName(a)}`;
+}
+
+function lockNote(a) {
+  const pack = packFor(a.continent);
+  if (!pack) return 'Locked.';
+  return `Locked. Part of ${pack.name} — ${pack.price}.`;
 }
 
 function placeRow({ label, sub, count, done, flag, swatch, advisory, onClick }) {
@@ -1345,18 +1415,19 @@ function filtered() {
 
 function cardHTML(a) {
   const r = row(a.id);
-  return `<article class="card ${r.completed ? 'done' : ''}">
+  const locked = isLocked(a);
+  return `<article class="card ${r.completed ? 'done' : ''}${locked ? ' locked' : ''}">
     <button class="tick ${r.completed ? 'on' : ''}" data-toggle="${a.id}"
-            aria-label="${r.completed ? 'Mark not done' : 'Mark done'}">✓</button>
+            aria-label="${r.completed ? 'Mark not done' : 'Mark done'}"${locked ? ' disabled' : ''}>✓</button>
     <div class="card-body" data-open="${a.id}">
-      <div class="card-title">${esc(a.title)}</div>
-      <div class="card-meta">${esc(metaLine(a))}</div>
+      <div class="card-title">${esc(locked ? lockedTitle(a) : a.title)}</div>
+      <div class="card-meta">${esc(locked ? lockNote(a) : metaLine(a))}</div>
       <div class="badges">
         <span class="badge">${esc(a.category)}</span>
         <span class="badge">${'●'.repeat(a.difficulty)}${'○'.repeat(5 - a.difficulty)}</span>
         <span class="badge">${a.cost === 0 ? 'Free' : '$'.repeat(a.cost)}</span>
         ${a.dog_friendly === 'yes' ? '<span class="badge dog">🐾 Dogs</span>' : ''}
-        ${a.hidden_gem ? '<span class="badge gem">💎 Hidden gem</span>' : ''}
+        ${a.hidden_gem ? `<span class="badge gem">💎 Hidden gem${isLocked(a) ? ' · locked' : ''}</span>` : ''}
         ${r.shortlisted ? '<span class="badge star">⭐ Shortlist</span>' : ''}
       </div>
     </div>
@@ -1366,9 +1437,14 @@ function cardHTML(a) {
 
 function renderList() {
   const arr = filtered();
+  // This line counts rows on screen, which includes locked gems - they are
+  // visible, just blurred. The completion target in the header is a different
+  // number on purpose, so say how many of these do not count towards it.
+  const locked = arr.reduce((n, a) => n + (isLocked(a) ? 1 : 0), 0);
   $('#resultCount').textContent =
     `${arr.length} adventure${arr.length === 1 ? '' : 's'}` +
-    (arr.length !== ADV.length ? ` of ${ADV.length}` : '');
+    (arr.length !== ADV.length ? ` of ${ADV.length}` : '') +
+    (locked ? ` · ${locked} locked` : '');
   $('#list').innerHTML = arr.length
     ? arr.map(cardHTML).join('')
     : `<div class="empty">Nothing matches that.<br>Try clearing a filter.</div>`;
@@ -1376,8 +1452,9 @@ function renderList() {
 
 function renderHeader() {
   const done = doneCount();
-  $('#progressCount').textContent = `${done} / ${ADV.length}`;
-  $('#progressFill').style.width = `${(done / Math.max(ADV.length, 1)) * 100}%`;
+  const total = countableTotal();
+  $('#progressCount').textContent = `${done} / ${total}`;
+  $('#progressFill').style.width = `${(done / Math.max(total, 1)) * 100}%`;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1850,8 +1927,8 @@ const ACHIEVEMENTS = [
   ['🎒', 'Proper Travellers','Complete 50 adventures',                         d => d.done >= 50],
   ['💯', 'Century',          'Complete 100 adventures',                        d => d.done >= 100],
   ['🏅', 'Serious About It', 'Complete 250 adventures',                        d => d.done >= 250],
-  ['🌐', 'Half the World',   () => `Complete half of all ${ADV.length}`,        d => d.done >= ADV.length / 2],
-  ['👑', 'The Lot',          () => `Complete all ${ADV.length} adventures`,     d => d.done >= ADV.length],
+  ['🌐', 'Half the World',   () => `Complete half of all ${countableTotal()}`,  d => d.done >= countableTotal() / 2],
+  ['👑', 'The Lot',          () => `Complete all ${countableTotal()} adventures`, d => d.done >= countableTotal()],
   ['💎', 'Gem Hunters',      'Find 25 hidden gems',                            d => d.gems >= 25],
   ['🗺️', 'State Hopper',     'An adventure in all 8 Australian states and territories', d => d.states >= 8],
   ['🌏', 'Continent Hopper','An adventure on three different continents',     d => d.continents >= 3],
@@ -1871,6 +1948,7 @@ function achievementData() {
   const countries = new Set();
   const continents = new Set();
   for (const a of ADV) {
+    if (!countable(a)) continue;
     const r = row(a.id);
     if (r.memory) d.memories++;
     if (r.rating) d.ratings++;
@@ -1892,7 +1970,7 @@ function achievementData() {
   d.parks = d.tags.get('theme-park') || 0;
   // How many Disney resorts exist at all, so the achievement text stays right
   // if a seventh ever opens.
-  d.disneyTotal = ADV.filter(a => (a.tags || []).includes('disney')).length;
+  d.disneyTotal = ADV.filter(a => countable(a) && (a.tags || []).includes('disney')).length;
   return d;
 }
 
@@ -1912,7 +1990,7 @@ function renderMe() {
 
   $('#usStats').innerHTML = `
     <div class="stat"><b>${d.done}</b><span>adventures done</span></div>
-    <div class="stat"><b>${ADV.length - d.done}</b><span>still to go</span></div>
+    <div class="stat"><b>${countableTotal() - d.done}</b><span>still to go</span></div>
     <div class="stat"><b>${d.countries}</b><span>countries visited</span></div>
     <div class="stat"><b>${d.gems}</b><span>hidden gems found</span></div>
     <div class="stat"><b>${avg}</b><span>average rating</span></div>
@@ -1928,6 +2006,7 @@ function renderMe() {
        <div><b>${esc(name)}</b><span>${esc(typeof desc === 'function' ? desc() : desc)}</span></div>
      </div>`).join('');
 
+  renderStore();
   $('#whoLabel').textContent = who || 'You';
   const nb = $('#notifyBtn');
   if (nb) {
@@ -1971,6 +2050,22 @@ function renderSheet(id) {
   const r = row(id);
   const ph = photosFor(id);
   const maps = mapsUrl(a);
+
+  // A locked gem gets its own sheet: what it is, roughly where, and the one
+  // button that changes that. No teaser copy pretending to be a description.
+  if (isLocked(a)) {
+    const pack = packFor(a.continent);
+    const n = packStats(ADV)[a.pack] || 0;
+    $('#sheetBody').innerHTML = `
+      <h2>💎 ${esc(lockedTitle(a))}</h2>
+      <div class="sheet-place">${esc(a.category)} · ${esc(a.continent)}</div>
+      <p>Hidden gems are the places people who live there send you to, rather
+         than the ones on every list. This is one of ${n} in ${esc(a.continent)}.</p>
+      ${pack ? `<button class="btn-primary" data-buy="${esc(pack.slug)}">Unlock ${esc(pack.name)} · ${esc(pack.price)}</button>
+      <button class="btn-ghost" data-buy="all">Or every continent · ${esc((packBySlug('all') || {}).price || '')}</button>
+      <p class="fineprint">One payment, kept forever, restorable on a new phone.</p>` : ''}`;
+    return;
+  }
 
   $('#sheetBody').innerHTML = `
     <h2>${esc(a.title)}</h2>
@@ -2147,6 +2242,27 @@ function wireUI() {
     if (countOf(a => a.continent === hit)) goTo('continent', { continent: hit });
     else toast(`No ${hit} adventures yet`);
   });
+  $('#privacyBtn').onclick = () => window.open('privacy.html', '_blank', 'noopener');
+  $('#supportBtn').onclick = () => window.open('support.html', '_blank', 'noopener');
+
+  $('#restoreBtn').onclick = async () => {
+    toast('Checking with the store…');
+    const res = await Billing.restore();
+    if (!res.ok) return toast(`Could not restore — ${res.reason}`);
+    renderAll();
+    toast(res.restored.length
+      ? `Restored ${res.restored.length} pack${res.restored.length === 1 ? '' : 's'}`
+      : 'Nothing to restore on this account');
+  };
+
+  // Buy buttons live in re-rendered markup, so the tap is caught on the way up.
+  document.body.addEventListener('click', e => {
+    const b = e.target.closest('[data-buy]');
+    if (!b) return;
+    e.preventDefault();
+    buyPack(b.dataset.buy);
+  });
+
   // The zoomed map, which knows which country you tapped rather than only
   // which continent. Tapping a country you are already inside does nothing.
   const placeMap = $('#placeMap');

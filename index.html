@@ -141,6 +141,12 @@
     <p class="muted">A group keeps one shared list between phones. Without one, your list is yours alone.</p>
     <div id="groupPanel" class="settings"></div>
 
+    <h2>Hidden gems</h2>
+    <p class="muted">Gems are the places locals send you to. Buy the continents you
+       travel, or all of them once.</p>
+    <div id="storePanel" class="storelist"></div>
+    <button id="restoreBtn" class="btn-ghost">Restore purchases</button>
+
     <h2>Settings</h2>
     <div class="settings">
       <p>Ticks you make are shown as <strong id="whoLabel">You</strong>.
@@ -156,8 +162,13 @@
       <button id="deleteAccountBtn" class="btn-ghost danger">Delete my account and all my data</button>
       <p class="fineprint">Access, opening hours, seasonal closures, permits and Traditional Owner
          requirements change. Always check before you travel.</p>
-      <p class="fineprint"><a href="privacy.html" target="_blank" rel="noopener">Privacy</a>
-         · <a href="support.html" target="_blank" rel="noopener">Support &amp; help</a></p>
+    </div>
+
+    <h2>About</h2>
+    <div class="settings">
+      <button id="privacyBtn" class="btn-ghost">Privacy policy</button>
+      <button id="supportBtn" class="btn-ghost">Support &amp; help</button>
+      <p class="fineprint">Wayfinder is an independent app. Questions go to a person.</p>
     </div>
   </section>
 
@@ -208,6 +219,7 @@
 
 <script src="config.js"></script>
 <script src="countries.js"></script>
+<script src="store.js"></script>
 <script src="land.js"></script>
 <script src="world.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>

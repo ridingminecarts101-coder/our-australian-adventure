@@ -12,7 +12,7 @@ import os
 import re
 import sys
 
-APP_FILES = ['app.js', 'world.js', 'config.js', 'land.js', 'countries.js']
+APP_FILES = ['app.js', 'world.js', 'config.js', 'land.js', 'countries.js', 'store.js']
 HTML = 'index.html'
 CSS = 'styles.css'
 

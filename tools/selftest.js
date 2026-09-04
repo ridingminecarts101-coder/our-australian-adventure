@@ -52,6 +52,8 @@
     localStorage.removeItem('oaa.progress.v1');
     localStorage.removeItem('oaa.outbox.v1');
     localStorage.removeItem('oaa.trips.v1');
+    localStorage.removeItem('oaa.packs.v1');
+    loadEntitlements();
     progress = new Map();
     trips = [];
     pendingPhotos = [];
@@ -166,7 +168,10 @@
   async function testFilters() {
     goTo('adventures', { continent: 'Oceania', country: 'AU' }); await wait(60);
     const total = +$('#resultCount').textContent.match(/^(\d+)/)[1];
-    chk('country list populated', total === countOf(a => a.country === 'AU'), `${total}`);
+    // The list shows locked gems too, blurred, so this counts rows on screen -
+    // not the completion target, which deliberately excludes them.
+    chk('country list populated',
+        total === ADV.filter(a => a.country === 'AU').length, `${total}`);
 
     for (const q of ['all', 'todo', 'done', 'short', 'gem']) {
       const chip = $(`#quickChips .chip[data-quick="${q}"]`);
@@ -319,6 +324,12 @@
   }
 
   async function testPassport() {
+    // Stamps are earned on the first tick in a country, so this suite only
+    // means anything from a clean slate. Make one rather than assuming the
+    // suite order provides it.
+    progress = new Map();
+    localStorage.removeItem('oaa.progress.v1');
+    renderAll();
     $('.tab[data-tab="tab-passport"]').click(); await wait(120);
     const countries = new Set(ADV.map(a => a.country)).size;
     chk('a stamp slot per country', $$$('.stamp').length === countries, `${$$$('.stamp').length} of ${countries}`);
@@ -383,6 +394,89 @@
     closeSheet();
   }
 
+  async function testStore() {
+    const counts = packStats(ADV);
+    const sell = sellablePacks(ADV);
+
+    chk('every sellable pack has something in it',
+        sell.every(p => p.slug === 'all' || (counts[p.slug] || 0) > 0),
+        sell.map(p => `${p.slug}:${counts[p.slug] || 0}`).join(' '));
+    chk('empty continents are not for sale',
+        !sell.some(p => ['south-america', 'africa'].includes(p.slug)));
+    chk('the bundle counts every gem',
+        counts.all === ADV.filter(a => a.hidden_gem).length,
+        `${counts.all} vs ${ADV.filter(a => a.hidden_gem).length}`);
+    chk('every gem belongs to a pack',
+        ADV.filter(a => a.hidden_gem && !a.pack).length === 0);
+    chk('every pack slug is one we sell',
+        [...new Set(ADV.filter(a => a.pack).map(a => a.pack))]
+          .every(slug => !!packBySlug(slug)));
+
+    // Nothing is owned at the start of a run, so gems are locked.
+    const euGem = ADV.find(a => a.hidden_gem && a.pack === 'europe');
+    const asiaGem = ADV.find(a => a.hidden_gem && a.pack === 'asia');
+    const plain = ADV.find(a => !a.hidden_gem);
+    chk('a gem starts locked', isLocked(euGem));
+    chk('an ordinary adventure is never locked', !isLocked(plain));
+    chk('a locked card hides the title',
+        !cardHTML(euGem).includes(euGem.title), 'title leaked into the card');
+    chk('a locked card still says where it is',
+        cardHTML(euGem).includes(regionName(euGem)));
+
+    // Buying one pack unlocks that pack and nothing else.
+    const realConfirm = window.confirm;
+    window.confirm = () => true;
+    try {
+      await buyPack('europe'); await wait(60);
+      chk('buying a pack unlocks it', !isLocked(euGem));
+      chk('buying one pack does not unlock another', isLocked(asiaGem));
+      chk('an unlocked card shows the real title', cardHTML(euGem).includes(euGem.title));
+
+      await buyPack('all'); await wait(60);
+      chk('the bundle unlocks everything',
+          !ADV.some(a => isLocked(a)),
+          `${ADV.filter(a => isLocked(a)).length} still locked`);
+
+      const res = await Billing.restore();
+      chk('restore reports what is owned', res.ok && res.restored.includes('all'));
+    } finally {
+      window.confirm = realConfirm;
+      localStorage.removeItem('oaa.packs.v1');
+      loadEntitlements();
+    }
+    chk('clearing entitlements re-locks the gems', isLocked(euGem));
+
+    // The point of the whole design: paying for nothing must still let you
+    // finish. A region's target is what you can actually reach.
+    const gemCount = ADV.filter(a => a.hidden_gem).length;
+    chk('locked gems are excluded from the total',
+        countableTotal() === ADV.length - gemCount,
+        `${countableTotal()} countable of ${ADV.length}, ${gemCount} gems`);
+
+    const inSA = a => a.country === 'AU' && a.admin1 === 'sa';
+    const saAll = ADV.filter(inSA).length;
+    const saGems = ADV.filter(a => inSA(a) && a.hidden_gem).length;
+    chk('a region asks only for what is unlocked',
+        countOf(inSA) === saAll - saGems,
+        `South Australia asks ${countOf(inSA)} of ${saAll} (${saGems} gems locked)`);
+
+    window.confirm = () => true;
+    try {
+      await buyPack('oceania'); await wait(60);
+      chk('buying raises the region target', countOf(inSA) === saAll,
+          `${countOf(inSA)} vs ${saAll}`);
+    } finally {
+      window.confirm = realConfirm;
+      localStorage.removeItem('oaa.packs.v1');
+      loadEntitlements();
+      // Repaint. Buying re-rendered the page while a pack was owned, and a
+      // later suite reading that stale markup sees totals that no longer
+      // match the entitlements - which is a test bug, not an app one.
+      renderAll();
+    }
+    chk('and lowers it again when not owned', countOf(inSA) === saAll - saGems);
+  }
+
   async function testMeTab() {
     $('.tab[data-tab="tab-me"]').click(); await wait(120);
     for (const id of ['#newTripBtn', '#switchWho', '#notifyBtn', '#previewNotifyBtn',
@@ -397,7 +491,7 @@
     const ach = $$$('.ach');
     chk('achievements render', ach.length >= 15, `${ach.length}`);
     const lot = ach.find(e => /The Lot/.test(e.textContent));
-    chk('The Lot counts the real list', lot && lot.textContent.includes(String(ADV.length)),
+    chk('The Lot counts what can be completed', lot && lot.textContent.includes(String(countableTotal())),
         lot ? lot.textContent.replace(/\s+/g, ' ') : 'missing');
 
     // Make the progress this assertion needs, rather than depending on another
@@ -506,7 +600,7 @@
     data: testData, navigation: testNavigation, map: testMap,
     filters: testFilters, sheet: testSheet, photos: testPhotos,
     memories: testMemoriesTab, passport: testPassport, trips: testTrips,
-    me: testMeTab, accessibility: testAccessibility,
+    me: testMeTab, store: testStore, accessibility: testAccessibility,
     performance: testPerformance, persistence: testPersistence,
     regions: testRegionMatching,
   };

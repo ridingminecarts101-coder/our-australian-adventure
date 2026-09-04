@@ -4,7 +4,7 @@
  * from cache (and works with no signal), while a fresh copy is fetched in the
  * background and used on the next launch. Bump CACHE_VERSION when you deploy.
  */
-const CACHE_VERSION = 'wayfinder-v24';
+const CACHE_VERSION = 'wayfinder-v25';
 const SHELL = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const SHELL = [
   './app.js',
   './config.js',
   './countries.js',
+  './store.js',
   './land.js',
   './world.js',
   './privacy.html',
