@@ -13,6 +13,33 @@
 -- ═══════════════════════════════════════════════════════════════════
 
 
+-- ═══════════════════════════════════════════════════════════════════
+--  STOP if the cutover has already been run
+-- ═══════════════════════════════════════════════════════════════════
+--  This file creates the old permissive policies - "any signed-in account
+--  may read everything" - which were fine for two trusted phones. It says
+--  it is safe to re-run, and it is, RIGHT UP UNTIL schema-cutover.sql has
+--  been applied. After that, re-running this would put the permissive
+--  policies back and quietly expose every row to anybody who installs the
+--  app. So it refuses.
+--
+--  If you need something from this file after the cutover, take that one
+--  statement rather than running the whole thing.
+-- ═══════════════════════════════════════════════════════════════════
+do $guard$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'progress'
+                and column_name = 'scope_id') then
+    raise exception using
+      message = 'schema-cutover.sql has already been run on this project.',
+      detail  = 'Re-running setup-all.sql would restore the permissive '
+                'security policies it replaced and expose every row.',
+      hint    = 'Nothing has been changed. Run only the statement you need.';
+  end if;
+end $guard$;
+
+
 -- ───────────────────────────────────────────────────────────────────
 --  PART 1 — Photos
 -- ───────────────────────────────────────────────────────────────────

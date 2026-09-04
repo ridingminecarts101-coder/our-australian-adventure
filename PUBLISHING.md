@@ -39,6 +39,17 @@ moment sign-ups open to the public it is a data breach.
 In that order. Opening sign-ups before the policies exist would expose
 everything to anyone who installs the app.
 
+**Do not re-run `setup-all.sql` after the cutover.** It creates the old
+"any signed-in account may read everything" policies, which is exactly what
+the cutover replaces — re-running it would put them back and expose every
+row. It now refuses to run if it detects the cutover has been applied, and
+says so, but the safe habit is to take the single statement you need rather
+than running whole files twice.
+
+`tools/check_sql.py` gives the files a sanity check — unclosed dollar quotes,
+unbalanced parentheses, policies on tables nothing creates — before you paste
+them anywhere. Postgres is still the real test.
+
 ### Prove it worked
 
 Open the app, then in the browser console:

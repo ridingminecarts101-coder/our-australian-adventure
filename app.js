@@ -1110,9 +1110,18 @@ async function pushMyName() {
 
 async function createGroup(name) {
   if (!sb || !userId) return toast('Not connected');
-  const code = makeJoinCode();
-  const { data, error } = await sb.from('groups')
-    .insert({ name, join_code: code, created_by: userId }).select().single();
+  // join_code is unique in the database, so a collision is a hard failure
+  // rather than something to shrug at. Rare, but the fix is to try again with
+  // a different code rather than to tell somebody their group could not be
+  // made and leave them to guess why.
+  let code, data, error;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    code = makeJoinCode();
+    ({ data, error } = await sb.from('groups')
+      .insert({ name, join_code: code, created_by: userId }).select().single());
+    if (!error) break;
+    if (!/duplicate|unique/i.test(error.message || '')) break;
+  }
   if (error) { toast('Could not create the group'); console.warn(error); return; }
   const join = await sb.from('group_members')
     .insert({ group_id: data.id, user_id: userId, display_name: who });
@@ -1754,7 +1763,15 @@ async function flushTrips() {
       created_by: t.created_by || who,
       ...ownership(),
     }, { onConflict: 'id' });
-    if (error) { left.push(t); console.warn('trip sync failed', error.message); }
+    if (error) {
+      // Same rule as the progress outbox: a row the server will never accept
+      // must not be retried on every flush for the life of the install.
+      t.tries = (t.tries || 0) + 1;
+      console.warn('trip sync failed', error.message, `(attempt ${t.tries})`);
+      if (t.tries < OUTBOX_MAX_TRIES) left.push(t);
+      else { console.error('giving up on trip', t.id, error.message);
+             toast('A trip could not be saved to the server'); }
+    }
   }
   writeLS(LS.tripOutbox, left);
 }
