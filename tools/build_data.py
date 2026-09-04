@@ -41,7 +41,7 @@ SOURCES = [
     # Cross-cutting collections
     'theme-parks',
     'food',
-    'us-fill', 'us-fill2', 'us-fill3', 'us-fill4', 'world-fill',
+    'us-fill', 'us-fill2', 'us-fill3', 'us-fill4', 'world-fill', 'canada-fill',
 ]
 
 FIELDS = ['continent', 'country', 'admin1', 'region', 'title', 'place',
