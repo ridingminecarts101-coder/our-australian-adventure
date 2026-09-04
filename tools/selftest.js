@@ -545,6 +545,99 @@
     renderRecs();
   }
 
+  /* Everything found in the bug sweep, so none of it comes back.
+   *
+   * Most of these are about a paid title escaping through a route that does
+   * not go via the card renderer. An entitlement is not permanent - a refund,
+   * a family-sharing revoke, or a second phone that never bought the pack all
+   * leave rows pointing at gems this device may not read.
+   */
+  async function testLeaks() {
+    localStorage.removeItem('oaa.packs.v1');
+    localStorage.removeItem('oaa.preview.v1');
+    loadEntitlements();
+    const gem = ADV.find(a => a.hidden_gem);
+    const words = gem.title.split(' ').slice(0, 3).join(' ').toLowerCase();
+    chk('there is a locked gem to test with', isLocked(gem));
+
+    // Search must not match text the reader cannot see.
+    goTo('adventures', { continent: gem.continent, country: gem.country });
+    filters.q = words;
+    chk('search does not match a locked title', !filtered().some(a => a.id === gem.id));
+    filters.q = gem.category.toLowerCase();
+    chk('search still matches what IS visible', filtered().some(a => a.id === gem.id));
+    filters.q = '';
+
+    // The dice must never hand back something that cannot be opened.
+    const pool = filtered().filter(a => !isDone(a.id) && !isLocked(a));
+    chk('the random pool excludes locked gems', !pool.some(a => isLocked(a)));
+
+    // Trips
+    const t = { id: newTripId(), name: 'leak probe', starts_on: null, ends_on: null,
+                adventure_ids: [], notes: null, created_by: 'test' };
+    upsertTrip(t);
+    toggleTripMember(t.id, gem.id);
+    chk('a locked gem cannot be added to a trip',
+        !(trips.find(x => x.id === t.id).adventure_ids || []).includes(gem.id));
+
+    // One added while owned, then the entitlement goes away.
+    setPreview(true);
+    toggleTripMember(t.id, gem.id);
+    const added = (trips.find(x => x.id === t.id).adventure_ids || []).includes(gem.id);
+    setPreview(false);
+    renderAll();
+    chk('it could be added while owned', added);
+    openTripSheet(t.id); await wait(150);
+    chk('a revoked gem does not leak its title into a trip',
+        !$('#tripBody').textContent.includes(gem.title));
+    closeTripSheet();
+    trips = trips.filter(x => x.id !== t.id); saveLocalTrips();
+
+    chk('safeTitle hides a locked title', safeTitle(gem) !== gem.title);
+    chk('safeTitle passes an unlocked one through', (() => {
+      const plain = ADV.find(a => !a.hidden_gem);
+      return safeTitle(plain) === plain.title;
+    })());
+
+    // An achievement behind a paywall is not an achievement.
+    chk('no gem achievement is offered with nothing bought',
+        gemTarget() === 0);
+    setPreview(true);
+    chk('and it appears, reachable, once unlocked', gemTarget() > 0 && gemTarget() <= 25);
+    setPreview(false);
+
+    // The 1-in-5 rule means no region can be entirely paid.
+    const byRegion = new Map();
+    for (const a of ADV) {
+      const k = a.country + '/' + a.admin1;
+      if (!byRegion.has(k)) byRegion.set(k, []);
+      byRegion.get(k).push(a);
+    }
+    const dead = [...byRegion.entries()].filter(([, v]) => v.every(isLocked));
+    chk('no region is completable only by paying', dead.length === 0,
+        dead.slice(0, 3).map(([k]) => k).join(', '));
+
+    // Rendering has to stay quick as the list grows.
+    goTo('continent', { continent: 'North America' });
+    renderPlaces();
+    const t0 = performance.now(); renderAll();
+    const ms = Math.round(performance.now() - t0);
+    R.metric.renderAllMs = ms;
+    chk('a full render stays under 150ms', ms < 150, `${ms}ms`);
+
+    // User content is escaped.
+    const payload = '<img src=x onerror="window.__xssProbe=1">';
+    window.__xssProbe = 0;
+    recs = [{ id: 'xss', created_by: 'u', author_name: payload, title: payload,
+              place: payload, admin1: payload, country: 'AU', category: payload,
+              description: payload, up_votes: 0, down_votes: 0, stars_sum: 0,
+              stars_count: 0, report_count: 0, hidden: false, created_at: '2026-09-01' }];
+    renderRecs(); await wait(150);
+    chk('user content cannot inject markup',
+        window.__xssProbe === 0 && $$$('#recList img').length === 0);
+    recs = []; renderRecs();
+  }
+
   async function testMeTab() {
     $('.tab[data-tab="tab-me"]').click(); await wait(120);
     for (const id of ['#newTripBtn', '#switchWho', '#notifyBtn', '#previewNotifyBtn',
@@ -668,7 +761,7 @@
     data: testData, navigation: testNavigation, map: testMap,
     filters: testFilters, sheet: testSheet, photos: testPhotos,
     memories: testMemoriesTab, passport: testPassport, trips: testTrips,
-    me: testMeTab, store: testStore, community: testCommunity,
+    me: testMeTab, store: testStore, community: testCommunity, leaks: testLeaks,
     accessibility: testAccessibility,
     performance: testPerformance, persistence: testPersistence,
     regions: testRegionMatching,

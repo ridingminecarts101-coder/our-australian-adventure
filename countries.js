@@ -150,8 +150,10 @@ function advisoryFor(code) {
 // Countries in one continent, most content first, then the empty ones by name.
 function countriesIn(continent, countFn) {
   const codes = Object.keys(COUNTRY_CONT).filter(c => COUNTRY_CONT[c] === continent);
-  return codes.sort((a, b) => {
-    const d = (countFn(b) || 0) - (countFn(a) || 0);
-    return d || COUNTRY_NAME[a].localeCompare(COUNTRY_NAME[b]);
-  });
+  // Count once per country, not once per comparison. countFn walks the whole
+  // adventure list, and a sort asks its comparator O(n log n) times - for
+  // fifty countries that was three hundred full scans to order one list.
+  const n = new Map(codes.map(c => [c, countFn(c) || 0]));
+  return codes.sort((a, b) =>
+    (n.get(b) - n.get(a)) || COUNTRY_NAME[a].localeCompare(COUNTRY_NAME[b]));
 }

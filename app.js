@@ -263,7 +263,7 @@ function subscribeRealtime() {
         progress.set(r.adventure_id, r);
         if (r.completed && !before.completed && r.completed_by_id !== userId) {
           const a = ADV.find(x => x.id === r.adventure_id);
-          if (a) toast(`${nameOf(r.completed_by_id, r.completed_by)} ticked off “${a.title}”`);
+          if (a) toast(`${nameOf(r.completed_by_id, r.completed_by)} ticked off “${safeTitle(a)}”`);
         }
       }
       saveLocalProgress();
@@ -815,6 +815,10 @@ async function share(payload, fallbackText) {
 async function shareAdventure(id) {
   const a = ADV.find(x => x.id === id);
   if (!a) return;
+  // Sharing a gem you cannot read would put the paid description into a
+  // message. The sheet for a locked one has no share button, but a deep link
+  // or a stale trip can still reach here.
+  if (isLocked(a)) return toast('That one is locked');
   const url = linkTo({ a: id });
   const lines = [
     a.title,
@@ -839,7 +843,7 @@ async function shareTrip(tripId) {
   if (when) lines.push(when);
   lines.push('');
   items.forEach((a, i) => {
-    lines.push(`${i + 1}. ${a.title}`);
+    lines.push(`${i + 1}. ${safeTitle(a)}`);
     lines.push(`   ${a.place} · ${countryName(a.country)}`);
   });
   const text = lines.join('\n');
@@ -1205,6 +1209,18 @@ function renderAdvisory(code) {
  * quietly dropping it from the totals would make the numbers lie. What is
  * withheld is the specifics: which place, and why it is worth the detour.
  */
+/* The title as this device is allowed to see it.
+ *
+ * Cards use this through lockedTitle(); everything else - trips, toasts, share
+ * text, the lightbox - has to use it too. An entitlement can go away after a
+ * row referring to a gem already exists, so every read is checked rather than
+ * trusting whatever was true when it was written.
+ */
+function safeTitle(a) {
+  if (!a) return '';
+  return isLocked(a) ? lockedTitle(a) : a.title;
+}
+
 function lockedTitle(a) {
   const pack = packFor(a.continent);
   return `Hidden gem in ${regionName(a)}`;
@@ -1302,18 +1318,35 @@ function renderPlaces() {
   if (nav.level === 'continent' || nav.level === 'islands') {
     const islandsOnly = nav.level === 'islands';
     const inCont = a => a.continent === nav.continent;
+
+    // Tally the whole continent in one pass. Asking countOf() per country
+    // walks all 2,300 adventures each time, and this list wants three numbers
+    // for each of fifty countries - which was sixty milliseconds of scanning
+    // to draw one screen.
+    const tally = new Map();
+    for (const a of ADV) {
+      if (a.continent !== nav.continent) continue;
+      let t = tally.get(a.country);
+      if (!t) tally.set(a.country, t = { n: 0, done: 0, regions: new Set() });
+      if (isLocked(a)) continue;
+      t.n++;
+      t.regions.add(a.admin1);
+      if (isDone(a.id)) t.done++;
+    }
+    const countIn = c => (tally.get(c) || { n: 0 }).n;
+
     // Every country in the continent, whether or not it holds adventures yet.
     // Leaving the empty ones out made the app look like they did not exist.
-    const all = countriesIn(nav.continent, c => countOf(a => a.country === c));
-    const withContent = all.filter(c => countOf(a => a.country === c) > 0);
+    const all = countriesIn(nav.continent, countIn);
+    const withContent = all.filter(c => countIn(c) > 0);
     const mainland = all.filter(c => !ISLAND_GROUP.has(c));
     const islands = all.filter(c => ISLAND_GROUP.has(c));
     const codes = islandsOnly ? islands : mainland;
 
     const countryRow = code => {
-      const inC = a => inCont(a) && a.country === code;
-      const n = countOf(inC);
-      const regions = new Set(ADV.filter(inC).map(a => a.admin1)).size;
+      const t = tally.get(code) || { n: 0, done: 0, regions: new Set() };
+      const n = t.n;
+      const regions = t.regions.size;
       const adv = advisoryFor(code);
       // The advisory outranks the region count: if the honest answer is "not
       // right now", that is the first thing worth saying about the place.
@@ -1322,7 +1355,7 @@ function renderPlaces() {
                            : 'Not mapped yet');
       return placeRow({
         label: countryName(code), flag: countryFlag(code),
-        sub, count: n, done: doneOf(inC), advisory: adv ? adv.level : null,
+        sub, count: n, done: t.done, advisory: adv ? adv.level : null,
         onClick: n ? { level: 'country', continent: nav.continent, country: code } : null,
       });
     };
@@ -1412,7 +1445,14 @@ function filtered() {
     if (a.difficulty > filters.diff) return false;
     if (a.cost > filters.cost) return false;
     if (q) {
-      const hay = `${a.title} ${a.place} ${a.region} ${regionName(a)} ${countryName(a.country)} ${a.category} ${a.description}`.toLowerCase();
+      // A locked gem is searchable only on what is actually visible on its
+      // card. Matching the blurred title meant you could confirm a guess at
+      // paid content, and worse, it was inconsistent: a card would appear for
+      // a word the reader had no way of knowing was there.
+      const hay = (isLocked(a)
+        ? `${a.region} ${regionName(a)} ${countryName(a.country)} ${a.category}`
+        : `${a.title} ${a.place} ${a.region} ${regionName(a)} ${countryName(a.country)} ${a.category} ${a.description}`
+      ).toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -1487,24 +1527,31 @@ function renderPassport() {
   // A country is stamped once, on the first thing you tick there. The date is
   // derived from the earliest completion rather than stored separately, so
   // un-ticking that one simply moves the stamp to the next earliest.
-  const rows = [...new Set(ADV.map(a => a.country))].map(code => {
-    const inC = a => a.country === code;
-    const times = ADV.filter(a => inC(a) && isDone(a.id))
-      .map(a => row(a.id).completed_at)
-      .filter(Boolean)
-      .map(t => new Date(t))
-      .filter(d => !isNaN(d));
-    const stampedAt = times.length ? new Date(Math.min(...times)) : null;
-    return {
-      code,
-      total: countOf(inC),
-      done: doneOf(inC),
-      stampedAt,
-      // Completed the country outright - a real passport would not mark this,
-      // but it is the thing people actually want to see.
-      complete: countOf(inC) > 0 && doneOf(inC) === countOf(inC),
-    };
-  });
+  // One pass over the list rather than four per country. With 123 countries
+  // the old shape was half a million comparisons to draw one screen.
+  const tally = new Map();
+  for (const a of ADV) {
+    let t = tally.get(a.country);
+    if (!t) tally.set(a.country, t = { total: 0, done: 0, first: null });
+    if (isLocked(a)) continue;               // locked gems count for nothing
+    t.total++;
+    if (!isDone(a.id)) continue;
+    t.done++;
+    const when = row(a.id).completed_at;
+    if (!when) continue;
+    const d = new Date(when);
+    if (!isNaN(d) && (!t.first || d < t.first)) t.first = d;
+  }
+
+  const rows = [...tally.entries()].map(([code, t]) => ({
+    code,
+    total: t.total,
+    done: t.done,
+    stampedAt: t.first,
+    // Completed the country outright - a real passport would not mark this,
+    // but it is the thing people actually want to see.
+    complete: t.total > 0 && t.done === t.total,
+  }));
 
   // Earned stamps first, in the order they were collected, like a real passport.
   const earned = rows.filter(r => r.stampedAt).sort((a, b) => a.stampedAt - b.stampedAt);
@@ -1636,6 +1683,13 @@ function tripInsideAdventure(id) {
 function toggleTripMember(tripId, adventureId) {
   const trip = trips.find(t => t.id === tripId);
   if (!trip) return;
+  // Planning around something you cannot read would put a blurred line in the
+  // itinerary. Removing one that is already there stays allowed.
+  const already = (trip.adventure_ids || []).includes(adventureId);
+  if (!already && isLocked(ADV.find(a => a.id === adventureId))) {
+    toast('That one is locked');
+    return;
+  }
   const ids = trip.adventure_ids || [];
   trip.adventure_ids = ids.includes(adventureId)
     ? ids.filter(x => x !== adventureId)
@@ -1712,7 +1766,7 @@ function renderTripSheet(id) {
         ${list.map(a => `<div class="tripitem ${isDone(a.id) ? 'done' : ''}">
           <button class="tick ${isDone(a.id) ? 'on' : ''}" data-toggle="${a.id}" aria-label="Mark done">✓</button>
           <div class="tripitem-body" data-open="${a.id}">
-            <div class="card-title">${esc(a.title)}</div>
+            <div class="card-title">${esc(safeTitle(a))}</div>
             <div class="card-meta">${esc(a.place)} · ${esc(a.region)}</div>
           </div>
           <button class="tripitem-remove" data-tripremove="${a.id}" aria-label="Remove from trip">✕</button>
@@ -1779,7 +1833,7 @@ function renderMemories() {
       const ph = photosFor(a.id);
       return `<div class="memory">
         <div data-open="${a.id}">
-          <b>${esc(a.title)}</b>
+          <b>${esc(safeTitle(a))}</b>
           <div class="card-meta">${esc(a.place)} · ${esc(regionName(a))}</div>
           <div class="badges">
             ${r.completed_by || r.completed_by_id ? `<span class="badge">Ticked by ${esc(nameOf(r.completed_by_id, r.completed_by))}</span>` : ''}
@@ -1909,7 +1963,7 @@ async function showLightbox() {
   };
 
   $('#lbImg').src = photoSrc(p) || '';
-  $('#lbTitle').textContent = a ? a.title : 'Photo';
+  $('#lbTitle').textContent = a ? safeTitle(a) : 'Photo';
   $('#lbSub').textContent =
     `${when}${SOURCE_NOTE[p.taken_at_source] || ''}` +
     (a ? ` · ${a.place}` : '') +
@@ -1927,6 +1981,13 @@ function closeLightbox() {
   lightbox = { list: [], index: 0 };
 }
 
+// How many gems this person could find at all. Twenty-five is the intent,
+// but there is no point asking for more than they own.
+function gemTarget() {
+  const reachable = ADV.reduce((n, a) => n + (a.hidden_gem && !isLocked(a) ? 1 : 0), 0);
+  return Math.min(25, reachable);
+}
+
 const ACHIEVEMENTS = [
   ['🌱', 'First Steps',      'Complete your first adventure',                  d => d.done >= 1],
   ['🔟', 'Getting Going',    'Complete 10 adventures',                         d => d.done >= 10],
@@ -1935,7 +1996,13 @@ const ACHIEVEMENTS = [
   ['🏅', 'Serious About It', 'Complete 250 adventures',                        d => d.done >= 250],
   ['🌐', 'Half the World',   () => `Complete half of all ${countableTotal()}`,  d => d.done >= countableTotal() / 2],
   ['👑', 'The Lot',          () => `Complete all ${countableTotal()} adventures`, d => d.done >= countableTotal()],
-  ['💎', 'Gem Hunters',      'Find 25 hidden gems',                            d => d.gems >= 25],
+  // Scaled to what you can actually reach. d.gems only counts unlocked gems,
+  // so a fixed target of 25 was impossible for anybody who had bought nothing -
+  // an achievement behind a paywall, which is exactly what was ruled out.
+  // With no pack owned it is not offered at all rather than sitting there
+  // permanently locked.
+  ['💎', 'Gem Hunters', () => `Find ${gemTarget()} hidden gems`,
+   d => gemTarget() > 0 && d.gems >= gemTarget(), () => gemTarget() > 0],
   ['🗺️', 'State Hopper',     'An adventure in all 8 Australian states and territories', d => d.states >= 8],
   ['🌏', 'Continent Hopper','An adventure on three different continents',     d => d.continents >= 3],
   ['🐾', 'Good Dog',        'Complete 15 dog-friendly adventures',            d => d.dogs >= 15],
@@ -2006,11 +2073,15 @@ function renderMe() {
           `<div class="stat"><b>${n}</b><span>ticked by ${esc(name)}</span></div>`).join('')
       : ''}`;
 
-  $('#achList').innerHTML = ACHIEVEMENTS.map(([icon, name, desc, test]) =>
-    `<div class="ach ${test(d) ? '' : 'locked'}">
-       <span class="ach-icon">${icon}</span>
-       <div><b>${esc(name)}</b><span>${esc(typeof desc === 'function' ? desc() : desc)}</span></div>
-     </div>`).join('');
+  // An achievement nobody can reach is not an achievement, it is a nag. The
+  // optional fifth element says whether it applies at all right now.
+  $('#achList').innerHTML = ACHIEVEMENTS
+    .filter(([, , , , available]) => !available || available(d))
+    .map(([icon, name, desc, test]) =>
+      `<div class="ach ${test(d) ? '' : 'locked'}">
+         <span class="ach-icon">${icon}</span>
+         <div><b>${esc(name)}</b><span>${esc(typeof desc === 'function' ? desc() : desc)}</span></div>
+       </div>`).join('');
 
   renderStore();
   $('#whoLabel').textContent = who || 'You';
@@ -2158,7 +2229,7 @@ function toggleDone(id) {
   });
   if (nowDone) {
     const a = ADV.find(x => x.id === id);
-    toast(`✓ ${a ? a.title : 'Done'}`);
+    toast(`✓ ${a ? safeTitle(a) : 'Done'}`);
   }
 }
 
@@ -2436,8 +2507,14 @@ function wireUI() {
 
   // Random pick
   $('#randomBtn').onclick = () => {
-    const pool = filtered().filter(a => !isDone(a.id));
-    if (!pool.length) return toast('Nothing left matching those filters!');
+    // Never offer something they cannot open. "Pick me an adventure" landing
+    // on a buy button is a poor answer to the question asked.
+    const pool = filtered().filter(a => !isDone(a.id) && !isLocked(a));
+    if (!pool.length) {
+      return toast(filtered().some(a => !isDone(a.id))
+        ? 'Only locked gems left here'
+        : 'Nothing left matching those filters!');
+    }
     openSheet(pool[Math.floor(Math.random() * pool.length)].id);
   };
 
