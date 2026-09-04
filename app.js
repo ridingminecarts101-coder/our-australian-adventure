@@ -662,7 +662,11 @@ async function ensureSignedUrls(paths) {
 function photoSrc(p) {
   if (p.pending) return p.objectUrl;
   const hit = signedUrls.get(p.storage_path);
-  return hit ? hit.url : '';
+  // Expiry matters here, not just presence. Returning a stale link made
+  // hydrateThumbs think the photo was fine and never re-sign it, so after two
+  // hours a session that had been left open showed broken images until reload.
+  if (!hit || hit.expires <= Date.now()) return '';
+  return hit.url;
 }
 
 // All photos for an adventure: uploaded ones plus anything still queued.
@@ -1983,8 +1987,14 @@ async function hydrateThumbs() {
     const p = findPhoto(btn.dataset.photo);
     if (!p) return;
     const src = photoSrc(p);
-    if (src && !btn.querySelector('img')) {
+    if (!src) return;
+    const img = btn.querySelector('img');
+    if (!img) {
       btn.innerHTML = `<img src="${esc(src)}" alt="" loading="lazy">`;
+    } else if (img.getAttribute('src') !== src) {
+      // A re-signed link has to replace the expired one already on the page,
+      // or the freshly minted URL sits in the map behind a broken image.
+      img.setAttribute('src', src);
     }
   });
 }

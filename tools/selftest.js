@@ -646,6 +646,16 @@
         ADV.filter(a => !/^(Year-round|[A-Z][a-z]{2}(-[A-Z][a-z]{2})?)$/.test(a.season))
            .slice(0, 3).map(a => a.season).join(', '));
 
+    // A signed link that has expired must not be handed back as if it worked.
+    // photoSrc used to check only that a link existed, so after two hours a
+    // session left open showed broken images and never re-signed them.
+    const probe = { storage_path: 'selftest/probe.jpg', pending: false };
+    signedUrls.set(probe.storage_path, { url: 'https://x/fresh', expires: Date.now() + 60000 });
+    chk('a live signed link is used', photoSrc(probe) === 'https://x/fresh');
+    signedUrls.set(probe.storage_path, { url: 'https://x/stale', expires: Date.now() - 1000 });
+    chk('an expired signed link is not', photoSrc(probe) === '');
+    signedUrls.delete(probe.storage_path);
+
     // Ids are what saved progress is stored against.
     chk('no two adventures share an id',
         new Set(ADV.map(a => a.id)).size === ADV.length);

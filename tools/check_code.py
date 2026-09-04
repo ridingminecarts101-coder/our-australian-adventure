@@ -118,7 +118,20 @@ def main():
     if loose:
         notes.append(('Files nothing references', loose))
 
-    # ── 7. Leftovers from the rename ─────────────────────────────────
+    # ── 7. Files the page needs that the service worker does not cache ─
+    # A script added to index.html but not to the shell works perfectly until
+    # somebody opens the app with no signal, and then the app is simply broken
+    # with no clue why.
+    sw = read('sw.js')
+    referenced = set(re.findall(r'<script src="([^"]+)"', html))
+    referenced |= set(re.findall(r'<link[^>]+href="([^"]+)"', html))
+    local = {r for r in referenced if not r.startswith('http')}
+    shell = set(re.findall(r"'\./([^']+)'", sw))
+    uncached = sorted(local - shell)
+    if uncached:
+        problems.append(('Loaded by index.html but not cached for offline', uncached))
+
+    # ── 8. Leftovers from the rename ─────────────────────────────────
     stale = []
     for f in [HTML, CSS] + APP_FILES + ['manifest.json', 'sw.js']:
         body = read(f)
