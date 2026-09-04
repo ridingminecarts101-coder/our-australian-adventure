@@ -126,6 +126,28 @@
     <div id="memList" class="list"></div>
   </section>
 
+  <!-- Recommendations from other travellers. Deliberately its own list. -->
+  <section id="tab-community" class="panel hidden">
+    <h2>Traveller recommendations</h2>
+    <p class="muted">Places other people who use Wayfinder rate. These are not
+       checked by us and never join the main adventure list — they are a
+       separate list, ranked by whoever votes on them.</p>
+
+    <div class="chiprow" id="recSort">
+      <button class="chip on" data-recsort="top">Top rated</button>
+      <button class="chip" data-recsort="stars">Best stars</button>
+      <button class="chip" data-recsort="new">Newest</button>
+      <button class="chip" data-recsort="mine">Mine</button>
+    </div>
+    <div id="recStatus" class="photostatus"></div>
+    <div id="recList" class="list"></div>
+    <button id="newRecBtn" class="btn-primary">＋ Recommend a place</button>
+    <p class="fineprint">Anything abusive, unsafe or advertising can be reported,
+       and three reports hides a post for everyone pending review. You can also
+       block someone, which hides everything they post from you.
+       <a href="support.html" target="_blank" rel="noopener">Contact us</a>.</p>
+  </section>
+
   <!-- Us -->
   <section id="tab-me" class="panel hidden">
     <h2>Trips</h2>
@@ -181,6 +203,7 @@
     <button class="tab active" data-tab="tab-list"><span>🧭</span>Adventures</button>
     <button class="tab" data-tab="tab-passport"><span>🛂</span>Passport</button>
     <button class="tab" data-tab="tab-memories"><span>📸</span>Memories</button>
+    <button class="tab" data-tab="tab-community"><span>🗺️</span>Community</button>
     <button class="tab" data-tab="tab-me"><span>❤️</span>Me</button>
   </nav>
 </div>
@@ -200,6 +223,15 @@
   <div class="sheet-card">
     <button class="sheet-close" data-tripclose aria-label="Close">✕</button>
     <div id="tripBody"></div>
+  </div>
+</div>
+
+<!-- ───────────────────── Recommendation sheet ───────────────── -->
+<div id="recSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Recommend a place">
+  <div class="sheet-backdrop" data-recclose></div>
+  <div class="sheet-card">
+    <button class="sheet-close" data-recclose aria-label="Close">✕</button>
+    <div id="recBody"></div>
   </div>
 </div>
 

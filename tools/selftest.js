@@ -477,6 +477,74 @@
     chk('and lowers it again when not owned', countOf(inSA) === saAll - saGems);
   }
 
+  async function testCommunity() {
+    $('.tab[data-tab="tab-community"]').click(); await wait(150);
+    chk('community tab exists', !!$('#tab-community'));
+    chk('community panel shows', !$('#tab-community').classList.contains('hidden'));
+    chk('it says it is not the curated list',
+        /not checked by us|never join/i.test($('#tab-community').textContent));
+
+    // Two posts, standing in for the server.
+    const before = ADV.length;
+    recs = [
+      { id: 'r1', created_by: 'a', author_name: 'Riley', title: 'Walk the old jetty at dusk',
+        place: 'Port Vincent', admin1: 'SA', country: 'AU', category: 'Scenic',
+        description: 'A long timber jetty locals fish off.', up_votes: 7, down_votes: 1,
+        stars_sum: 22, stars_count: 5, report_count: 0, hidden: false, created_at: '2026-09-01' },
+      { id: 'r2', created_by: 'b', author_name: 'Ryno', title: 'Swim the flooded quarry',
+        place: 'Schladitzer See', admin1: 'Saxony', country: 'DE', category: 'Water',
+        description: 'A lignite pit with a beach.', up_votes: 3, down_votes: 0,
+        stars_sum: 8, stars_count: 2, report_count: 0, hidden: false, created_at: '2026-09-02' },
+    ];
+    renderRecs(); await wait(80);
+    chk('recommendations render', $$$('.reccard').length === 2);
+
+    // The point of the whole design.
+    chk('recommendations never enter the adventure list',
+        ADV.length === before && !ADV.some(a => a.title === 'Walk the old jetty at dusk'));
+    chk('and never count towards completion',
+        countableTotal() === ADV.filter(a => !isLocked(a)).length);
+
+    // Ranking
+    recSort = 'top';
+    chk('top rated sorts by score', sortedRecs()[0].id === 'r1');
+    recSort = 'new';
+    chk('newest sorts by date', sortedRecs()[0].id === 'r2');
+    recSort = 'stars';
+    // r1 averages 4.4 from five ratings, r2 averages 4.0 from two.
+    chk('stars sorts by average', sortedRecs()[0].id === 'r1',
+        `${recStars(recs[0]).toFixed(1)} vs ${recStars(recs[1]).toFixed(1)}`);
+    recSort = 'top';
+
+    chk('a score is up minus down', recScore(recs[0]) === 6);
+    chk('an unrated post reports no stars', recStars({ stars_sum: 0, stars_count: 0 }) === 0);
+
+    // Moderation controls have to be present, or the app cannot ship.
+    const card = $('.reccard');
+    chk('every post can be reported', !!card.querySelector('[data-recreport]'));
+    chk('every author can be blocked', !!card.querySelector('[data-recblock]'));
+    chk('a hidden post is marked as such', (() => {
+      recs[0].hidden = true; renderRecs();
+      const marked = !!$('.reccard.hidden-post');
+      recs[0].hidden = false; renderRecs();
+      return marked;
+    })());
+
+    // Writing one
+    openRecSheet(null); await wait(100);
+    chk('the submit sheet opens', !$('#recSheet').classList.contains('hidden'));
+    for (const id of ['recTitle', 'recPlace', 'recAdmin', 'recCountry', 'recCategory', 'recDesc'])
+      chk(`submit field present: ${id}`, !!$('#' + id));
+    chk('every country is offered', $('#recCountry').options.length === Object.keys(COUNTRY_NAME).length);
+    chk('the form warns about what not to post',
+        /unsafe|abusive|advertising/i.test($('#recBody').textContent));
+    closeRecSheet(); await wait(60);
+    chk('the sheet closes', $('#recSheet').classList.contains('hidden'));
+
+    recs = [];
+    renderRecs();
+  }
+
   async function testMeTab() {
     $('.tab[data-tab="tab-me"]').click(); await wait(120);
     for (const id of ['#newTripBtn', '#switchWho', '#notifyBtn', '#previewNotifyBtn',
@@ -600,7 +668,8 @@
     data: testData, navigation: testNavigation, map: testMap,
     filters: testFilters, sheet: testSheet, photos: testPhotos,
     memories: testMemoriesTab, passport: testPassport, trips: testTrips,
-    me: testMeTab, store: testStore, accessibility: testAccessibility,
+    me: testMeTab, store: testStore, community: testCommunity,
+    accessibility: testAccessibility,
     performance: testPerformance, persistence: testPersistence,
     regions: testRegionMatching,
   };

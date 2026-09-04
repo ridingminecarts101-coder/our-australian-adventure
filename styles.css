@@ -218,14 +218,16 @@ input, select, textarea { font: inherit; color: inherit; }
 /* ── Bottom tab bar ──────────────────────────────────────────────── */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  /* Five tabs. Named rather than counted so adding one does not silently
+     wrap the last item onto a second row, which is what happened. */
+  display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--card); border-top: 1px solid var(--line);
   padding-bottom: var(--safe-bottom);
 }
 .tab {
   display: grid; gap: 2px; justify-items: center; align-content: center;
   min-height: 44px;
-  padding: 8px 4px 6px; font-size: 10.5px; font-weight: 600; color: var(--muted);
+  padding: 8px 2px 6px; font-size: 10px; font-weight: 600; color: var(--muted);
 }
 .tab span { font-size: 20px; line-height: 1.1; }
 .tab.active { color: var(--ochre); }
@@ -603,3 +605,50 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .card.locked .tick { opacity: .3; }
 .badge.gem { white-space: nowrap; }
+
+/* ── Traveller recommendations ────────────────────────────────────────
+ * Deliberately styled apart from the adventure cards. Somebody scrolling
+ * should never be in doubt about which list they are looking at.
+ */
+.reccard {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--card); border: 1px dashed var(--line);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.reccard.hidden-post { opacity: .55; }
+.recvote { display: grid; justify-items: center; gap: 1px; flex: none; min-width: 34px; }
+.recvote b { font-size: 14px; font-variant-numeric: tabular-nums; }
+.recv {
+  min-height: 28px; min-width: 34px; font-size: 15px; line-height: 1;
+  color: var(--muted); border-radius: 8px;
+}
+.recv.on { color: var(--ochre); background: rgba(140, 61, 31, .14); }
+.recmain { flex: 1; min-width: 0; }
+.rectitle { font-weight: 650; font-size: 15px; }
+.recmeta { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.recdesc { font-size: 13.5px; line-height: 1.45; margin: 7px 0 4px; }
+
+.recstars { display: flex; align-items: center; gap: 1px; margin: 4px 0 2px; }
+.star {
+  min-height: 30px; min-width: 26px; font-size: 16px; line-height: 1;
+  color: var(--line);
+}
+.star.on { color: #d9a13a; }
+.star.mine.on { color: var(--ochre); }
+.recavg { font-size: 12px; color: var(--muted); margin-left: 6px; }
+
+.recfoot {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 6px; font-size: 12px; color: var(--muted);
+}
+.reclink { font-size: 12px; color: var(--muted); text-decoration: underline;
+           min-height: 30px; }
+.reclink.danger { color: #c4553c; }
+.recnote { margin-top: 6px; font-size: 12px; color: #c4553c; }
+
+#recSheet label { display: block; margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+#recSheet input, #recSheet select, #recSheet textarea {
+  width: 100%; margin-top: 4px; padding: 11px 12px; font-size: 16px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--paper); color: var(--ink);
+}

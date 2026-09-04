@@ -75,6 +75,29 @@ difficulty and cost visible. You can see there is something there and roughly
 what kind of thing it is; what is withheld is which place and why it is worth
 the detour.
 
+## Traveller recommendations, and what Apple requires of them
+
+The Community tab carries public user-generated content, which brings
+Guideline 1.2 into play. It demands four things, and all four are built:
+
+| Requirement | How |
+|---|---|
+| Filter objectionable content | Three independent reports hide a post from everyone pending review |
+| Report mechanism | On every post that is not your own |
+| Block abusive users | Per viewer, enforced in the database so a blocked account cannot reach you by any route |
+| Published contact | On the support page, linked from the Community tab itself |
+
+Answer the review team plainly: recommendations are a **separate list** that
+never joins the curated adventures, never counts towards completion, and is
+labelled as unchecked on the screen it appears on.
+
+Run `supabase/schema-recommendations.sql` after the cutover.
+
+You will also need to say **Yes** to the App Store Connect question about
+user-generated content, and the age rating may move to 12+ on the
+"Infrequent/Mild Mature/Suggestive Themes" question that UGC usually triggers.
+That is the honest answer; claiming otherwise is how apps get pulled later.
+
 ## App Store Connect — the answers you will be asked for
 
 **Privacy nutrition label.** The honest answers:
@@ -141,7 +164,7 @@ the app ships as it is written.
 In order. Nothing here can be done from code.
 
 1. **Run `supabase/schema-cutover.sql`** in the Supabase SQL Editor, and read
-   the notices it prints.
+   the notices it prints, then **`supabase/schema-recommendations.sql`**.
 2. **Turn on "Allow new users to sign up"** in Supabase — after step 1, not
    before.
 3. **Run the multi-user test** from the console (above) and check `failed: 0`.

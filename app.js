@@ -2198,6 +2198,9 @@ function wireUI() {
     $$('.panel').forEach(p => p.classList.add('hidden'));
     $('#' + b.dataset.tab).classList.remove('hidden');
     window.scrollTo(0, 0);
+    // Fetched on opening rather than at launch: it is a separate list and
+    // most sessions never look at it.
+    if (b.dataset.tab === 'tab-community') pullRecommendations();
   });
 
   // Quick chips
@@ -2248,6 +2251,28 @@ function wireUI() {
     if (countOf(a => a.continent === hit)) goTo('continent', { continent: hit });
     else toast(`No ${hit} adventures yet`);
   });
+  // Traveller recommendations
+  $('#newRecBtn').onclick = () => openRecSheet(null);
+  $$('#recSort .chip').forEach(c => c.onclick = () => {
+    recSort = c.dataset.recsort;
+    $$('#recSort .chip').forEach(x => x.classList.toggle('on', x === c));
+    pullRecommendations();
+  });
+  $$('#recSheet [data-recclose]').forEach(b => b.onclick = closeRecSheet);
+
+  document.body.addEventListener('click', e => {
+    const t = e.target;
+    const hit = sel => t.closest(`[${sel}]`);
+    let el;
+    if ((el = hit('data-recvote'))) return voteRec(el.dataset.recid, +el.dataset.recvote);
+    if ((el = hit('data-recstar'))) return starRec(el.dataset.recid, +el.dataset.recstar);
+    if ((el = hit('data-recreport'))) return reportRec(el.dataset.recreport);
+    if ((el = hit('data-recblock'))) return blockAuthor(el.dataset.recblock);
+    if ((el = hit('data-recedit'))) return openRecSheet(el.dataset.recedit);
+    if ((el = hit('data-recdelete'))) return deleteRec(el.dataset.recdelete);
+    if ((el = hit('data-recsave'))) return saveRec(el.dataset.recsave || null);
+  });
+
   $('#privacyBtn').onclick = () => window.open('privacy.html', '_blank', 'noopener');
   $('#supportBtn').onclick = () => window.open('support.html', '_blank', 'noopener');
 
@@ -2475,6 +2500,264 @@ function wireUI() {
     // agreeing after one has been in a pocket. Rebuild it if it is not live.
     if (sb && !realtimeOk) resubscribeRealtime();
   });
+}
+
+
+// ══════════════════════════════════════════════════════════════════════
+//  Traveller recommendations
+//
+//  A separate list, and it stays separate. The curated adventures are
+//  checked and somebody stands behind each one; these are what other people
+//  using the app say is worth going to, ranked by whoever votes. There is no
+//  promotion path between the two on purpose - mixing them would quietly
+//  spend the credibility of the checked list on content nobody checked.
+//
+//  Everything public needs moderation to exist at all, so: report, which
+//  hides a post for everyone at three, and block, which hides an author from
+//  you immediately and is enforced by the database rather than the interface.
+// ══════════════════════════════════════════════════════════════════════
+let recs = [];                 // what is on screen
+let myVotes = new Map();       // rec id -> { vote, stars }
+let recSort = 'top';
+let recBusy = false;
+
+const REC_CATEGORIES = ['Nature', 'Beach', 'Wildlife', 'Hiking', 'Water', 'Culture',
+  'History', 'Food & Drink', 'Road Trip', 'Adrenaline', 'Island', 'Snow', 'City',
+  'Family', 'Scenic', 'Stargazing'];
+
+function recScore(r) { return (r.up_votes || 0) - (r.down_votes || 0); }
+function recStars(r) {
+  return r.stars_count ? (r.stars_sum / r.stars_count) : 0;
+}
+
+async function pullRecommendations() {
+  if (!sb || !online) { renderRecs(); return; }
+  recBusy = true; renderRecStatus();
+  let q = sb.from('recommendations').select('*');
+  if (recSort === 'mine' && userId) q = q.eq('created_by', userId);
+  const { data, error } = await q.limit(300);
+  recBusy = false;
+  if (error) {
+    // The tables may not exist yet, which is a valid state rather than a fault.
+    if (!/does not exist|schema cache/i.test(error.message)) console.warn('recs', error.message);
+    recs = [];
+    renderRecs();
+    return;
+  }
+  recs = data || [];
+
+  if (userId && recs.length) {
+    const { data: votes } = await sb.from('recommendation_votes')
+      .select('rec_id, vote, stars').eq('user_id', userId);
+    myVotes = new Map((votes || []).map(v => [v.rec_id, v]));
+  }
+  renderRecs();
+}
+
+function sortedRecs() {
+  const list = [...recs];
+  if (recSort === 'stars') {
+    list.sort((a, b) => recStars(b) - recStars(a)
+      || (b.stars_count || 0) - (a.stars_count || 0));
+  } else if (recSort === 'new' || recSort === 'mine') {
+    list.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  } else {
+    list.sort((a, b) => recScore(b) - recScore(a)
+      || (b.created_at || '').localeCompare(a.created_at || ''));
+  }
+  return list;
+}
+
+function renderRecStatus() {
+  const el = $('#recStatus');
+  if (!el) return;
+  if (!sb) { el.textContent = 'Not connected, so recommendations are unavailable.'; return; }
+  el.textContent = recBusy ? 'Loading…' : '';
+}
+
+function starRow(r) {
+  const mine = myVotes.get(r.id);
+  const avg = recStars(r);
+  const shown = mine && mine.stars ? mine.stars : Math.round(avg);
+  return `<span class="recstars" data-recid="${esc(r.id)}">${
+    [1, 2, 3, 4, 5].map(n =>
+      `<button class="star${n <= shown ? ' on' : ''}${mine && mine.stars ? ' mine' : ''}"
+               data-recstar="${n}" data-recid="${esc(r.id)}"
+               aria-label="Rate ${n} out of 5">★</button>`).join('')
+  }<span class="recavg">${r.stars_count
+    ? `${avg.toFixed(1)} · ${r.stars_count}` : 'unrated'}</span></span>`;
+}
+
+function recCard(r) {
+  const mine = myVotes.get(r.id);
+  const v = mine ? mine.vote : 0;
+  const own = userId && r.created_by === userId;
+  return `<article class="reccard${r.hidden ? ' hidden-post' : ''}">
+    <div class="recvote">
+      <button class="recv${v === 1 ? ' on' : ''}" data-recvote="1" data-recid="${esc(r.id)}"
+              aria-label="Vote up">▲</button>
+      <b>${recScore(r)}</b>
+      <button class="recv${v === -1 ? ' on' : ''}" data-recvote="-1" data-recid="${esc(r.id)}"
+              aria-label="Vote down">▼</button>
+    </div>
+    <div class="recmain">
+      <div class="rectitle">${esc(r.title)}</div>
+      <div class="recmeta">${esc(r.place)}${r.admin1 ? ' · ' + esc(r.admin1) : ''} · ${
+        esc(countryName(r.country))} ${countryFlag(r.country)}${
+        r.category ? ' · ' + esc(r.category) : ''}</div>
+      ${r.description ? `<p class="recdesc">${esc(r.description)}</p>` : ''}
+      ${starRow(r)}
+      <div class="recfoot">
+        <span>${esc(r.author_name || 'Someone')}</span>
+        ${own
+          ? `<button class="reclink" data-recedit="${esc(r.id)}">Edit</button>
+             <button class="reclink danger" data-recdelete="${esc(r.id)}">Delete</button>`
+          : `<button class="reclink" data-recreport="${esc(r.id)}">Report</button>
+             <button class="reclink" data-recblock="${esc(r.created_by)}">Block</button>`}
+      </div>
+      ${r.hidden ? '<div class="recnote">Hidden after reports. Only you can see it.</div>' : ''}
+    </div>
+  </article>`;
+}
+
+function renderRecs() {
+  const el = $('#recList');
+  if (!el) return;
+  renderRecStatus();
+  const list = sortedRecs();
+  el.innerHTML = list.length
+    ? list.map(recCard).join('')
+    : `<div class="empty">${sb
+        ? 'Nothing recommended yet.<br>Be the first.'
+        : 'Recommendations need a connection.'}</div>`;
+}
+
+async function voteRec(id, vote) {
+  if (!sb || !userId) return toast('Not connected');
+  const mine = myVotes.get(id) || {};
+  const next = mine.vote === vote ? 0 : vote;      // pressing again withdraws it
+  const row = { rec_id: id, user_id: userId, vote: next, stars: mine.stars ?? null };
+  const { error } = await sb.from('recommendation_votes')
+    .upsert(row, { onConflict: 'rec_id,user_id' });
+  if (error) { console.warn(error); return toast('Could not vote'); }
+  myVotes.set(id, { vote: next, stars: mine.stars ?? null });
+  const r = recs.find(x => x.id === id);
+  if (r) {
+    // Optimistic, then corrected by the pull that follows.
+    const was = mine.vote || 0;
+    if (was === 1) r.up_votes--;
+    if (was === -1) r.down_votes--;
+    if (next === 1) r.up_votes++;
+    if (next === -1) r.down_votes++;
+  }
+  renderRecs();
+  pullRecommendations();
+}
+
+async function starRec(id, stars) {
+  if (!sb || !userId) return toast('Not connected');
+  const mine = myVotes.get(id) || {};
+  const next = mine.stars === stars ? null : stars;
+  const { error } = await sb.from('recommendation_votes')
+    .upsert({ rec_id: id, user_id: userId, vote: mine.vote ?? 0, stars: next },
+            { onConflict: 'rec_id,user_id' });
+  if (error) { console.warn(error); return toast('Could not rate'); }
+  myVotes.set(id, { vote: mine.vote ?? 0, stars: next });
+  renderRecs();
+  pullRecommendations();
+}
+
+async function reportRec(id) {
+  if (!sb || !userId) return toast('Not connected');
+  const reason = prompt('What is wrong with this post?\n\n'
+    + 'Three reports hide it for everyone while it is looked at.');
+  if (reason === null) return;
+  const { error } = await sb.from('recommendation_reports')
+    .upsert({ rec_id: id, user_id: userId, reason: reason.slice(0, 300) },
+            { onConflict: 'rec_id,user_id' });
+  if (error) { console.warn(error); return toast('Could not report'); }
+  toast('Reported. Thank you.');
+  pullRecommendations();
+}
+
+async function blockAuthor(authorId) {
+  if (!sb || !userId || !authorId) return;
+  if (authorId === userId) return toast('That is you');
+  if (!confirm('Block this person? Everything they have posted disappears from '
+             + 'your list, now and in future.')) return;
+  const { error } = await sb.from('blocked_authors')
+    .upsert({ user_id: userId, blocked_id: authorId }, { onConflict: 'user_id,blocked_id' });
+  if (error) { console.warn(error); return toast('Could not block'); }
+  toast('Blocked');
+  pullRecommendations();
+}
+
+async function deleteRec(id) {
+  if (!confirm('Delete your recommendation? This cannot be undone.')) return;
+  const { error } = await sb.from('recommendations').delete().eq('id', id);
+  if (error) { console.warn(error); return toast('Could not delete'); }
+  toast('Deleted');
+  pullRecommendations();
+}
+
+// ── Writing one ───────────────────────────────────────────────────────
+function openRecSheet(id) {
+  const r = id ? recs.find(x => x.id === id) : null;
+  const countries = Object.keys(COUNTRY_NAME)
+    .sort((a, b) => COUNTRY_NAME[a].localeCompare(COUNTRY_NAME[b]));
+  $('#recBody').innerHTML = `
+    <h2>${r ? 'Edit your recommendation' : 'Recommend a place'}</h2>
+    <p class="muted">This goes on the traveller list, not the main adventure
+       list. Say what somebody would actually do there.</p>
+    <label>What to do<input id="recTitle" maxlength="90" placeholder="Walk the old tramway to the point"
+      value="${r ? esc(r.title) : ''}"></label>
+    <label>Where<input id="recPlace" maxlength="90" placeholder="Name of the place"
+      value="${r ? esc(r.place) : ''}"></label>
+    <label>Region or state<input id="recAdmin" maxlength="60" placeholder="Optional"
+      value="${r && r.admin1 ? esc(r.admin1) : ''}"></label>
+    <label>Country<select id="recCountry">${countries.map(c =>
+      `<option value="${c}"${r && r.country === c ? ' selected' : ''}>${
+        COUNTRY_FLAG[c]} ${esc(COUNTRY_NAME[c])}</option>`).join('')}</select></label>
+    <label>Category<select id="recCategory"><option value="">—</option>${
+      REC_CATEGORIES.map(c => `<option${r && r.category === c ? ' selected' : ''}>${c}</option>`).join('')
+    }</select></label>
+    <label>Why it is worth it<textarea id="recDesc" maxlength="600" rows="4"
+      placeholder="What makes it worth the detour, and anything someone should know before going.">${
+        r && r.description ? esc(r.description) : ''}</textarea></label>
+    <p class="fineprint">Posting puts your display name on it. Do not post
+       anything unsafe, abusive, or advertising a business you are part of.
+       Posts can be reported and removed.</p>
+    <button class="btn-primary" data-recsave="${r ? esc(r.id) : ''}">${
+      r ? 'Save changes' : 'Post it'}</button>`;
+  $('#recSheet').classList.remove('hidden');
+}
+
+function closeRecSheet() { $('#recSheet').classList.add('hidden'); }
+
+async function saveRec(id) {
+  if (!sb || !userId) return toast('Not connected');
+  const title = $('#recTitle').value.trim();
+  const place = $('#recPlace').value.trim();
+  if (title.length < 4) return toast('Say what somebody would do there');
+  if (place.length < 2) return toast('Where is it?');
+
+  const row = {
+    title, place,
+    admin1: $('#recAdmin').value.trim() || null,
+    country: $('#recCountry').value,
+    category: $('#recCategory').value || null,
+    description: $('#recDesc').value.trim() || null,
+    author_name: who || 'Someone',
+  };
+  const res = id
+    ? await sb.from('recommendations').update(row).eq('id', id)
+    : await sb.from('recommendations').insert({ ...row, created_by: userId });
+  if (res.error) { console.warn(res.error); return toast('Could not post it'); }
+  closeRecSheet();
+  toast(id ? 'Updated' : 'Posted');
+  recSort = 'new';
+  $$('#recSort .chip').forEach(c => c.classList.toggle('on', c.dataset.recsort === 'new'));
+  pullRecommendations();
 }
 
 // ══════════════════════════════════════════════════════════════════════
