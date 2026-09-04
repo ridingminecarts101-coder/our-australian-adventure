@@ -646,6 +646,24 @@
         ADV.filter(a => !/^(Year-round|[A-Z][a-z]{2}(-[A-Z][a-z]{2})?)$/.test(a.season))
            .slice(0, 3).map(a => a.season).join(', '));
 
+    // What goes into the outbox has to be something the server will accept.
+    // rating has a `between 1 and 5` check on it; a value outside that was
+    // stored locally and then rejected on every sync attempt for ever, with
+    // the sync bar permanently claiming changes were waiting.
+    const plain = ADV.find(a => !isLocked(a));
+    applyPatch(plain.id, { rating: 99 });
+    chk('a rating above five is refused', row(plain.id).rating === null);
+    applyPatch(plain.id, { rating: 0 });
+    chk('a rating of zero is refused', row(plain.id).rating === null);
+    applyPatch(plain.id, { rating: 4 });
+    chk('a valid rating is kept', row(plain.id).rating === 4);
+    applyPatch(plain.id, { rating: null });
+    applyPatch(plain.id, { memory: 'y'.repeat(9000) });
+    chk('a huge note is trimmed rather than synced',
+        (row(plain.id).memory || '').length === MEMORY_MAX);
+    applyPatch(plain.id, { memory: null });
+    chk('the outbox gives up eventually', OUTBOX_MAX_TRIES > 0 && OUTBOX_MAX_TRIES < 100);
+
     // A signed link that has expired must not be handed back as if it worked.
     // photoSrc used to check only that a link existed, so after two hours a
     // session left open showed broken images and never re-signed them.

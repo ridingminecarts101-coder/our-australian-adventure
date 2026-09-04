@@ -169,7 +169,33 @@ function saveLocalProgress() {
 // ══════════════════════════════════════════════════════════════════════
 //  Writing — local first, then outbox, then server
 // ══════════════════════════════════════════════════════════════════════
+const MEMORY_MAX = 2000;
+// Enough to ride out a bad connection, few enough that a permanently
+// rejected row does not retry for the life of the install.
+const OUTBOX_MAX_TRIES = 12;
+
+/* Keep what goes in matching what the database will accept.
+ *
+ * rating has a `between 1 and 5` check on the server. A value outside that is
+ * accepted locally, then rejected on every sync attempt for ever - the row
+ * sits in the outbox, the sync bar says changes are waiting, and nothing ever
+ * clears it. Better to refuse it here, where it can be explained.
+ */
+function cleanPatch(patch) {
+  const out = { ...patch };
+  if ('rating' in out && out.rating != null) {
+    const n = Math.round(Number(out.rating));
+    out.rating = Number.isFinite(n) && n >= 1 && n <= 5 ? n : null;
+  }
+  if ('memory' in out && typeof out.memory === 'string' && out.memory.length > MEMORY_MAX) {
+    out.memory = out.memory.slice(0, MEMORY_MAX);
+    toast(`Note trimmed to ${MEMORY_MAX} characters`);
+  }
+  return out;
+}
+
 function applyPatch(id, patch) {
+  patch = cleanPatch(patch);
   const merged = { ...row(id), ...patch, adventure_id: id, updated_by: who, updated_at: new Date().toISOString() };
   progress.set(id, merged);
   saveLocalProgress();
@@ -213,7 +239,20 @@ async function flushOutbox() {
       const retry = await sb.from('progress').upsert(payload, { onConflict: 'adventure_id' });
       if (!retry.error) { continue; }
     }
-    if (error) { stillPending.push(item); console.warn('sync failed', item.adventure_id, error.message); }
+    if (error) {
+      // A row the server will never accept - a constraint it violates, say -
+      // would otherwise be retried on every flush for the life of the install,
+      // with the sync bar permanently claiming changes are waiting. Count the
+      // attempts and give up out loud rather than pretending forever.
+      item.tries = (item.tries || 0) + 1;
+      console.warn('sync failed', item.adventure_id, error.message, `(attempt ${item.tries})`);
+      if (item.tries < OUTBOX_MAX_TRIES) {
+        stillPending.push(item);
+      } else {
+        console.error('giving up on', item.adventure_id, error.message);
+        toast('One change could not be saved to the server');
+      }
+    }
   }
   writeLS(LS.outbox, stillPending);
   refreshSyncBar();
