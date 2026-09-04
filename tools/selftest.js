@@ -386,12 +386,18 @@
     // Make the progress this assertion needs, rather than depending on another
     // suite having run first. Tests that need each other's leftovers pass and
     // fail for reasons that have nothing to do with the code.
-    const lockedBefore = $$$('.ach.locked').length;
-    if (!doneCount()) toggleDone(ADV[0].id);
+    // Tick something that is not already ticked, then check the invariant that
+    // actually holds: with progress on the board, at least one achievement is
+    // unlocked and some are still to earn. Asserting the locked count *drops*
+    // on every tick is wrong - most ticks cross no threshold - and it only
+    // ever passed when this suite happened to run against a clean slate.
+    const fresh = ADV.find(x => !isDone(x.id));
+    if (fresh) toggleDone(fresh.id);
     await wait(120);
+    const unlocked = $$$('.ach:not(.locked)').length;
     chk('completing something unlocks an achievement',
-        $$$('.ach:not(.locked)').length >= 1 && $$$('.ach.locked').length < lockedBefore,
-        `${$$$('.ach:not(.locked)').length} unlocked`);
+        doneCount() > 0 && unlocked >= 1 && unlocked < ach.length,
+        `${unlocked} of ${ach.length} unlocked, ${doneCount()} done`);
   }
 
   async function testAccessibility() {

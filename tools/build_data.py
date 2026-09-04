@@ -22,12 +22,18 @@ SOURCES = [
     'europe-gb',
     'europe-de',
     'europe-gr',
+    'europe-west2',
+    'europe-nordic',
+    'europe-central',
     # North America
     'us-west', 'us-southwest', 'us-east',
     'canada', 'mexico',
     'central-america', 'caribbean',
     # Asia
     'asia', 'indonesia',
+    'asia-jp',
+    'asia-sea',
+    'asia-south-east',
     # Middle East
     'middle-east',
     # Cross-cutting collections

@@ -45,6 +45,11 @@ const CONTINENT_BOXES = {
     [40, 60, 28, 45],       // eastern Europe
     [50, 59, -11, 2],       // Britain & Ireland
     [63, 67, -25, -13],     // Iceland
+    // Mediterranean islands sit below the 36-degree line the mainland
+    // boxes start at, so they need their own. Kept tight so they cannot
+    // reach across to the North African coast.
+    [35.7, 36.2, 14.0, 14.7],   // Malta and Gozo
+    [34.7, 35.8, 23.3, 26.5],   // Crete
   ],
   // Its own region rather than a slice of Asia. Geographically this is Western
   // Asia; every travel guide splits it out, and so does this app.
@@ -70,6 +75,8 @@ const CONTINENT_BOXES = {
     [35, 50, 45, 90],       // Central Asia
     [20, 35, 60, 78],       // India, upper
     [8, 20, 72, 82],        // India, tapering to the point
+    [5.5, 10, 79.4, 82.2],  // Sri Lanka, below the tip of India
+    [-1, 7.5, 72.4, 74.0],  // Maldives, strung down the 73rd meridian
     [20, 32, 78, 97],       // north-east India / Myanmar
     [-10, 20, 95, 130],     // South-East Asia and Indonesia
     [22, 45, 100, 145],     // China and the Koreas
@@ -131,6 +138,23 @@ const COUNTRIES = {
   TC: ['Turks & Caicos', '🇹🇨'], AW: ['Aruba', '🇦🇼'], AG: ['Antigua & Barbuda', '🇦🇬'],
   GD: ['Grenada', '🇬🇩'], VG: ['British Virgin Islands', '🇻🇬'],
   VI: ['US Virgin Islands', '🇻🇮'], HT: ['Haiti', '🇭🇹'],
+  // Europe - rest of the continent
+  BE: ['Belgium', '🇧🇪'], LU: ['Luxembourg', '🇱🇺'], FI: ['Finland', '🇫🇮'],
+  HU: ['Hungary', '🇭🇺'], SK: ['Slovakia', '🇸🇰'], SI: ['Slovenia', '🇸🇮'],
+  RO: ['Romania', '🇷🇴'], BG: ['Bulgaria', '🇧🇬'], EE: ['Estonia', '🇪🇪'],
+  LV: ['Latvia', '🇱🇻'], LT: ['Lithuania', '🇱🇹'], RS: ['Serbia', '🇷🇸'],
+  BA: ['Bosnia & Herzegovina', '🇧🇦'], ME: ['Montenegro', '🇲🇪'],
+  AL: ['Albania', '🇦🇱'], MK: ['North Macedonia', '🇲🇰'], MT: ['Malta', '🇲🇹'],
+  AD: ['Andorra', '🇦🇩'], MC: ['Monaco', '🇲🇨'], SM: ['San Marino', '🇸🇲'],
+  VA: ['Vatican City', '🇻🇦'], LI: ['Liechtenstein', '🇱🇮'],
+  // Asia - rest of the continent
+  TH: ['Thailand', '🇹🇭'], VN: ['Vietnam', '🇻🇳'], IN: ['India', '🇮🇳'],
+  NP: ['Nepal', '🇳🇵'], MY: ['Malaysia', '🇲🇾'], PH: ['Philippines', '🇵🇭'],
+  LK: ['Sri Lanka', '🇱🇰'], KH: ['Cambodia', '🇰🇭'], LA: ['Laos', '🇱🇦'],
+  TW: ['Taiwan', '🇹🇼'], MN: ['Mongolia', '🇲🇳'], MM: ['Myanmar', '🇲🇲'],
+  BT: ['Bhutan', '🇧🇹'], BD: ['Bangladesh', '🇧🇩'], PK: ['Pakistan', '🇵🇰'],
+  KZ: ['Kazakhstan', '🇰🇿'], UZ: ['Uzbekistan', '🇺🇿'], MV: ['Maldives', '🇲🇻'],
+  BN: ['Brunei', '🇧🇳'], MO: ['Macau', '🇲🇴'],
 };
 
 // Small island nations are collected behind one row rather than listed beside
@@ -185,23 +209,52 @@ function continentAt(lat, lon) {
  * Draws into a canvas sized to its container. `counts` maps continent
  * name -> number of adventures, so empty continents can be drawn muted.
  */
-// Which continent owns a land dot. The boxes are deliberately coarse, so a
-// coastal dot can sit just outside every one of them; step outwards until a
-// box claims it rather than dropping the dot on the floor.
-function continentForDot(lat, lon) {
-  const hit = continentAt(lat, lon);
-  if (hit) return hit;
-  for (const pad of [1.6, 3.2, 4.8]) {
-    for (const [dLat, dLon] of [[0, pad], [0, -pad], [pad, 0], [-pad, 0],
-                                [pad, pad], [pad, -pad], [-pad, pad], [-pad, -pad]]) {
-      const near = continentAt(lat + dLat, lon + dLon);
-      if (near) return near;
-    }
-  }
-  return null;
+/* ── The dot map ──────────────────────────────────────────────────────
+ * One renderer for three zoom levels. `view` is null for the whole world,
+ * {continent} for one continent, or {country} for one country; the window it
+ * frames comes from the outlines themselves rather than the tap-target boxes,
+ * so a country fills its canvas properly.
+ *
+ * The grid is rasterised at the resolution the view needs, so zooming in
+ * resolves more coastline instead of magnifying the same dots.
+ */
+// Which continent a dot belongs to. LAND.cont only names countries we hold
+// adventures for, so land we have nothing in - most of Africa and South
+// America - falls back to the boxes, which cover the whole world. Without this
+// a tap on Brazil resolves to nothing at all.
+function contOf(code, lat, lon) {
+  return (code && LAND.cont[code]) || continentAt(lat, lon);
 }
 
-function drawWorldMap(canvas, counts, selected) {
+const DOT_PITCH = 5;              // css px between dot centres
+const MAP_PAD = 0.06;             // fraction of the span left as margin
+
+// The last grid drawn, kept so a tap can be resolved without rasterising again.
+let lastMap = null;
+
+const WORLD_WINDOW = [-58, 78, -180, 180];   // poles cropped, no padding
+
+function mapWindow(view) {
+  let box = null;
+  if (view && view.country) box = LAND.box[view.country];
+  else if (view && view.continent) box = LAND.contBox[view.continent];
+  // The world is already framed exactly as we want it, and padding it would
+  // push the east edge past the antimeridian and shift the whole map west.
+  if (!box) return WORLD_WINDOW.slice();
+
+  let [s, n, w, e] = box;
+  const padLat = Math.max((n - s) * MAP_PAD, 0.4);
+  const padLon = Math.max((e - w) * MAP_PAD, 0.4);
+  s -= padLat; n += padLat; w -= padLon; e += padLon;
+
+  // A window whose east edge is past 180 wraps the dateline on purpose -
+  // Oceania does. Anything else gets clamped to the map.
+  const wraps = box[3] > 180;
+  return [Math.max(s, -85), Math.min(n, 85),
+          Math.max(w, -180), wraps ? Math.min(e, 360) : Math.min(e, 180)];
+}
+
+function drawWorldMap(canvas, counts, selected, view) {
   const css = getComputedStyle(document.documentElement);
   const land   = css.getPropertyValue('--eucalypt').trim() || '#3f6b52';
   const empty  = css.getPropertyValue('--line').trim() || '#ccc';
@@ -210,7 +263,14 @@ function drawWorldMap(canvas, counts, selected) {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = Math.max(rect.width, 1);
-  const h = w * (LAND.rows / LAND.cols) * 1.02;   // a hair of breathing room
+
+  const [s, n, west, east] = mapWindow(view);
+  // Latitude degrees are taller than longitude degrees away from the equator.
+  const mid = (s + n) / 2;
+  const squash = Math.max(Math.cos(mid * Math.PI / 180), 0.25);
+  let h = w * ((n - s) / ((east - west) * squash));
+  h = Math.min(Math.max(h, w * 0.35), w * 0.95);
+
   canvas.width = w * dpr;
   canvas.height = h * dpr;
   canvas.style.height = h + 'px';
@@ -219,23 +279,39 @@ function drawWorldMap(canvas, counts, selected) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
-  const cw = w / LAND.cols;
-  const ch = h / LAND.rows;
-  const r = Math.max(Math.min(cw, ch) * 0.40, 0.5);
+  const cols = Math.max(Math.round(w / DOT_PITCH), 12);
+  const rows = Math.max(Math.round(h / DOT_PITCH), 8);
+  const grid = landGrid(s, n, west, east, cols, rows);
+  lastMap = { canvas, s, n, w: west, e: east, cols, rows, grid };
 
-  for (let row = 0; row < LAND.rows; row++) {
-    const lat = LAND.top - row * LAND.step - LAND.step / 2;
-    for (let col = 0; col < LAND.cols; col++) {
-      if (!landAt(row, col)) continue;          // ocean stays blank
-      const lon = -180 + col * LAND.step + LAND.step / 2;
-      const cont = continentForDot(lat, lon);
-      const has = cont && (counts[cont] || 0) > 0;
+  const cw = w / cols, ch = h / rows;
+  const r = Math.max(Math.min(cw, ch) * 0.40, 0.6);
 
-      // Land we have nothing for still gets a dot, faintly. Without it the
-      // world has holes in it and the shape stops reading as a map.
-      ctx.fillStyle = cont && cont === selected ? active
-                    : (has ? (CONTINENT_COLOUR[cont] || land) : empty);
-      ctx.globalAlpha = cont === selected ? 1 : (has ? 0.92 : 0.28);
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const v = grid[row * cols + col];
+      if (!v) continue;                      // sea
+      const code = v === 255 ? null : LAND.codes[v - 1];
+      const cont = contOf(code, n - (row + 0.5) * ((n - s) / rows),
+                                west + (col + 0.5) * ((east - west) / cols));
+
+      // What counts as "lit" depends on how far in you are: the world and a
+      // continent light everything that has adventures, a country view lights
+      // only that country so its shape reads against its neighbours.
+      let lit, colour;
+      if (view && view.country) {
+        lit = code === view.country;
+        colour = lit ? (CONTINENT_COLOUR[cont] || land) : empty;
+      } else if (view && view.continent) {
+        lit = cont === view.continent;
+        colour = lit ? (CONTINENT_COLOUR[cont] || land) : empty;
+      } else {
+        lit = cont && (counts[cont] || 0) > 0;
+        colour = cont === selected ? active : (lit ? (CONTINENT_COLOUR[cont] || land) : empty);
+      }
+
+      ctx.fillStyle = colour;
+      ctx.globalAlpha = (!view && cont === selected) ? 1 : (lit ? 0.92 : 0.26);
       ctx.beginPath();
       ctx.arc(col * cw + cw / 2, row * ch + ch / 2, r, 0, Math.PI * 2);
       ctx.fill();
@@ -244,20 +320,37 @@ function drawWorldMap(canvas, counts, selected) {
   ctx.globalAlpha = 1;
 }
 
-// Turn a click on the canvas back into a continent.
-function continentFromPoint(canvas, clientX, clientY) {
+// Turn a tap on the canvas into whatever that dot belongs to. Returns
+// { country, continent } for the dot under the finger, searching outwards a
+// little so a narrow country or an island is still reachable with a thumb.
+function mapHit(canvas, clientX, clientY) {
+  if (!lastMap || lastMap.canvas !== canvas) return null;
+  const { s, n, w, e, cols, rows, grid } = lastMap;
   const rect = canvas.getBoundingClientRect();
-  const lon = ((clientX - rect.left) / rect.width) * 360 - 180;
-  const lat = LAND.top - ((clientY - rect.top) / rect.height) * (LAND.top - LAND.bottom);
+  const col0 = Math.floor(((clientX - rect.left) / rect.width) * cols);
+  const row0 = Math.floor(((clientY - rect.top) / rect.height) * rows);
 
-  // Exact hit first, then a small tolerance so narrow landmasses stay tappable.
-  const exact = continentAt(lat, lon);
-  if (exact) return exact;
-  for (const pad of [3, 6, 9]) {
-    for (const [dLat, dLon] of [[pad, 0], [-pad, 0], [0, pad], [0, -pad]]) {
-      const hit = continentAt(lat + dLat, lon + dLon);
-      if (hit) return hit;
+  for (const pad of [0, 1, 2, 3, 4]) {
+    for (let dr = -pad; dr <= pad; dr++) {
+      for (let dc = -pad; dc <= pad; dc++) {
+        if (pad && Math.max(Math.abs(dr), Math.abs(dc)) !== pad) continue;
+        const row = row0 + dr, col = col0 + dc;
+        if (row < 0 || row >= rows || col < 0 || col >= cols) continue;
+        const v = grid[row * cols + col];
+        if (!v) continue;
+        const code = v === 255 ? null : LAND.codes[v - 1];
+        const lat = n - (row + 0.5) * ((n - s) / rows);
+        let lon = w + (col + 0.5) * ((e - w) / cols);
+        if (lon > 180) lon -= 360;
+        return { country: code, continent: contOf(code, lat, lon) };
+      }
     }
   }
   return null;
+}
+
+// Kept for the world map, which only ever needs the continent.
+function continentFromPoint(canvas, clientX, clientY) {
+  const hit = mapHit(canvas, clientX, clientY);
+  return hit ? hit.continent : null;
 }

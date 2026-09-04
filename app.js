@@ -1057,10 +1057,19 @@ function renderPlaces() {
     !['continent', 'country', 'islands'].includes(nav.level));
   list.classList.toggle('hidden', nav.level !== 'adventures');
 
+  // The map follows you down: the whole world, then the continent, then the
+  // country on its own. Regions have no outline of their own in the data, so
+  // the country view is as far in as the map can honestly go.
+  if (!place.classList.contains('hidden')) {
+    drawWorldMap($('#placeMap'), null, null,
+      nav.level === 'country' ? { country: nav.country }
+                              : { continent: nav.continent });
+  }
+
   if (nav.level === 'world') {
     const counts = {};
     for (const name of CONTINENT_ORDER) counts[name] = countOf(a => a.continent === name);
-    drawWorldMap($('#worldMap'), counts, null);
+    drawWorldMap($('#worldMap'), counts, null, null);
 
     // Most content first, so the list reorders itself as regions fill in.
     // Empty continents fall to the bottom in their declared order.
@@ -1990,7 +1999,23 @@ function wireUI() {
     if (countOf(a => a.continent === hit)) goTo('continent', { continent: hit });
     else toast(`No ${hit} adventures yet`);
   });
-  addEventListener('resize', () => { if (nav.level === 'world') renderPlaces(); });
+  // The zoomed map, which knows which country you tapped rather than only
+  // which continent. Tapping a country you are already inside does nothing.
+  const placeMap = $('#placeMap');
+  placeMap.addEventListener('click', e => {
+    const hit = mapHit(placeMap, e.clientX, e.clientY);
+    if (!hit || !hit.country || hit.country === nav.country) return;
+    if (nav.level === 'country' && hit.country !== nav.country) return;
+    const n = countOf(a => a.country === hit.country);
+    if (!n) return toast(`Nothing in ${countryName(hit.country)} yet`);
+    goTo('country', { continent: hit.continent, country: hit.country });
+  });
+
+  // The canvas is sized from its container, so a rotate or a resize has to
+  // redraw whichever map is currently on screen.
+  addEventListener('resize', () => {
+    if (nav.level !== 'adventures') renderPlaces();
+  });
 
   // Card taps (delegated — the list is re-rendered constantly)
   document.body.addEventListener('click', e => {

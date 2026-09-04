@@ -287,7 +287,9 @@ input, select, textarea { font: inherit; color: inherit; }
   background: var(--card); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 10px; box-shadow: var(--shadow);
 }
-#worldMap { display: block; width: 100%; cursor: pointer; }
+#worldMap, #placeMap { display: block; width: 100%; cursor: pointer; }
+/* The zoomed map sits above the place title, so it needs a little air below. */
+#placeView .mapwrap { margin-bottom: 12px; }
 .maphint { font-size: 12.5px; color: var(--muted); margin: 8px 2px 14px; text-align: center; }
 
 .placelist { display: grid; gap: 8px; }

@@ -36,6 +36,16 @@ REFERENCE = {
     'AT': 'Europe', 'NL': 'Europe', 'NO': 'Europe', 'IS': 'Europe',
     'GR': 'Europe', 'CZ': 'Europe', 'HR': 'Europe', 'PL': 'Europe',
     'DK': 'Europe', 'SE': 'Europe',
+    'BE': 'Europe', 'LU': 'Europe', 'FI': 'Europe', 'HU': 'Europe',
+    'SK': 'Europe', 'SI': 'Europe', 'RO': 'Europe', 'BG': 'Europe',
+    'EE': 'Europe', 'LV': 'Europe', 'LT': 'Europe', 'RS': 'Europe',
+    'BA': 'Europe', 'ME': 'Europe', 'AL': 'Europe', 'MK': 'Europe',
+    'MT': 'Europe', 'AD': 'Europe', 'MC': 'Europe', 'SM': 'Europe',
+    'VA': 'Europe', 'LI': 'Europe',
+    'TH': 'Asia', 'VN': 'Asia', 'IN': 'Asia', 'NP': 'Asia', 'MY': 'Asia',
+    'PH': 'Asia', 'LK': 'Asia', 'KH': 'Asia', 'LA': 'Asia', 'TW': 'Asia',
+    'MN': 'Asia', 'MM': 'Asia', 'BT': 'Asia', 'BD': 'Asia', 'PK': 'Asia',
+    'KZ': 'Asia', 'UZ': 'Asia', 'MV': 'Asia', 'BN': 'Asia', 'MO': 'Asia',
     # North America - mainland
     'US': 'North America', 'CA': 'North America', 'MX': 'North America',
     # North America - Central America
@@ -67,6 +77,20 @@ NOTES = {
 
 # Rough centroid per country, only used to test the map boxes.
 CENTROID = {
+    'BE': (50.6, 4.6), 'LU': (49.8, 6.1), 'FI': (64.0, 26.0),
+    'HU': (47.2, 19.4), 'SK': (48.7, 19.7), 'SI': (46.1, 14.8),
+    'RO': (45.9, 25.0), 'BG': (42.7, 25.2), 'EE': (58.7, 25.5),
+    'LV': (56.9, 24.9), 'LT': (55.3, 23.9), 'RS': (44.2, 20.8),
+    'BA': (44.0, 17.8), 'ME': (42.8, 19.2), 'AL': (41.1, 20.1),
+    'MK': (41.6, 21.7), 'MT': (35.9, 14.4), 'AD': (42.5, 1.6),
+    'MC': (43.74, 7.42), 'SM': (43.94, 12.46), 'VA': (41.9, 12.45),
+    'LI': (47.15, 9.55), 'TH': (15.0, 101.0), 'VN': (16.0, 106.5),
+    'IN': (22.0, 79.0), 'NP': (28.3, 84.1), 'MY': (4.2, 102.0),
+    'PH': (12.9, 122.0), 'LK': (7.6, 80.7), 'KH': (12.6, 104.9),
+    'LA': (18.2, 103.9), 'TW': (23.7, 121.0), 'MN': (46.9, 103.8),
+    'MM': (21.9, 96.0), 'BT': (27.4, 90.4), 'BD': (23.7, 90.3),
+    'PK': (30.4, 69.3), 'KZ': (48.0, 67.0), 'UZ': (41.4, 64.6),
+    'MV': (3.2, 73.2), 'BN': (4.5, 114.7), 'MO': (22.2, 113.55),
     'AU': (-25.0, 134.0), 'NZ': (-41.0, 174.0), 'PG': (-6.3, 144.0),
     'FJ': (-17.8, 178.0), 'PF': (-17.6, -149.4), 'VU': (-15.4, 167.0),
     'NC': (-21.3, 165.6), 'WS': (-13.6, -172.4), 'TO': (-21.2, -175.2),
