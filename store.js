@@ -15,9 +15,9 @@
  *     looking thin next to Oceania. If that becomes a complaint, tier it -
  *     nothing here assumes the prices are equal.
  *
- * Packs are a flat $1.99 for simplicity. The bundle at $7.99 is the honest
- * recommendation for anyone travelling more than four continents: it is
- * cheaper than five packs, and covers every continent added later.
+ * Packs are a flat $1.99 for simplicity. The bundle at $9.99 is the headline:
+ * priced against the seven continents the app will eventually hold rather than
+ * the five it holds today, so it stays the better buy as content is added.
  *
  * Locked gems do not count towards any total. A region with 71 adventures of
  * which 30 are unbought gems asks for 41, not 71 - completion, stamps and
@@ -35,7 +35,7 @@ const STORE_PREFIX = 'app.wayfinder.mobile.gems.';
  */
 const PACKS = [
   { slug: 'all',           continent: null,            name: 'Every hidden gem',
-    price: '$7.99', blurb: 'Every pack, including continents added later.' },
+    price: '$9.99', blurb: 'Every pack, including continents added later.' },
   { slug: 'oceania',       continent: 'Oceania',       name: 'Oceania gems',
     price: '$1.99' },
   { slug: 'europe',        continent: 'Europe',        name: 'Europe gems',

@@ -41,6 +41,7 @@ SOURCES = [
     # Cross-cutting collections
     'theme-parks',
     'food',
+    'us-fill', 'world-fill',
 ]
 
 FIELDS = ['continent', 'country', 'admin1', 'region', 'title', 'place',
@@ -141,6 +142,20 @@ def load():
                     problems.append(f'{where}: only hidden_gem entries belong to a pack')
 
                 records.append(rec)
+
+    # A region written two ways is two regions as far as the app is concerned,
+    # and whoever lives in the smaller half sees a stub. Catch the forms that
+    # differ only by case or punctuation before they reach anyone.
+    import re as _re
+    seen_admin = collections.defaultdict(dict)
+    for r in records:
+        key = _re.sub(r'[^a-z]', '', str(r.get('admin1', '')).lower())
+        seen_admin[r.get('country')].setdefault(key, set()).add(r.get('admin1'))
+    for country, groups in seen_admin.items():
+        for key, forms in groups.items():
+            if len(forms) > 1:
+                problems.append(f'{country}: region written {len(forms)} ways: '
+                                + ', '.join(sorted(map(repr, forms))))
 
     # Place names repeat legitimately across countries - there is a Kingston in
     # Tasmania and another on Norfolk Island - so scope that check per country.

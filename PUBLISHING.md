@@ -164,7 +164,7 @@ In order. Nothing here can be done from code.
 
     | Product id | Shown as | Price |
     |---|---|---|
-    | `app.wayfinder.mobile.gems.all` | Every hidden gem | $7.99 |
+    | `app.wayfinder.mobile.gems.all` | Every hidden gem | $9.99 |
     | `app.wayfinder.mobile.gems.oceania` | Oceania gems (270) | $1.99 |
     | `app.wayfinder.mobile.gems.europe` | Europe gems (225) | $1.99 |
     | `app.wayfinder.mobile.gems.north_america` | North America gems (171) | $1.99 |
