@@ -100,62 +100,6 @@ const CONTINENT_BOXES = {
   ],
 };
 
-const COUNTRIES = {
-  AU: ['Australia', '🇦🇺'], NZ: ['New Zealand', '🇳🇿'],
-  FJ: ['Fiji', '🇫🇯'], PF: ['French Polynesia', '🇵🇫'], VU: ['Vanuatu', '🇻🇺'],
-  NC: ['New Caledonia', '🇳🇨'], WS: ['Samoa', '🇼🇸'], TO: ['Tonga', '🇹🇴'],
-  CK: ['Cook Islands', '🇨🇰'], SB: ['Solomon Islands', '🇸🇧'],
-  PG: ['Papua New Guinea', '🇵🇬'], PW: ['Palau', '🇵🇼'], NU: ['Niue', '🇳🇺'],
-  NF: ['Norfolk Island', '🇳🇫'], FM: ['Micronesia', '🇫🇲'],
-  MH: ['Marshall Islands', '🇲🇭'], KI: ['Kiribati', '🇰🇮'],
-  TV: ['Tuvalu', '🇹🇻'], NR: ['Nauru', '🇳🇷'], TL: ['Timor-Leste', '🇹🇱'],
-  GB: ['United Kingdom', '🇬🇧'], IE: ['Ireland', '🇮🇪'], FR: ['France', '🇫🇷'],
-  IT: ['Italy', '🇮🇹'], ES: ['Spain', '🇪🇸'], PT: ['Portugal', '🇵🇹'],
-  DE: ['Germany', '🇩🇪'], CH: ['Switzerland', '🇨🇭'], AT: ['Austria', '🇦🇹'],
-  NL: ['Netherlands', '🇳🇱'], NO: ['Norway', '🇳🇴'], IS: ['Iceland', '🇮🇸'],
-  GR: ['Greece', '🇬🇷'], CZ: ['Czechia', '🇨🇿'], HR: ['Croatia', '🇭🇷'],
-  PL: ['Poland', '🇵🇱'], US: ['United States', '🇺🇸'], CA: ['Canada', '🇨🇦'],
-  MX: ['Mexico', '🇲🇽'],
-  DK: ['Denmark', '🇩🇰'], SE: ['Sweden', '🇸🇪'],
-  JP: ['Japan', '🇯🇵'], KR: ['South Korea', '🇰🇷'], CN: ['China', '🇨🇳'],
-  HK: ['Hong Kong', '🇭🇰'], SG: ['Singapore', '🇸🇬'], AE: ['United Arab Emirates', '🇦🇪'],
-  ID: ['Indonesia', '🇮🇩'],
-  // Middle East
-  OM: ['Oman', '🇴🇲'], JO: ['Jordan', '🇯🇴'],
-  IL: ['Israel', '🇮🇱'], PS: ['Palestine', '🇵🇸'],
-  QA: ['Qatar', '🇶🇦'], SA: ['Saudi Arabia', '🇸🇦'],
-  BH: ['Bahrain', '🇧🇭'], KW: ['Kuwait', '🇰🇼'],
-  LB: ['Lebanon', '🇱🇧'], TR: ['Turkiye', '🇹🇷'],
-  // Central America
-  GT: ['Guatemala', '🇬🇹'], BZ: ['Belize', '🇧🇿'], CR: ['Costa Rica', '🇨🇷'],
-  PA: ['Panama', '🇵🇦'], NI: ['Nicaragua', '🇳🇮'], HN: ['Honduras', '🇭🇳'],
-  SV: ['El Salvador', '🇸🇻'],
-  // Caribbean
-  CU: ['Cuba', '🇨🇺'], JM: ['Jamaica', '🇯🇲'], BS: ['Bahamas', '🇧🇸'],
-  DO: ['Dominican Republic', '🇩🇴'], PR: ['Puerto Rico', '🇵🇷'],
-  BB: ['Barbados', '🇧🇧'], TT: ['Trinidad & Tobago', '🇹🇹'],
-  LC: ['Saint Lucia', '🇱🇨'], DM: ['Dominica', '🇩🇲'], KY: ['Cayman Islands', '🇰🇾'],
-  TC: ['Turks & Caicos', '🇹🇨'], AW: ['Aruba', '🇦🇼'], AG: ['Antigua & Barbuda', '🇦🇬'],
-  GD: ['Grenada', '🇬🇩'], VG: ['British Virgin Islands', '🇻🇬'],
-  VI: ['US Virgin Islands', '🇻🇮'], HT: ['Haiti', '🇭🇹'],
-  // Europe - rest of the continent
-  BE: ['Belgium', '🇧🇪'], LU: ['Luxembourg', '🇱🇺'], FI: ['Finland', '🇫🇮'],
-  HU: ['Hungary', '🇭🇺'], SK: ['Slovakia', '🇸🇰'], SI: ['Slovenia', '🇸🇮'],
-  RO: ['Romania', '🇷🇴'], BG: ['Bulgaria', '🇧🇬'], EE: ['Estonia', '🇪🇪'],
-  LV: ['Latvia', '🇱🇻'], LT: ['Lithuania', '🇱🇹'], RS: ['Serbia', '🇷🇸'],
-  BA: ['Bosnia & Herzegovina', '🇧🇦'], ME: ['Montenegro', '🇲🇪'],
-  AL: ['Albania', '🇦🇱'], MK: ['North Macedonia', '🇲🇰'], MT: ['Malta', '🇲🇹'],
-  AD: ['Andorra', '🇦🇩'], MC: ['Monaco', '🇲🇨'], SM: ['San Marino', '🇸🇲'],
-  VA: ['Vatican City', '🇻🇦'], LI: ['Liechtenstein', '🇱🇮'],
-  // Asia - rest of the continent
-  TH: ['Thailand', '🇹🇭'], VN: ['Vietnam', '🇻🇳'], IN: ['India', '🇮🇳'],
-  NP: ['Nepal', '🇳🇵'], MY: ['Malaysia', '🇲🇾'], PH: ['Philippines', '🇵🇭'],
-  LK: ['Sri Lanka', '🇱🇰'], KH: ['Cambodia', '🇰🇭'], LA: ['Laos', '🇱🇦'],
-  TW: ['Taiwan', '🇹🇼'], MN: ['Mongolia', '🇲🇳'], MM: ['Myanmar', '🇲🇲'],
-  BT: ['Bhutan', '🇧🇹'], BD: ['Bangladesh', '🇧🇩'], PK: ['Pakistan', '🇵🇰'],
-  KZ: ['Kazakhstan', '🇰🇿'], UZ: ['Uzbekistan', '🇺🇿'], MV: ['Maldives', '🇲🇻'],
-  BN: ['Brunei', '🇧🇳'], MO: ['Macau', '🇲🇴'],
-};
 
 // Small island nations are collected behind one row rather than listed beside
 // Australia — a country with three adventures shouldn't sit at the same level
@@ -193,8 +137,9 @@ const PACK_SLUG = {
   'South America': 'south-america', 'Africa': 'africa',
 };
 
-function countryName(code) { return (COUNTRIES[code] || [code])[0]; }
-function countryFlag(code) { return (COUNTRIES[code] || ['', '🌍'])[1]; }
+// Names and flags live in countries.js, which is generated from one list.
+function countryName(code) { return COUNTRY_NAME[code] || code; }
+function countryFlag(code) { return COUNTRY_FLAG[code] || '🌍'; }
 
 function continentAt(lat, lon) {
   for (const [name, boxes] of Object.entries(CONTINENT_BOXES)) {

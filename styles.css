@@ -530,3 +530,29 @@ input, select, textarea { font: inherit; color: inherit; }
   .panel, .filters { max-width: 620px; margin-inline: auto; }
   .sheet-card { max-width: 620px; margin-inline: auto; border-radius: 20px; bottom: 20px; left: 16px; right: 16px; }
 }
+
+/* ── Travel advisories ────────────────────────────────────────────────
+ * Muted rather than alarming. A country you should not visit right now is
+ * still a country someone may want to read about, so the row stays legible
+ * instead of turning into a warning triangle.
+ */
+.advisory {
+  display: inline-block; margin: 2px 0 0; padding: 1px 7px;
+  border-radius: 999px; font-size: 11px; font-weight: 700;
+  letter-spacing: .02em;
+}
+.advisory.avoid { background: rgba(190, 60, 45, .18); color: #e58573; }
+.advisory.care  { background: rgba(196, 149, 43, .18); color: #d9b45e; }
+.placerow.has-advisory { opacity: .82; }
+
+.advisory-box {
+  margin: 10px 0 14px; padding: 12px 14px; border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--card);
+}
+.advisory-box.avoid { border-color: rgba(190, 60, 45, .45); }
+.advisory-box.care  { border-color: rgba(196, 149, 43, .45); }
+.advisory-head { font-weight: 700; margin-bottom: 5px; }
+.advisory-box.avoid .advisory-head { color: #e58573; }
+.advisory-box.care  .advisory-head { color: #d9b45e; }
+.advisory-box p { margin: 0 0 6px; font-size: 13.5px; line-height: 1.45; }
+.advisory-box .fineprint { margin-bottom: 0; }

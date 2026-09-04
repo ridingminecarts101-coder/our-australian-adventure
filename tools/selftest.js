@@ -241,18 +241,22 @@
     chk('sheet closes', $('#sheet').classList.contains('hidden'));
   }
 
-  async function testPhotos() {
-    const a = ADV.find(x => x.country === 'NZ');
-    // Sized and textured like a real phone photo. A small flat-colour image
-    // would already be under the 1600px cap and would re-encode to the same
-    // number of bytes, so the shrink assertion would be meaningless.
+  // Sized and textured like a real phone photo. A small flat-colour image
+  // would already be under the 1600px cap and would re-encode to the same
+  // number of bytes, so the shrink assertion would be meaningless.
+  async function fakePhotoBlob() {
     const c = document.createElement('canvas'); c.width = 3000; c.height = 2000;
     const x = c.getContext('2d');
     for (let i = 0; i < 1500; i++) {
       x.fillStyle = `hsl(${(i * 37) % 360},${40 + (i % 40)}%,${25 + (i % 50)}%)`;
       x.fillRect((i * 97) % 3000, (i * 53) % 2000, 60, 60);
     }
-    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+    return new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+  }
+
+  async function testPhotos() {
+    const a = ADV.find(x => x.country === 'NZ');
+    const blob = await fakePhotoBlob();
 
     const t0 = performance.now();
     await addPhotos(a.id, [new File([blob], 'IMG.JPG', { type: 'image/jpeg' })]);
@@ -290,7 +294,15 @@
     }
     $('#groupChips .chip[data-group="adventure"]').click(); await wait(60);
 
-    const thumb = $('.thumb:not(.add)');
+    if (!pendingPhotos.length) {
+      const blob = await fakePhotoBlob();
+      await addPhotos(ADV.find(x => x.country === 'NZ').id,
+                      [new File([blob], 'IMG.JPG', { type: 'image/jpeg' })]);
+      await wait(300);
+      $('.tab[data-tab="tab-memories"]').click(); await wait(120);
+    }
+
+    const thumb = $('#memList .thumb:not(.add)');
     if (thumb) {
       thumb.click(); await wait(200);
       chk('lightbox opens', !$('#lightbox').classList.contains('hidden'));

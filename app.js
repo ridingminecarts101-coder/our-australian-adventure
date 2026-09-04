@@ -1015,14 +1015,36 @@ function goTo(level, opts = {}) {
   renderList();
 }
 
-function placeRow({ label, sub, count, done, flag, swatch, onClick }) {
+/* The travel advisory panel shown at the top of a country.
+ *
+ * Deliberately not dismissible and deliberately not the last word: conditions
+ * change faster than an app gets updated, so it points at the government
+ * advice rather than pretending to be it.
+ */
+function renderAdvisory(code) {
+  const box = $('#advisory');
+  const adv = advisoryFor(code);
+  if (!adv) { box.className = 'advisory-box hidden'; box.innerHTML = ''; return; }
+  box.className = 'advisory-box ' + adv.level;
+  box.innerHTML = `
+    <div class="advisory-head">${adv.level === 'avoid' ? '⛔ Do not travel' : '⚠️ Take care'}</div>
+    <p>${esc(adv.note)}</p>
+    <p class="fineprint">Conditions change faster than this app does. Check your
+       government's current travel advice before you book anything.</p>`;
+}
+
+function placeRow({ label, sub, count, done, flag, swatch, advisory, onClick }) {
   const pct = count ? Math.round((done / count) * 100) : 0;
-  return `<button class="placerow" data-go='${esc(JSON.stringify(onClick))}'>
+  const mark = advisory === 'avoid' ? '<span class="advisory avoid">Do not travel</span>'
+             : advisory === 'care' ? '<span class="advisory care">Check advice</span>'
+             : '';
+  return `<button class="placerow${advisory ? ' has-advisory' : ''}" data-go='${esc(JSON.stringify(onClick))}'>
     <div class="placerow-main">
       <div class="placerow-top">
         <span class="placerow-label">${swatch ? `<i class="swatch" style="background:${esc(swatch)}"></i>` : ''}${flag ? flag + ' ' : ''}${esc(label)}</span>
-        <span class="placerow-count">${count ? `${done} / ${count}` : 'Coming soon'}</span>
+        <span class="placerow-count">${count ? `${done} / ${count}` : (advisory ? '' : 'Coming soon')}</span>
       </div>
+      ${mark}
       ${sub ? `<div class="placerow-sub">${esc(sub)}</div>` : ''}
       ${count ? `<div class="minibar"><i style="width:${pct}%"></i></div>` : ''}
     </div>
@@ -1081,32 +1103,44 @@ function renderPlaces() {
       return placeRow({
         label: name,
         swatch: count ? CONTINENT_COLOUR[name] : null,
-        sub: count ? `${countries} ${countries === 1 ? 'country' : 'countries'}` : 'Not mapped yet — tell us where to go next',
+        sub: count ? `${countries} ${countries === 1 ? 'country' : 'countries'}`
+                   : `${countriesIn(name, () => 0).length} countries, none mapped yet`,
         count, done: doneOf(a => a.continent === name),
-        onClick: count ? { level: 'continent', continent: name } : null,
+        // Openable either way: an empty continent still lists its countries,
+        // which is more use than a dead row.
+        onClick: { level: 'continent', continent: name },
       });
     }).join('');
     return;
   }
 
+  if (nav.level !== 'country') renderAdvisory(null);
+
   if (nav.level === 'continent' || nav.level === 'islands') {
     const islandsOnly = nav.level === 'islands';
     const inCont = a => a.continent === nav.continent;
-    const all = [...new Set(ADV.filter(inCont).map(a => a.country))];
-    const mainland = all.filter(c => !ISLAND_GROUP.has(c))
-      .sort((x, y) => countryName(x).localeCompare(countryName(y)));
-    const islands = all.filter(c => ISLAND_GROUP.has(c))
-      .sort((x, y) => countryName(x).localeCompare(countryName(y)));
+    // Every country in the continent, whether or not it holds adventures yet.
+    // Leaving the empty ones out made the app look like they did not exist.
+    const all = countriesIn(nav.continent, c => countOf(a => a.country === c));
+    const withContent = all.filter(c => countOf(a => a.country === c) > 0);
+    const mainland = all.filter(c => !ISLAND_GROUP.has(c));
+    const islands = all.filter(c => ISLAND_GROUP.has(c));
     const codes = islandsOnly ? islands : mainland;
 
     const countryRow = code => {
       const inC = a => inCont(a) && a.country === code;
+      const n = countOf(inC);
       const regions = new Set(ADV.filter(inC).map(a => a.admin1)).size;
+      const adv = advisoryFor(code);
+      // The advisory outranks the region count: if the honest answer is "not
+      // right now", that is the first thing worth saying about the place.
+      const sub = adv ? adv.note
+                      : (n ? `${regions} ${regions === 1 ? 'region' : 'regions'}`
+                           : 'Not mapped yet');
       return placeRow({
         label: countryName(code), flag: countryFlag(code),
-        sub: `${regions} ${regions === 1 ? 'region' : 'regions'}`,
-        count: countOf(inC), done: doneOf(inC),
-        onClick: { level: 'country', continent: nav.continent, country: code },
+        sub, count: n, done: doneOf(inC), advisory: adv ? adv.level : null,
+        onClick: n ? { level: 'country', continent: nav.continent, country: code } : null,
       });
     };
 
@@ -1115,7 +1149,8 @@ function renderPlaces() {
       const inIslands = a => inCont(a) && ISLAND_GROUP.has(a.country);
       $('#placeTitle').textContent = '🏝️ Island nations';
       $('#placeSub').textContent =
-        `${countOf(inIslands)} adventures across ${islands.length} nations and territories`;
+        `${countOf(inIslands)} adventures across ${islands.filter(c => countOf(a => a.country === c)).length}` +
+        ` of ${islands.length} nations and territories`;
       $('#placeList').innerHTML = codes.map(countryRow).join('');
       return;
     }
@@ -1123,16 +1158,20 @@ function renderPlaces() {
     const inIslands = a => inCont(a) && ISLAND_GROUP.has(a.country);
     const islandCount = countOf(inIslands);
     $('#placeTitle').textContent = nav.continent;
-    $('#placeSub').textContent =
-      `${countOf(inCont)} adventures across ${all.length} ${all.length === 1 ? 'country' : 'countries'}`;
+    $('#placeSub').textContent = countOf(inCont)
+      ? `${countOf(inCont)} adventures across ${withContent.length} of ${all.length} countries`
+      : `${all.length} countries, none mapped yet`;
+    // Group the island nations whenever there are enough of them, not only when
+    // they hold adventures - otherwise an unmapped continent silently drops
+    // them and the country count stops adding up.
     $('#placeList').innerHTML = codes.map(countryRow).join('') +
-      (islandCount ? placeRow({
+      (islands.length >= ISLAND_GROUP_MIN ? placeRow({
         label: 'Island nations', flag: '🏝️',
         sub: islands.map(countryName).slice(0, 4).join(', ') +
              (islands.length > 4 ? ` and ${islands.length - 4} more` : ''),
         count: islandCount, done: doneOf(inIslands),
         onClick: { level: 'islands', continent: nav.continent },
-      }) : '');
+      }) : islands.map(countryRow).join(''));
     return;
   }
 
@@ -1142,6 +1181,7 @@ function renderPlaces() {
     $('#crumb').innerHTML = crumbHTML();
     $('#placeTitle').textContent = countryFlag(nav.country) + ' ' + countryName(nav.country);
     $('#placeSub').textContent = `${countOf(inC)} adventures`;
+    renderAdvisory(nav.country);
 
     const rows = regions.map(code => {
       const inR = a => inC(a) && a.admin1 === code;

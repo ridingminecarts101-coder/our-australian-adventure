@@ -38,6 +38,7 @@ SOURCES = [
     'middle-east',
     # Cross-cutting collections
     'theme-parks',
+    'food',
 ]
 
 FIELDS = ['continent', 'country', 'admin1', 'region', 'title', 'place',

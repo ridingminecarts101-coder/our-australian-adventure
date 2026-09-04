@@ -35,7 +35,9 @@ OUT = 'land.js'
 # Coordinates are quantised to this many degrees before packing. At 0.02 a dot
 # is never larger than the error, even zoomed to a single small country.
 STEP = 0.02
-LON0, LAT0 = -180.0, -90.0
+# Longitudes are unwrapped, so a ring that crosses the antimeridian runs past
+# 180. The origin is pulled back a full turn to keep the packed values positive.
+LON0, LAT0 = -360.0, -90.0
 
 
 def load_country_rings():
@@ -59,7 +61,23 @@ def load_country_rings():
         for i in idxs:
             pts = arcs[~i][::-1] if i < 0 else arcs[i]
             ring.extend(pts[1:] if ring else pts)
-        return ring
+        # Russia, Fiji and Antarctica cross the antimeridian, where longitude
+        # jumps from 180 to -180. Left alone, that single edge spans the whole
+        # map and the scanline fill smears a band of "land" across the ocean -
+        # which is what put stray dots off the coast of Norway. Unwrapping keeps
+        # consecutive points within half a turn of each other, so every edge is
+        # short and the fill stays where the country is.
+        out = []
+        shift = 0.0
+        for j, (lon, lat) in enumerate(ring):
+            if j:
+                d = (lon + shift) - out[-1][0]
+                if d > 180:
+                    shift -= 360
+                elif d < -180:
+                    shift += 360
+            out.append((lon + shift, lat))
+        return out
 
     out = []
     for geom in topo['objects']['countries']['geometries']:
@@ -363,7 +381,9 @@ function landGrid(s, n, w, e, cols, rows) {
         const b0 = xs[k + 1] * LAND.step + LAND.lon0;
         // A window that reaches past 180 wraps - Oceania does - so the same
         // span is tried again a full turn east.
-        for (const shift of (e > 180 ? [0, 360] : [0])) {
+        // Rings are stored unwrapped, so the same land can sit a turn either
+        // side of the window we are drawing. Try all three positions.
+        for (const shift of [-360, 0, 360]) {
           const lonA = a0 + shift, lonB = b0 + shift;
           if (lonB < w || lonA > e) continue;
           let c0 = Math.floor((lonA - w) / dLon);

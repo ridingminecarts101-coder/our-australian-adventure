@@ -65,6 +65,7 @@
       <!-- The same dot map, zoomed to wherever you have drilled to. -->
       <div class="mapwrap"><canvas id="placeMap" aria-label="Map of the area you are looking at"></canvas></div>
       <h2 id="placeTitle"></h2>
+      <div id="advisory" class="advisory-box hidden"></div>
       <p id="placeSub" class="muted"></p>
       <div id="placeList" class="placelist"></div>
     </div>
@@ -204,6 +205,7 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script src="config.js"></script>
+<script src="countries.js"></script>
 <script src="land.js"></script>
 <script src="world.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
