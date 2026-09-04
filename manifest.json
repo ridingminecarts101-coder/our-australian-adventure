@@ -1,7 +1,7 @@
 {
   "name": "Wayfinder",
   "short_name": "Wayfinder",
-  "description": "2,100+ real places worth going, ticked off together.",
+  "description": "2,300+ real places worth going, ticked off together.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

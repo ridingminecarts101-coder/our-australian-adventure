@@ -1078,6 +1078,12 @@ async function adoptExistingRowsIntoGroup() {
 function renderStore() {
   const el = $('#storePanel');
   if (!el) return;
+  const row = $('#previewRow');
+  if (row) {
+    row.classList.toggle('hidden', !previewAvailable());
+    $('#previewBtn').textContent = previewOn()
+      ? 'Turn preview off' : 'Preview the hidden gems';
+  }
   const counts = packStats(ADV);
   const packs = sellablePacks(ADV);
   const hasAll = ownsPack('all');
@@ -2244,6 +2250,13 @@ function wireUI() {
   });
   $('#privacyBtn').onclick = () => window.open('privacy.html', '_blank', 'noopener');
   $('#supportBtn').onclick = () => window.open('support.html', '_blank', 'noopener');
+
+  // Only offered while there is no real store to buy from.
+  $('#previewBtn').onclick = () => {
+    setPreview(!previewOn());
+    renderAll();
+    toast(previewOn() ? 'Hidden gems unlocked for preview' : 'Preview off');
+  };
 
   $('#restoreBtn').onclick = async () => {
     toast('Checking with the store…');

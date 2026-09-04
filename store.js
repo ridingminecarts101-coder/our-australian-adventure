@@ -76,7 +76,9 @@ function saveEntitlements() {
 
 function grant(slug) { owned.add(slug); saveEntitlements(); }
 
-function ownsPack(slug) { return owned.has('all') || owned.has(slug); }
+function ownsPack(slug) {
+  return (previewAvailable() && previewOn()) || owned.has('all') || owned.has(slug);
+}
 
 // An adventure is locked when it is a hidden gem in a pack you have not bought.
 function isLocked(a) {
@@ -178,5 +180,31 @@ const Billing = {
     }
   },
 };
+
+
+/* Preview mode — see the paid content without a store.
+ *
+ * There is no way to buy your own pack until the app is on a store, which
+ * makes the locked half impossible to review. This unlocks everything on this
+ * device only. It is not a purchase: it writes to its own key, is never
+ * restored, and disappears the moment a real store is present, so it cannot
+ * ship as a way around paying.
+ */
+const LS_PREVIEW = 'oaa.preview.v1';
+
+function previewAvailable() {
+  return !Billing.native;      // gone as soon as StoreKit or Play Billing is there
+}
+
+function previewOn() {
+  try { return localStorage.getItem(LS_PREVIEW) === '1'; } catch { return false; }
+}
+
+function setPreview(on) {
+  try {
+    if (on) localStorage.setItem(LS_PREVIEW, '1');
+    else localStorage.removeItem(LS_PREVIEW);
+  } catch { /* private mode */ }
+}
 
 loadEntitlements();
