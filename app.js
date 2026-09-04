@@ -1061,6 +1061,32 @@ function ownership() {
   return { user_id: userId, group_id: activeGroupId };
 }
 
+/* Ask for a name, but only when it will actually be seen.
+ *
+ * On your own the app needs no name - your list is yours and "You" is a fine
+ * label. The moment a group is involved somebody else reads it, and a group of
+ * three people all showing as "Someone" is useless. So the prompt happens at
+ * the point of joining or creating, not on first launch, where it would be
+ * friction for a person who may never share anything.
+ *
+ * Returns false if they cancelled, in which case the caller stops.
+ */
+async function requireName(reason) {
+  if (who && who.trim()) return true;
+  const name = prompt(`${reason}\n\nWhat should the others see against the `
+                    + 'things you tick?', '');
+  if (name === null) return false;
+  const clean = name.trim().slice(0, 40);
+  if (!clean) {
+    toast('A name is needed so the others know who ticked what');
+    return false;
+  }
+  who = clean;
+  localStorage.setItem(LS.who, who);
+  renderAll();
+  return true;
+}
+
 async function loadGroups() {
   if (!sb || !online || !userId) return;
   const { data, error } = await sb
@@ -1110,6 +1136,7 @@ async function pushMyName() {
 
 async function createGroup(name) {
   if (!sb || !userId) return toast('Not connected');
+  if (!await requireName('You are about to share a list.')) return;
   // join_code is unique in the database, so a collision is a hard failure
   // rather than something to shrug at. Rare, but the fix is to try again with
   // a different code rather than to tell somebody their group could not be
@@ -1139,6 +1166,7 @@ async function createGroup(name) {
 
 async function joinGroup(code) {
   if (!sb || !userId) return toast('Not connected');
+  if (!await requireName('You are about to join a shared list.')) return;
   const clean = code.trim().toUpperCase();
   const { data, error } = await sb.from('groups')
     .select('id, name').eq('join_code', clean).maybeSingle();
@@ -1240,8 +1268,9 @@ function renderMe_groups() {
   el.innerHTML = `
     ${active ? `
       <p>Sharing with <strong>${esc(active.name)}</strong>.</p>
-      <p class="fineprint">Join code <code class="joincode">${esc(active.join_code)}</code> — read this
-         out to whoever should see the same list.</p>
+      <p class="fineprint">Join code <code class="joincode">${esc(active.join_code)}</code> — read it
+         out, or send the link below and they will be asked to confirm.</p>
+      <button class="btn-ghost" data-groupact="invite">↗ Send an invite link</button>
       <button class="btn-ghost danger" data-groupact="leave" data-id="${esc(active.id)}">Leave this group</button>
     ` : `
       <p class="muted">This list is yours alone at the moment.</p>
@@ -1589,6 +1618,11 @@ function cardHTML(a) {
 }
 
 function renderList() {
+  // The list pane is only on screen at the adventures level. Building a few
+  // hundred cards of markup for a hidden element cost 400ms of every render
+  // at continent level, which is most of them - a tick, a filter change, a
+  // sync arriving. Nothing is lost by waiting: drilling in calls this again.
+  if (nav.level !== 'adventures') return;
   const arr = filtered();
   // This line counts rows on screen, which includes locked gems - they are
   // visible, just blurred. The completion target in the header is a different
@@ -2676,6 +2710,15 @@ function wireUI() {
   $('#groupPanel').addEventListener('click', async e => {
     const b = e.target.closest('[data-groupact]');
     if (!b) return;
+    if (b.dataset.groupact === 'invite') {
+      const g = myGroups.find(x => x.id === activeGroupId);
+      if (!g) return;
+      const url = linkTo({ join: g.join_code });
+      const text = `Join "${g.name}" on Wayfinder. Open this and it will ask you to confirm.`;
+      return share({ title: 'Wayfinder', text, url }, `${text}
+
+${url}`);
+    }
     if (b.dataset.groupact === 'create') {
       const name = prompt('Name this group', 'Our list');
       if (name && name.trim()) await createGroup(name.trim());
@@ -3018,6 +3061,22 @@ async function enterApp() {
 // A shared link lands directly on the adventure or trip it names.
 function openDeepLink() {
   const q = new URLSearchParams(location.search);
+  // An invite link. Never joined silently - a link can be forwarded, and
+  // nobody should end up sharing their list with a stranger because they
+  // tapped something in a group chat.
+  const join = q.get('join');
+  if (join && sb) {
+    (async () => {
+      const clean = join.trim().toUpperCase();
+      const { data } = await sb.from('groups').select('name')
+        .eq('join_code', clean).maybeSingle();
+      if (!data) return toast('That invite link is not valid any more');
+      if (confirm(`Join "${data.name}"?\n\nYou will share ticks, photos and `
+                + 'trips with everybody already in it.')) await joinGroup(clean);
+    })();
+    return;
+  }
+
   const a = q.get('a'), t = q.get('trip');
   if (a && ADV.some(x => x.id === +a)) openSheet(+a);
   else if (t && trips.some(x => x.id === t)) openTripSheet(t);

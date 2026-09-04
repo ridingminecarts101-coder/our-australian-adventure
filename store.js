@@ -196,11 +196,20 @@ function previewAvailable() {
   return !Billing.native;      // gone as soon as StoreKit or Play Billing is there
 }
 
-function previewOn() {
-  try { return localStorage.getItem(LS_PREVIEW) === '1'; } catch { return false; }
-}
+/* Held in a variable, not read from storage each time.
+ *
+ * ownsPack() is called from isLocked(), which runs once per adventure inside
+ * several render loops - so reading localStorage here meant thousands of
+ * synchronous storage reads to draw one screen, and cost about 200ms a render.
+ * The flag only changes when somebody presses the button.
+ */
+let previewFlag = false;
+try { previewFlag = localStorage.getItem(LS_PREVIEW) === '1'; } catch { /* private mode */ }
+
+function previewOn() { return previewFlag; }
 
 function setPreview(on) {
+  previewFlag = !!on;
   try {
     if (on) localStorage.setItem(LS_PREVIEW, '1');
     else localStorage.removeItem(LS_PREVIEW);
