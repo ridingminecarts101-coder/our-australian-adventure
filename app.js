@@ -3077,6 +3077,15 @@ function openDeepLink() {
     return;
   }
 
+  // Long-press shortcuts from the home screen icon.
+  const shortcut = q.get('shortcut');
+  if (shortcut === 'random') { $('#randomBtn').click(); return; }
+  if (shortcut === 'near')   { $('#hereBtn').click(); return; }
+  if (shortcut === 'passport') {
+    $('.tab[data-tab="tab-passport"]').click();
+    return;
+  }
+
   const a = q.get('a'), t = q.get('trip');
   if (a && ADV.some(x => x.id === +a)) openSheet(+a);
   else if (t && trips.some(x => x.id === t)) openTripSheet(t);

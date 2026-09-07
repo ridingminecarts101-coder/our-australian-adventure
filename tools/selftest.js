@@ -778,6 +778,14 @@
       .filter(e => e.offsetParent !== null);
     R.metric.interactiveControls = interactive.length;
 
+    // A pane laid out at 30 pixels wide makes every full-width button look
+    // like a failure. That is the harness being unable to measure, the same
+    // as the map check, not a control anybody could miss with a thumb.
+    if (innerWidth < 320) {
+      warn('tap targets not measurable here',
+           `viewport ${innerWidth}px — run with the browser pane visible`);
+      return;
+    }
     const small = interactive.filter(e => {
       if (HIT_AREA_EXPANDED.some(c => e.classList.contains(c))) return false;
       const r = e.getBoundingClientRect();
@@ -879,9 +887,26 @@
                advice: 'wait for it to finish, or reload the page to abandon it' };
     }
     running = true;
+
+    /* Cut the server off for the duration.
+     *
+     * Once anonymous sign-in started working, every run began writing to the
+     * live project - progress rows, uploaded photo files, trips called "leak
+     * probe" - under a throwaway account that nothing ever cleans up. These
+     * suites test the interface and the rules, not the backend; the one test
+     * that genuinely needs a server is tools/multiuser-test.js, which makes
+     * its own accounts and deletes them.
+     *
+     * Pass { online: true } if you deliberately want a run to sync.
+     */
+    const realSb = sb;
+    const realOnline = online;
+    if (!opts.online) { sb = null; online = false; }
     try {
       return await runSuites(opts);
     } finally {
+      sb = realSb;
+      online = realOnline;
       running = false;
     }
   };
