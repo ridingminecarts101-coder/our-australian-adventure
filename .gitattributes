@@ -1,0 +1,18 @@
+# Git is converting everything to CRLF on checkout on this machine, which is
+# harmless for the web files and fatal for two things.
+#
+# gradlew is a shell script run by a Unix shell on a Mac or in CI. With CRLF
+# line endings the shebang line ends in a carriage return and the whole thing
+# fails with "bad interpreter: no such file or directory" - a confusing error
+# a long way from its cause.
+*.sh      text eol=lf
+gradlew   text eol=lf
+
+# Binary, and never to be line-ending converted or diffed as text.
+*.png     binary
+*.jpg     binary
+*.jks     binary
+*.keystore binary
+*.aab     binary
+*.apk     binary
+*.jar     binary
