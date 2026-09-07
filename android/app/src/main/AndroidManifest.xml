@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Invite and adventure links.
+
+                 android:autoVerify is off on purpose. Verifying an App Link
+                 needs .well-known/assetlinks.json at the ROOT of the domain,
+                 and the app is served from a path on github.io whose root
+                 belongs to a different repository. Unverified, Android shows
+                 a "open with" chooser instead of going straight in - one
+                 extra tap, and nothing silently broken. Turn autoVerify on
+                 the day the app has a domain of its own. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                      android:host="ridingminecarts101-coder.github.io"
+                      android:pathPrefix="/our-australian-adventure" />
+            </intent-filter>
+
+            <!-- Always works, needs no domain, and is what the share sheet
+                 can fall back to. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="wayfinder" />
+            </intent-filter>
+
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+    </application>
+
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- The app uses plain web APIs for these - navigator.geolocation and a
+         file input with capture= - which Capacitor's WebView bridge services.
+         The bridge asks the user at the point of use, but it can only ask for
+         a permission the manifest declares, so without these lines Near me
+         silently returns nothing and the camera button opens the gallery. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Reading a photo the person picked. Split at API 33, when Android
+         replaced blanket storage access with per-type media access. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- Pulled in by the notifications plugin and removed again on purpose.
+         Play treats exact alarms as a restricted permission and asks you to
+         justify it against a list that an alarm clock is on and a travel
+         checklist is not. Nothing here needs to fire at an exact minute: the
+         one reminder is a seasonal nudge that is just as useful an hour
+         later, and an inexact alarm costs the battery far less. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"
+        tools:node="remove" />
+
+    <!-- Declared optional so the app installs on hardware that has none of
+         them. Every one of these features is a nice-to-have: no camera means
+         no photo attached, no GPS means Near me falls back to picking a
+         region by name, and the app is otherwise unaffected. Without these
+         lines Play would hide the listing from those devices entirely. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+</manifest>

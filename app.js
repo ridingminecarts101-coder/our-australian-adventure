@@ -864,7 +864,11 @@ async function jumpToHere() {
 // A link back into the app, so what arrives is a tappable thing rather than
 // a wall of text someone has to read and then go looking for.
 function linkTo(params) {
-  return `${location.origin}${location.pathname}?${new URLSearchParams(params)}`;
+  // Falls back to wherever we are when shareBase is unset, which keeps a
+  // local copy of the app producing links to itself during development.
+  const base = (window.OAA_CONFIG && OAA_CONFIG.shareBase)
+    || `${location.origin}${location.pathname}`;
+  return `${base}${base.includes('?') ? '&' : '?'}${new URLSearchParams(params)}`;
 }
 
 async function share(payload, fallbackText) {
@@ -924,11 +928,79 @@ async function shareTrip(tripId) {
 // ── Reminders ────────────────────────────────────────────────────────
 // Deliberately modest: one opt-in, one seasonal nudge. An app that pesters
 // gets its notifications switched off within a week.
+/* Two ways to put a notification on a screen, because there is no one way.
+ *
+ * A browser has the Notification API. An Android WebView does not - the
+ * object simply is not there - so the packaged app would have gone to the
+ * store with a Reminders switch that turned nothing on. Inside the native
+ * shell the LocalNotifications plugin does the same job, and it is reached
+ * through Capacitor.Plugins rather than an import because this app has no
+ * bundler; the native bridge exposes every registered plugin on that object
+ * at runtime.
+ */
+/* The last known permission state, kept because two callers cannot await.
+ *
+ * renderMe() draws a button label and seasonalNudge() runs on launch; both are
+ * synchronous. On the web they read Notification.permission directly, which is
+ * a plain property. In an Android WebView there is no Notification object at
+ * all, so that read is a ReferenceError that takes the whole Me tab down with
+ * it - the reason this cache exists rather than a tidier await.
+ */
+let notifyPerm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+
+function nativeNotifier() {
+  const cap = window.Capacitor;
+  const native = cap && cap.isNativePlatform && cap.isNativePlatform();
+  return native && cap.Plugins && cap.Plugins.LocalNotifications
+    ? cap.Plugins.LocalNotifications : null;
+}
+
 function notificationsSupported() {
-  return typeof Notification !== 'undefined';
+  return !!nativeNotifier() || typeof Notification !== 'undefined';
+}
+
+/* 'granted' | 'denied' | 'default', matching the web API so the callers do
+ * not have to know which of the two they are talking to.
+ */
+async function notificationPermission() {
+  const n = nativeNotifier();
+  if (n) {
+    try {
+      const { display } = await n.checkPermissions();
+      notifyPerm = display === 'prompt' || display === 'prompt-with-rationale'
+        ? 'default' : display;                    // 'granted' | 'denied'
+    } catch { notifyPerm = 'denied'; }
+  } else {
+    notifyPerm = typeof Notification !== 'undefined' ? Notification.permission : 'denied';
+  }
+  return notifyPerm;
+}
+
+async function askNotificationPermission() {
+  const n = nativeNotifier();
+  if (n) {
+    try { notifyPerm = (await n.requestPermissions()).display; }
+    catch { notifyPerm = 'denied'; }
+  } else {
+    notifyPerm = await Notification.requestPermission();
+  }
+  return notifyPerm;
 }
 
 async function showNotification(title, body, tag) {
+  const n = nativeNotifier();
+  if (n) {
+    try {
+      // The id has to be a 32-bit int and has to differ between notifications
+      // that should both be visible, so the tag is hashed rather than counted.
+      let id = 0;
+      for (const ch of String(tag || title)) id = (id * 31 + ch.charCodeAt(0)) | 0;
+      await n.schedule({ notifications: [{ id: Math.abs(id) || 1, title, body,
+                                           smallIcon: 'ic_stat_icon' }] });
+      return true;
+    } catch (e) { console.warn('notify', e); return false; }
+  }
+
   const opts = { body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag };
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
@@ -939,7 +1011,7 @@ async function showNotification(title, body, tag) {
 
 // The real nudge can be months away, so make it possible to see one now.
 async function previewReminder() {
-  if (!notificationsSupported() || Notification.permission !== 'granted') {
+  if (!notificationsSupported() || await notificationPermission() !== 'granted') {
     return toast('Turn reminders on first');
   }
   // The sample used to be drawn from hidden gems, which put paid text into a
@@ -958,13 +1030,13 @@ async function previewReminder() {
 
 async function toggleNotifications() {
   if (!notificationsSupported()) return toast('This device does not support reminders');
-  if (Notification.permission === 'granted') {
+  if (await notificationPermission() === 'granted') {
     writeLS(LS.notify, !readLS(LS.notify, false));
     renderMe();
     toast(readLS(LS.notify, false) ? 'Reminders on' : 'Reminders off');
     return;
   }
-  const res = await Notification.requestPermission();
+  const res = await askNotificationPermission();
   if (res !== 'granted') { toast('Reminders stay off'); return; }
   writeLS(LS.notify, true);
   renderMe();
@@ -1003,9 +1075,9 @@ function inSeason(season, month = new Date().getMonth()) {
                     : (month >= from || month <= to);
 }
 
-function seasonalNudge() {
+async function seasonalNudge() {
   if (!readLS(LS.notify, false) || !notificationsSupported()) return;
-  if (Notification.permission !== 'granted') return;
+  if (await notificationPermission() !== 'granted') return;
   const last = readLS(LS.notifyLast, 0);
   if (Date.now() - last < 7 * 24 * 3600 * 1000) return;
 
@@ -1239,7 +1311,7 @@ function renderStore() {
         <span>${esc(sub)}</span>
       </div>
       ${got ? '<span class="packowned">Unlocked</span>'
-            : `<button class="btn-buy" data-buy="${esc(p.slug)}">${esc(p.price)}</button>`}
+            : `<button class="btn-buy" data-buy="${esc(p.slug)}">${esc(priceFor(p.slug))}</button>`}
     </div>`;
   }).join('') + (hasAll ? '' :
     '<p class="fineprint">Every pack is a single payment, kept forever. ' +
@@ -2251,7 +2323,7 @@ function renderMe() {
   const nb = $('#notifyBtn');
   if (nb) {
     nb.textContent = readLS(LS.notify, false) && notificationsSupported()
-      && Notification.permission === 'granted'
+      && notifyPerm === 'granted'
       ? 'Reminders are on — turn off' : 'Turn on seasonal reminders';
   }
   renderMe_groups();
@@ -2290,6 +2362,9 @@ function renderSheet(id) {
   const r = row(id);
   const ph = photosFor(id);
   const maps = mapsUrl(a);
+  // null unless an affiliate id is configured and this is the kind of thing
+  // anybody books. See partners.js.
+  const book = bookingLink(a);
 
   // A locked gem gets its own sheet: what it is, roughly where, and the one
   // button that changes that. No teaser copy pretending to be a description.
@@ -2301,8 +2376,8 @@ function renderSheet(id) {
       <div class="sheet-place">${esc(a.category)} · ${esc(a.continent)}</div>
       <p>Hidden gems are the places people who live there send you to, rather
          than the ones on every list. This is one of ${n} in ${esc(a.continent)}.</p>
-      ${pack ? `<button class="btn-primary" data-buy="${esc(pack.slug)}">Unlock ${esc(pack.name)} · ${esc(pack.price)}</button>
-      <button class="btn-ghost" data-buy="all">Or every continent · ${esc((packBySlug('all') || {}).price || '')}</button>
+      ${pack ? `<button class="btn-primary" data-buy="${esc(pack.slug)}">Unlock ${esc(pack.name)} · ${esc(priceFor(pack.slug))}</button>
+      <button class="btn-ghost" data-buy="all">Or every continent · ${esc(priceFor('all'))}</button>
       <p class="fineprint">One payment, kept forever, restorable on a new phone.</p>` : ''}`;
     return;
   }
@@ -2336,6 +2411,10 @@ function renderSheet(id) {
       ${TOURISM[a.admin1] ? `<a class="btn-ghost" href="${TOURISM[a.admin1]}" target="_blank" rel="noopener">
         Check current access on ${esc(a.admin1 === 'AUS' ? 'australia.com' : regionName(a) + ' tourism')}
       </a>` : ''}
+      ${book ? `<a class="btn-ghost booking" href="${esc(book.url)}" target="_blank" rel="noopener nofollow sponsored">
+        ↗ Find a tour or ticket on ${esc(book.site)}
+      </a>
+      <p class="fineprint disclosure">${esc(BOOKING_DISCLOSURE)}</p>` : ''}
     </div>
 
     <h3>Add to a trip</h3>
@@ -3044,6 +3123,15 @@ async function enterApp() {
   }
   loadLocalTrips();
   pendingPhotos = await idbAll();
+  // Asked for before the first paint so the Reminders button in Me shows the
+  // right label straight away rather than correcting itself a moment later.
+  await notificationPermission();
+  /* Deliberately not awaited. Talking to the store means a network round trip
+   * on a cold app, and none of the first screen depends on the answer - the
+   * gems are locked until it says otherwise, which is the safe default. It
+   * repaints when it lands.
+   */
+  Billing.init().then(ok => { if (ok) renderAll(); });
   renderAll();
   openDeepLink();
   await pullProgress();
@@ -3138,6 +3226,14 @@ async function boot() {
 
 addEventListener('DOMContentLoaded', boot);
 
-if ('serviceWorker' in navigator) {
+/* The service worker is for the web build only.
+ *
+ * Inside the native shell every file is already on the device, so there is no
+ * offline problem left to solve - and a worker that outlives an app update
+ * will happily keep serving the version it cached, which is how a shipped fix
+ * fails to reach anyone. Native is excluded on purpose.
+ */
+if ('serviceWorker' in navigator && !(window.Capacitor && window.Capacitor.isNativePlatform
+                                      && window.Capacitor.isNativePlatform())) {
   addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }

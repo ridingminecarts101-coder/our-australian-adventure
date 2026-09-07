@@ -1,4 +1,27 @@
-
 # Python bytecode from the tools directory
 __pycache__/
 *.pyc
+
+# Installed, not authored
+node_modules/
+
+# Staged copy of the app, rebuilt by tools/stage.mjs on every sync
+www/
+
+# Native build output and machine-local paths
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/capacitor-cordova-android-plugins/
+ios/App/Pods/
+ios/App/build/
+ios/capacitor-cordova-ios-plugins/
+DerivedData/
+
+# Signing material. These sign releases as you; they never go in a public repo.
+*.jks
+*.keystore
+keystore.properties
+android/keystore/
+dist/

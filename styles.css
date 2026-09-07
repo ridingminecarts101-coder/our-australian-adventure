@@ -664,3 +664,13 @@ input, select, textarea { font: inherit; color: inherit; }
   border: 1px solid var(--line); border-radius: 10px;
   background: var(--paper); color: var(--ink);
 }
+
+/* Booking links.
+ *
+ * Styled quieter than the app's own buttons, not louder. It is the last
+ * control in the sheet and it should read as a useful afterthought, because
+ * that is what it is - the moment it starts competing with "Mark as
+ * completed" the app has changed into something else.
+ */
+.btn-ghost.booking { border-style: dashed; }
+.fineprint.disclosure { margin: -2px 0 0; opacity: .85; }

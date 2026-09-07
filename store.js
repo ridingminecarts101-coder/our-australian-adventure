@@ -104,28 +104,129 @@ function sellablePacks(adventures) {
 }
 
 
-/* ── Billing ──────────────────────────────────────────────────────────
+/* ── Billing ──────────────────────────────────────────
  *
  * One interface, two implementations. On a phone this talks to StoreKit or
- * Play Billing through a Capacitor plugin. In a browser there is no store, so
- * it runs a simulator that is clearly labelled as one and never pretends a
- * real purchase happened — the whole flow can be exercised before an Apple
- * account exists, which is the point.
+ * Play Billing through RevenueCat. In a browser there is no store, so it runs
+ * a simulator that is clearly labelled as one and never pretends a real
+ * purchase happened — the whole flow can be exercised before an Apple account
+ * exists, which is the point.
+ *
+ * WHY REVENUECAT AND NOT STOREKIT DIRECTLY
+ *
+ * The same six products have to be sold twice, on two stores whose receipt
+ * formats, restore semantics and refund notifications have nothing in common.
+ * Written by hand that is two implementations to keep correct forever, and the
+ * failure mode is somebody who paid being told they did not. RevenueCat is one
+ * API over both and it keeps the record of who bought what, so a person who
+ * changes phone or platform is not arguing with us about it. It is free below
+ * $2,500 a month of tracked revenue.
+ *
+ * ENTITLEMENTS, NOT PRODUCT IDS
+ *
+ * Ownership is read from entitlements where they exist, falling back to the
+ * raw list of purchased product ids. The fallback matters: it means the app
+ * behaves correctly the moment the products exist in App Store Connect, before
+ * anybody has configured a single entitlement in the RevenueCat dashboard, and
+ * it keeps working if that configuration is later changed.
  */
+
+// Store prices, once the store has said what they actually are. Keyed by slug,
+// empty until a device asks.
+const livePrices = {};
+
+/* What to print on the button.
+ *
+ * The prices in PACKS are our guess at a US price point. The store knows the
+ * real one, in the buyer's own currency, including whatever regional
+ * adjustment Apple or Google applied — so it wins whenever it has answered.
+ * Showing a price the store then does not charge is both an unpleasant
+ * surprise and a review rejection.
+ */
+function priceFor(slug) {
+  const pack = packBySlug(slug);
+  return livePrices[slug] || (pack ? pack.price : '');
+}
+
 const Billing = {
+  _plugin: null,
+  _ready: null,
+
   get native() {
     const cap = window.Capacitor;
-    return !!(cap && cap.Plugins && cap.Plugins.Purchases);
+    return !!(cap && cap.isNativePlatform && cap.isNativePlatform()
+              && cap.Plugins && cap.Plugins.Purchases && this._key());
   },
 
   get mode() { return this.native ? 'store' : 'simulated'; },
 
+  _key() {
+    const cfg = (window.OAA_CONFIG && OAA_CONFIG.revenueCat) || {};
+    const p = window.Capacitor && window.Capacitor.getPlatform
+      ? window.Capacitor.getPlatform() : 'web';
+    return (p === 'ios' ? cfg.ios : p === 'android' ? cfg.android : '') || '';
+  },
+
+  /* Configure once, and only once even if two callers race.
+   *
+   * It also pulls entitlements down on the way through, which is what makes a
+   * reinstall find its purchases without anybody pressing Restore. Failure
+   * here is not fatal: the app carries on with whatever is cached locally,
+   * rather than locking content somebody has already paid for.
+   */
+  init() {
+    if (this._ready) return this._ready;
+    if (!this.native) { this._ready = Promise.resolve(false); return this._ready; }
+
+    const P = window.Capacitor.Plugins.Purchases;
+    this._plugin = P;
+    this._ready = (async () => {
+      try {
+        await P.configure({ apiKey: this._key() });
+        await this.refresh();
+        await this.products();
+        return true;
+      } catch (e) {
+        console.warn('billing init', e);
+        return false;
+      }
+    })();
+    return this._ready;
+  },
+
+  /* Read ownership back from the store and replace what is held locally.
+   *
+   * Replaces rather than merges, so a refund or a revoked family share
+   * actually takes the content away again, instead of leaving it unlocked
+   * forever on the strength of one old localStorage write.
+   */
+  async refresh() {
+    if (!this.native) return [...owned];
+    try {
+      const { customerInfo } = await this._plugin.getCustomerInfo();
+      const slugs = slugsFromCustomerInfo(customerInfo);
+      owned = new Set(slugs);
+      saveEntitlements();
+      return slugs;
+    } catch (e) { console.warn('refresh', e); return [...owned]; }
+  },
+
+  /* Real, localised prices. Also the check that the store agrees these
+   * products exist — a slug missing from the answer is one that has not been
+   * created in App Store Connect or Play yet.
+   */
   async products() {
     if (!this.native) return null;                 // simulated: use our own prices
     try {
-      const { products } = await window.Capacitor.Plugins.Purchases.getProducts({
-        productIdentifiers: PACKS.filter(p => !p.unreleased).map(p => productId(p.slug)),
+      const wanted = PACKS.filter(p => !p.unreleased);
+      const { products } = await this._plugin.getProducts({
+        productIdentifiers: wanted.map(p => productId(p.slug)),
+        productCategory: 'NON_SUBSCRIPTION',
       });
+      for (const pack of wanted) {
+        const found = (products || []).find(x => x.identifier === productId(pack.slug));
+        if (found && found.priceString) livePrices[pack.slug] = found.priceString;
+      }
       return products || null;
     } catch (e) { console.warn('products', e); return null; }
   },
@@ -146,14 +247,26 @@ const Billing = {
       return { ok: true, slug, simulated: true };
     }
 
+    await this.init();
     try {
-      const res = await window.Capacitor.Plugins.Purchases.purchase({
-        productIdentifier: productId(slug),
+      const { products } = await this._plugin.getProducts({
+        productIdentifiers: [productId(slug)],
+        productCategory: 'NON_SUBSCRIPTION',
       });
-      if (res && res.cancelled) return { ok: false, reason: 'cancelled' };
-      grant(slug);
+      const product = (products || [])[0];
+      if (!product) return { ok: false, reason: 'the store does not have that one yet' };
+
+      const { customerInfo } = await this._plugin.purchaseStoreProduct({ product });
+      owned = new Set(slugsFromCustomerInfo(customerInfo));
+      owned.add(slug);          // belt and braces, in case entitlements lag a moment
+      saveEntitlements();
       return { ok: true, slug };
     } catch (e) {
+      // PURCHASE_CANCELLED_ERROR is code 1. Backing out of a payment sheet is
+      // a normal thing to do and must never surface as an error message.
+      if (e && (e.userCancelled || String(e.code) === '1')) {
+        return { ok: false, reason: 'cancelled' };
+      }
       console.warn('purchase', e);
       return { ok: false, reason: (e && e.message) || 'the store refused' };
     }
@@ -167,10 +280,10 @@ const Billing = {
     if (!this.native) {
       return { ok: true, restored: [...owned], simulated: true };
     }
+    await this.init();
     try {
-      const res = await window.Capacitor.Plugins.Purchases.restorePurchases();
-      const ids = (res && res.productIdentifiers) || [];
-      const slugs = PACKS.map(p => p.slug).filter(s => ids.includes(productId(s)));
+      const { customerInfo } = await this._plugin.restorePurchases();
+      const slugs = slugsFromCustomerInfo(customerInfo);
       owned = new Set(slugs);
       saveEntitlements();
       return { ok: true, restored: slugs };
@@ -180,6 +293,27 @@ const Billing = {
     }
   },
 };
+
+/* Which packs a RevenueCat customer record says are owned.
+ *
+ * Two sources, deliberately. Entitlements are the configured answer and the
+ * one that survives a product id being renamed; allPurchasedProductIdentifiers
+ * is the raw truth from the store and needs no dashboard setup at all. Taking
+ * the union of the two means neither a missing entitlement nor a missing
+ * product mapping can lock somebody out of content they have paid for.
+ */
+function slugsFromCustomerInfo(info) {
+  if (!info) return [];
+  const out = new Set();
+
+  const active = (info.entitlements && info.entitlements.active) || {};
+  for (const slug of Object.keys(active)) if (packBySlug(slug)) out.add(slug);
+
+  const ids = info.allPurchasedProductIdentifiers || [];
+  for (const pack of PACKS) if (ids.includes(productId(pack.slug))) out.add(pack.slug);
+
+  return [...out];
+}
 
 
 /* Preview mode — see the paid content without a store.
@@ -193,7 +327,15 @@ const Billing = {
 const LS_PREVIEW = 'oaa.preview.v1';
 
 function previewAvailable() {
-  return !Billing.native;      // gone as soon as StoreKit or Play Billing is there
+  /* Browser only, and deliberately not "no store key configured".
+   *
+   * Keying it off Billing.native would mean that shipping a build with the
+   * RevenueCat key left blank hands every buyer a button that unlocks the paid
+   * content for nothing. Tying it to the platform instead makes that mistake
+   * cost a broken shop rather than the whole shop.
+   */
+  const cap = window.Capacitor;
+  return !(cap && cap.isNativePlatform && cap.isNativePlatform());
 }
 
 /* Held in a variable, not read from storage each time.

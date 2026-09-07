@@ -1,7 +1,7 @@
 {
   "appId": "app.wayfinder.mobile",
   "appName": "Wayfinder",
-  "webDir": ".",
+  "webDir": "www",
   "server": {
     "androidScheme": "https",
     "iosScheme": "wayfinder"
@@ -12,7 +12,8 @@
     "limitsNavigationsToAppBoundDomains": false
   },
   "android": {
-    "backgroundColor": "#f6efe6"
+    "backgroundColor": "#f6efe6",
+    "allowMixedContent": false
   },
   "plugins": {
     "SplashScreen": {
