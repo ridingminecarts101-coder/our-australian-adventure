@@ -259,6 +259,13 @@ custom cryptography.
 
 ## Google Play — the answers you will be asked for
 
+**The step-by-step is in `PLAY.md`.** It covers the whole path from paying the
+$25 to a staged production rollout, including the one thing that decides the
+timeline: a personal developer account has to run a closed test with 12 testers
+for 14 continuous days before it may publish at all. Read that first.
+
+Below is the reference material `PLAY.md` points back at.
+
 - **$25 one-off** registration, versus Apple's $99/year. Play is the cheaper
   and faster of the two to get onto, and the AAB is already built.
 - **Data safety form** asks the same questions as the table above.

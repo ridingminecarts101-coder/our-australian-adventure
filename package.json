@@ -7,13 +7,18 @@
     "build:data": "python tools/build_data.py",
     "build:icons": "python tools/build_icons.py",
     "stage": "node tools/stage.mjs",
-    "check": "python tools/check_geography.py && python tools/check_code.py && python tools/check_quality.py && python tools/check_sql.py",
+    "check": "python tools/check_all.py",
     "serve": "python -m http.server 8811 --bind 127.0.0.1",
     "sync": "npm run stage && npx cap sync",
     "android:aab": "npm run stage && npx cap copy android && cd android && gradlew.bat bundleRelease",
     "android:apk": "npm run stage && npx cap copy android && cd android && gradlew.bat assembleRelease",
     "android:open": "npx cap open android",
-    "ios:open": "npx cap open ios"
+    "ios:open": "npx cap open ios",
+    "release": "python tools/release.py build",
+    "release:show": "python tools/release.py show",
+    "play": "python tools/play.py",
+    "play:doctor": "python tools/play.py doctor",
+    "play:status": "python tools/play.py status"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.1"

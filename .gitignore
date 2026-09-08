@@ -27,3 +27,8 @@ android/keystore/
 dist/
 android-sim.html
 android-sim-nokey.html
+
+# Google Play service account. This is a key to your store account - it can
+# upload and publish releases as you. Same category as the keystore.
+play-service-account.json
+*-service-account.json
