@@ -871,9 +871,36 @@ function linkTo(params) {
   return `${base}${base.includes('?') ? '&' : '?'}${new URLSearchParams(params)}`;
 }
 
+/* One plugin lookup, used by everything below.
+ *
+ * There is no bundler here, so plugins are reached through the object the
+ * native bridge hangs on window rather than through an import. Returns null
+ * in a browser and null for a plugin that is not installed, so every caller
+ * has to have a web path anyway - which it should, because the web build is
+ * the one most people will use.
+ */
+function cap(name) {
+  const c = window.Capacitor;
+  const native = c && c.isNativePlatform && c.isNativePlatform();
+  return native && c.Plugins && c.Plugins[name] ? c.Plugins[name] : null;
+}
+
 async function share(payload, fallbackText) {
+  /* Three routes, in descending order of how good it feels.
+   *
+   * An Android WebView has no navigator.share at all - the Web Share API is a
+   * browser feature, not a WebView one - so without this the packaged app
+   * silently degraded to a clipboard copy, and "Send an invite link" put a URL
+   * on the clipboard and said so in a toast rather than opening the share
+   * sheet the person expected. The plugin was already installed; nothing was
+   * calling it.
+   */
+  const Share = cap('Share');
   try {
-    if (navigator.share) {
+    if (Share) {
+      await Share.share({ title: payload.title, text: payload.text,
+                          url: payload.url, dialogTitle: 'Share' });
+    } else if (navigator.share) {
       // url is passed as its own field rather than pasted into the body, so
       // iOS renders a link preview instead of a bare address mid-sentence.
       await navigator.share(payload);
@@ -882,7 +909,12 @@ async function share(payload, fallbackText) {
       toast('Copied to the clipboard');
     }
   } catch (err) {
-    if (err && err.name !== 'AbortError') toast('Could not share that');
+    // Backing out of a share sheet is not a failure. Android reports it as a
+    // plain error rather than an AbortError, so the message has to be read.
+    const name = (err && err.name) || '';
+    const msg = String((err && err.message) || '');
+    if (name === 'AbortError' || /cancel/i.test(msg)) return;
+    toast('Could not share that');
   }
 }
 
@@ -948,12 +980,7 @@ async function shareTrip(tripId) {
  */
 let notifyPerm = typeof Notification !== 'undefined' ? Notification.permission : 'default';
 
-function nativeNotifier() {
-  const cap = window.Capacitor;
-  const native = cap && cap.isNativePlatform && cap.isNativePlatform();
-  return native && cap.Plugins && cap.Plugins.LocalNotifications
-    ? cap.Plugins.LocalNotifications : null;
-}
+function nativeNotifier() { return cap('LocalNotifications'); }
 
 function notificationsSupported() {
   return !!nativeNotifier() || typeof Notification !== 'undefined';
@@ -2501,7 +2528,68 @@ function buildFilterOptions() {
   $('#fCost').innerHTML = [4, 3, 2, 1, 0].map(n => opt(n, COST_LABEL[n] + (n ? ' or less' : ' only'), n === 4)).join('');
 }
 
+/* Android's back button and its incoming links.
+ *
+ * WHY THIS IS NOT OPTIONAL
+ *
+ * Capacitor's App plugin registers an OnBackPressedCallback that is enabled
+ * whether or not anything is listening. With no listener it tries the WebView
+ * history, and this app has none - it never pushes a history entry, tabs just
+ * toggle visibility. So the callback consumed every back press and did
+ * nothing at all: a sheet could not be dismissed with Back, and the app could
+ * not be left with Back. On Android that reads as a frozen app, and it is the
+ * kind of thing Play reviewers check.
+ *
+ * The order below is the order things are stacked on screen, so Back always
+ * undoes the most recent thing.
+ */
+function wireNative() {
+  const App = cap('App');
+  if (!App) return;                              // web: the browser's own back works
+
+  App.addListener('backButton', () => {
+    if (!$('#lightbox').classList.contains('hidden')) return closeLightbox();
+    if (!$('#recSheet').classList.contains('hidden')) return closeRecSheet();
+    if (!$('#tripSheet').classList.contains('hidden')) return closeTripSheet();
+    if (!$('#sheet').classList.contains('hidden')) return closeSheet();
+
+    // Off the Adventures tab, Back returns to it rather than leaving - the
+    // same thing the phone's own apps do with a bottom bar.
+    const tab = $('.tab.active');
+    if (tab && tab.dataset.tab !== 'tab-list') {
+      $('.tab[data-tab="tab-list"]').click();
+      return;
+    }
+
+    // Then back up the map, one level at a time.
+    if (nav.level === 'adventures') return goTo('country', { continent: nav.continent, country: nav.country });
+    if (nav.level === 'country')    return goTo('continent', { continent: nav.continent });
+    if (nav.level === 'continent')  return goTo('world');
+
+    App.exitApp();                               // at the top: leave, as expected
+  });
+
+  /* An invite or shared link opened from outside.
+   *
+   * Capacitor retains this event until something listens, so a link that
+   * launched the app cold is still delivered once this runs.
+   */
+  App.addListener('appUrlOpen', ({ url }) => {
+    try { openDeepLink(new URL(url).search); }
+    catch { /* a URL we cannot parse is not a link we can act on */ }
+  });
+
+  /* Light icons in the status bar, because the header behind it is rust.
+   * Style.Dark means "dark background", which is the opposite of what it
+   * sounds like and is worth writing down.
+   */
+  const StatusBar = cap('StatusBar');
+  if (StatusBar) StatusBar.setStyle({ style: 'DARK' }).catch(() => {});
+}
+
 function wireUI() {
+  wireNative();
+
   // Tabs
   $$('.tab').forEach(b => b.onclick = () => {
     // Tapping the tab you are already on takes you back to the top of it.
@@ -3147,13 +3235,27 @@ async function enterApp() {
 }
 
 // A shared link lands directly on the adventure or trip it names.
-function openDeepLink() {
-  const q = new URLSearchParams(location.search);
+/* Everything a link can ask the app to do.
+ *
+ * Takes the query rather than reading location.search, because on Android the
+ * link never reaches location at all. Capacitor hands an incoming intent to
+ * its plugins and does not navigate the WebView, so the address bar the app
+ * does not have still says https://localhost/ and location.search is empty.
+ * Web calls this with its own query; native calls it from appUrlOpen.
+ */
+function openDeepLink(search = location.search) {
+  const q = new URLSearchParams(search);
   // An invite link. Never joined silently - a link can be forwarded, and
   // nobody should end up sharing their list with a stranger because they
   // tapped something in a group chat.
   const join = q.get('join');
-  if (join && sb) {
+  if (join && !sb) {
+    // Tapping an invite and getting silence is indistinguishable from a
+    // broken link. Say which it is.
+    toast('Joining needs a connection — open this link again when you have one');
+    return;
+  }
+  if (join) {
     (async () => {
       const clean = join.trim().toUpperCase();
       const { data } = await sb.from('groups').select('name')
@@ -3178,7 +3280,9 @@ function openDeepLink() {
   if (a && ADV.some(x => x.id === +a)) openSheet(+a);
   else if (t && trips.some(x => x.id === t)) openTripSheet(t);
   else return;
-  history.replaceState(null, '', location.pathname);
+  // Tidy the address so a refresh does not reopen it. Meaningless on native,
+  // where there was never a query in the address to begin with.
+  if (location.search) history.replaceState(null, '', location.pathname);
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -3214,6 +3318,22 @@ async function boot() {
   if (cfg.allowAnonymous !== false) {
     const { error } = await sb.auth.signInAnonymously();
     if (!error) return enterApp();
+
+    /* Being told no and not being able to ask are different things.
+     *
+     * A first launch on a plane, in a tunnel, or while Supabase is having a
+     * bad morning used to land on the passphrase form - a screen a new person
+     * cannot possibly get past, in front of an app that works perfectly well
+     * offline. The passphrase form exists only for the old shared-account
+     * installs, so it is shown when the server actually refuses, and a
+     * network failure lets them in and syncs later instead.
+     */
+    const offline = !navigator.onLine || !error.status
+      || error.name === 'AuthRetryableFetchError';
+    if (offline) {
+      console.info('no connection at launch; carrying on locally:', error.message);
+      return enterApp();
+    }
     console.info('anonymous sign-in unavailable, falling back to passphrase:', error.message);
   }
 
@@ -3222,6 +3342,8 @@ async function boot() {
     e.preventDefault();
     if (await trySignIn($('#passphrase').value)) enterApp();
   };
+  // Nobody gets trapped behind a password they were never given.
+  $('#lockSkip').onclick = () => { sb = null; enterApp(); };
 }
 
 addEventListener('DOMContentLoaded', boot);

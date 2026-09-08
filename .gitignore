@@ -25,3 +25,5 @@ DerivedData/
 keystore.properties
 android/keystore/
 dist/
+android-sim.html
+android-sim-nokey.html

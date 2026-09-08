@@ -106,10 +106,22 @@ def main():
         notes.append(('data- attributes with no handler', unheard))
 
     # ── 6. Files in the repo nothing points at ───────────────────────
+    #
+    # Anything git is told to ignore is exempt. Generated scratch files - a
+    # staged www/, a build output, the Android WebView simulation page - are
+    # unreferenced by design, and listing them each run trains you to skim
+    # past the one that is a real orphan.
     referenced = html + js_raw + read('manifest.json') + read('sw.js')
+    try:
+        import subprocess
+        ignored = set(subprocess.run(
+            ['git', 'ls-files', '--others', '--ignored', '--exclude-standard'],
+            capture_output=True, text=True, timeout=20).stdout.splitlines())
+    except Exception:
+        ignored = set()
     loose = []
     for f in sorted(os.listdir('.')):
-        if not os.path.isfile(f) or f.startswith('.'):
+        if not os.path.isfile(f) or f.startswith('.') or f in ignored:
             continue
         if f.endswith(('.md', '.json', '.py')) or f in {'index.html', 'styles.css'}:
             continue

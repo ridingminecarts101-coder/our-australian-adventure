@@ -42,6 +42,16 @@
       <button id="lockBtn" type="submit" class="btn-primary">Unlock</button>
     </form>
     <p id="lockMsg" class="lock-msg" role="status" aria-live="polite"></p>
+    <!-- The way out.
+
+         This screen only appears when the server refuses to make an account -
+         anonymous sign-ups switched off, or the project unreachable in a way
+         that is not a network error. A new installer has no passphrase and
+         never will, so without this they are looking at a locked door in
+         front of an app that works perfectly well on its own. -->
+    <button id="lockSkip" class="btn-ghost">Carry on without an account</button>
+    <p class="fineprint">Everything works offline. Sharing with other phones
+       needs an account, and you can add one later from the Me tab.</p>
   </div>
 </div>
 
@@ -271,7 +281,18 @@
 <script src="partners.js"></script>
 <script src="land.js"></script>
 <script src="world.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.113.0/dist/umd/supabase.js" defer></script>
+<!-- Supabase, served from here rather than a CDN.
+
+     Two reasons, and the second is the one that would have cost a
+     week. A native app with no signal on first launch could not fetch
+     it, so an app that works perfectly well offline had no client at
+     all. And App Store guideline 2.5.2 wants an app self-contained -
+     pulling executable code off a CDN at runtime is exactly what it
+     asks you not to do, and it is a slow rejection to argue with.
+
+     Pinned by filename. To move version, download the new UMD build
+     into vendor/ and change this line and the one in tools/stage.mjs. -->
+<script src="vendor/supabase-2.113.0.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>

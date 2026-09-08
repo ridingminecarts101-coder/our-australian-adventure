@@ -72,6 +72,52 @@ build script that cannot be read at all.
 
 ---
 
+## What the shell does that a browser does not
+
+An Android WebView is not Chrome, and the gaps are not cosmetic. Each of these
+was found by running the app against a stubbed Capacitor bridge
+(`tools/android-bridge-sim.js`) and reading the plugin sources in
+`node_modules`, and each is now handled:
+
+| | In a browser | In the shell | Now |
+|---|---|---|---|
+| Hardware Back | browser back | **inert** | closes the sheet, then walks back up the map, then exits |
+| Invite / shared link | `location.search` | **never delivered** | `appUrlOpen`, plus the `wayfinder://` scheme |
+| Share | `navigator.share` | **absent** | the native share sheet |
+| Notifications | `Notification` | **absent** | `LocalNotifications` |
+| Supabase client | CDN | **no signal, no client** | served from `vendor/` |
+| First launch offline | n/a | **passphrase wall** | goes straight in, syncs later |
+| Status bar | n/a | dark icons on rust | light icons |
+
+The Back button one deserves its own note, because it is the one that reads as
+a broken app. Capacitor's App plugin registers an `OnBackPressedCallback` that
+is enabled whether or not anything is listening; with no listener it tries the
+WebView history, and this app has none — it never pushes a history entry, tabs
+just toggle visibility. So the callback swallowed every back press and did
+nothing at all. A sheet could not be dismissed with Back and the app could not
+be left with Back.
+
+### Trying it without a device
+
+```bash
+python tools/make_android_sim.py   # writes android-sim.html, gitignored
+npm run serve
+```
+
+Open `android-sim.html` instead of `index.html`. It loads the same app behind a
+stub that claims to be Android, removes `Notification` and `navigator.share`,
+and stands in for the notification and purchase plugins with the real return
+shapes. `window.__simBack()` presses the hardware Back button,
+`window.__simDeepLink(url)` delivers an intent, and `window.__simLog` lists
+every plugin call the app made.
+
+It is not a device and it does not pretend to be one — it cannot tell you
+whether the layout is right or whether a real store will accept a purchase. It
+can tell you whether the code paths that only run inside the shell run at all,
+which is where every one of the faults above was hiding.
+
+---
+
 ## Before anything else: the security cutover
 
 **Both SQL files have been run and sign-ups are open.** Recorded here because
@@ -134,9 +180,17 @@ telling somebody who paid that they did not.
 Set the two keys in `config.js` → `revenueCat`. Both empty means the app stays
 in its clearly-labelled simulator, which is correct in a browser.
 
-**Preview mode is browser-only** and keyed off the platform, not off whether a
-store key is present. Shipping with an empty RevenueCat key therefore costs you
-a broken shop, not a free-for-all.
+**Two separate guards keep the paid content paid.** Both are keyed off the
+platform rather than off whether a store key is configured, because shipping
+with a blank key is a plausible mistake and it must not be an expensive one:
+
+- Preview mode — the button that unlocks every gem for reviewing — exists only
+  in a browser.
+- The purchase simulator, which grants a pack after a `confirm()`, also exists
+  only in a browser. On a phone with no key the shop says it is unavailable.
+
+Get the key wrong and you have a shop that does not work. Without these you
+would have had an app that gives every hidden gem away to anyone who taps Buy.
 
 ---
 
@@ -288,6 +342,11 @@ In order. Nothing here can be done from code.
   and restore all work and are tested against the simulator, but the first real
   purchase will happen in Apple's sandbox and Play's internal test track. Budget
   an afternoon for it.
+- **No Android device or emulator has run it here.** The emulator is installed
+  but this machine has no hypervisor — Windows Hypervisor Platform is off and
+  the Android emulator driver is not installed, and turning either on needs
+  administrator rights and a reboot. The APK on a real phone is better evidence
+  anyway, and it is built.
 - **iOS has never been compiled.** The project is configured correctly as far
   as text files go, and Capacitor 8 uses Swift Package Manager so there is no
   CocoaPods step to get wrong — but no Mac has built it, so treat the first

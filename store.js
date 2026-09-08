@@ -148,6 +148,18 @@ function priceFor(slug) {
   return livePrices[slug] || (pack ? pack.price : '');
 }
 
+/* Running inside a native shell, whatever else may be true.
+ *
+ * Kept separate from Billing.native on purpose. Billing.native asks "can I
+ * reach a store", which is false on a phone with no key configured; this asks
+ * "am I on a phone", which decides whether test affordances are allowed to
+ * exist at all. Conflating the two is how a build ships giving content away.
+ */
+function onNativePlatform() {
+  const c = window.Capacitor;
+  return !!(c && c.isNativePlatform && c.isNativePlatform());
+}
+
 const Billing = {
   _plugin: null,
   _ready: null,
@@ -238,7 +250,17 @@ const Billing = {
     const pack = packBySlug(slug);
     if (!pack || pack.unreleased) return { ok: false, reason: 'not for sale' };
 
-    if (!this.native) {
+    /* The simulator is a browser tool and must never run on a phone.
+      *
+      * Billing.native is false when the RevenueCat key is missing, so without
+      * this a shipped build with a blank key would offer every buyer a
+      * confirm() that unlocks the pack for nothing. Checking the platform
+      * separately means that mistake costs a shop that says it is unavailable,
+      * rather than the entire paid catalogue.
+      */
+    if (onNativePlatform()) {
+      if (!this._key()) return { ok: false, reason: 'the shop is not available in this build' };
+    } else {
       const yes = confirm(
         `Simulated purchase — no money moves.\n\n${pack.name} · ${pack.price}\n\n`
         + 'On a phone this opens the real store. Unlock it here for testing?');
@@ -334,8 +356,7 @@ function previewAvailable() {
    * content for nothing. Tying it to the platform instead makes that mistake
    * cost a broken shop rather than the whole shop.
    */
-  const cap = window.Capacitor;
-  return !(cap && cap.isNativePlatform && cap.isNativePlatform());
+  return !onNativePlatform();
 }
 
 /* Held in a variable, not read from storage each time.
