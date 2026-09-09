@@ -5,6 +5,7 @@ Run from the repo root:  python tools/build_data.py
 Edit the per-region .jsonl files, run this, commit the result.
 """
 import collections
+import glob
 import io
 import json
 import os
@@ -12,37 +13,17 @@ import re
 import sys
 
 # Source files, in the order their entries should be numbered.
-SOURCES = [
-    # Oceania
-    'sa', 'vic', 'nsw', 'qld', 'wa', 'tas', 'nt', 'act', 'aus',
-    'nz', 'nz-north', 'nz-south', 'oceania-islands',
-    # Europe
-    'europe',
-    'europe-fr',
-    'europe-it',
-    'europe-es',
-    'europe-gb',
-    'europe-de',
-    'europe-gr',
-    'europe-west2',
-    'europe-nordic',
-    'europe-central',
-    # North America
-    'us-west', 'us-southwest', 'us-east',
-    'canada', 'mexico',
-    'central-america', 'caribbean',
-    # Asia
-    'asia', 'indonesia',
-    'asia-jp',
-    'asia-sea',
-    'asia-south-east',
-    # Middle East
-    'middle-east',
-    # Cross-cutting collections
-    'theme-parks',
-    'food',
-    'us-fill', 'us-fill2', 'us-fill3', 'us-fill4', 'world-fill', 'canada-fill',
-]
+# Every .jsonl in data/src, discovered rather than listed.
+#
+# This used to be a hand-maintained list of names, which meant adding a source
+# file did nothing at all until somebody remembered to add it here too - a
+# silent no-op, the worst kind. Ordering carried no meaning once ids moved into
+# data/ids.json keyed on country|place, so sorted order is as good as any and
+# a new file now ships by existing.
+SOURCES = sorted(
+    os.path.splitext(os.path.basename(p))[0]
+    for p in glob.glob(os.path.join('data', 'src', '*.jsonl'))
+)
 
 FIELDS = ['continent', 'country', 'admin1', 'region', 'title', 'place',
           'category', 'difficulty', 'cost', 'duration', 'season',

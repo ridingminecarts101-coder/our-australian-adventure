@@ -97,6 +97,10 @@ const CONTINENT_BOXES = {
     [-20.5, -15.0, -152, -146], // French Polynesia
     [-3.0, 4.0, -160, -150],    // Kiribati, Line Islands
     [-30.0, -28.0, 167.0, 168.5], // Norfolk Island
+    [12.5, 21.0, 144.0, 146.5],   // Guam and the Northern Marianas
+    [-10.5, -8.0, -173.5, -170.0], // Tokelau, north of the Samoa box
+    [-14.6, -12.5, -178.5, -175.6], // Wallis & Futuna, just west of it
+    [-25.5, -23.5, -131.0, -128.0], // Pitcairn, on its own in the middle
   ],
 };
 

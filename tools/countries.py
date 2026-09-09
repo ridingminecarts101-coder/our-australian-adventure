@@ -32,6 +32,7 @@ COUNTRIES = {
     'TO': ('Tonga', 'Oceania', -21.2, -175.2),
     'CK': ('Cook Islands', 'Oceania', -21.2, -159.8),
     'NU': ('Niue', 'Oceania', -19.1, -169.9),
+    'PN': ('Pitcairn Islands', 'Oceania', -25.1, -130.1),
     'NF': ('Norfolk Island', 'Oceania', -29.0, 167.9),
     'FM': ('Micronesia', 'Oceania', 7.4, 150.6),
     'MH': ('Marshall Islands', 'Oceania', 7.1, 171.2),
