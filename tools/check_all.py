@@ -20,6 +20,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 CHECKS = [
+    ('source data',    'lint_source.py',     'every data/src file, before it is built'),
     ('geography',      'check_geography.py', 'countries, continents and the map'),
     ('code',           'check_code.py',      'dead functions, orphan files, unheard handlers'),
     ('content',        'check_quality.py',   'thin regions, narrow categories, tall claims'),
