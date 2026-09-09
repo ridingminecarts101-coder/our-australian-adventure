@@ -1257,6 +1257,7 @@ let userId = null;             // auth.users.id for this session
 let myGroups = [];             // groups this user belongs to
 let activeGroupId = null;      // the group new rows are written into
 let members = new Map();       // user_id -> display name, for everyone in the group
+let pushedName = null;         // the display name last written to the server
 
 /* Names used to be frozen into completed_by at the moment of ticking, so
  * renaming yourself never changed anything you had already done, and a new
@@ -1357,11 +1358,25 @@ async function loadMembers() {
  */
 async function pushMyName() {
   if (!sb || !userId || !who) return;
+  /* Nothing to say if the name has not moved since we last wrote it.
+   *
+   * This runs from loadMembers(), which now runs from the 45-second poll. A
+   * write every 45 seconds would be pointless traffic, and worse: every write
+   * echoes back through the member-sync channel, which calls loadMembers,
+   * which calls this. The guard is what stops that being a loop.
+   *
+   * Guarding on members.get(userId) instead would look right and be wrong -
+   * members only ever holds the ACTIVE group, so somebody in two groups whose
+   * name was current in one and stale in the other would return early here
+   * and stay stale forever, which is the bug this function was fixed for.
+   */
+  if (pushedName === who) return;
   const ids = myGroups.map(g => g.id);
   if (!ids.length) return;
   const { error } = await sb.from('group_members')
     .update({ display_name: who }).in('group_id', ids).eq('user_id', userId);
   if (error) { console.warn('name', error.message); return; }
+  pushedName = who;
   members.set(userId, who);
 }
 
