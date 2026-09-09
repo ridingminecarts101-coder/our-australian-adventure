@@ -16,6 +16,7 @@ build gets rejected at 11pm for reusing a versionCode. The rules Play enforces:
     python tools/release.py build --no-bump        # rebuild the same version
 """
 import argparse
+import io
 import os
 import re
 import subprocess
@@ -23,6 +24,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GRADLE = os.path.join(ROOT, 'android', 'app', 'build.gradle')
+PBXPROJ = os.path.join(ROOT, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj')
 SW = os.path.join(ROOT, 'sw.js')
 AAB = os.path.join(ROOT, 'android', 'app', 'build', 'outputs', 'bundle', 'release', 'app-release.aab')
 APK = os.path.join(ROOT, 'android', 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk')
@@ -73,6 +75,18 @@ def cmd_build(args):
         s = re.sub(r'versionName "[^"]+"', 'versionName "%s"' % new_name, s, count=1)
         open(GRADLE, 'w', encoding='utf-8', newline='\n').write(s)
 
+    # iOS carries the same numbers under different names. Bumping only one
+    # is how the two stores end up shipping "the same" release under two
+    # different version strings, which is then impossible to talk about.
+    if os.path.exists(PBXPROJ):
+        x = io.open(PBXPROJ, encoding='utf-8').read()
+        x2 = re.sub(r'MARKETING_VERSION = [^;]+;', 'MARKETING_VERSION = %s;' % new_name, x)
+        x2 = re.sub(r'CURRENT_PROJECT_VERSION = [^;]+;',
+                    'CURRENT_PROJECT_VERSION = %d;' % new_code, x2)
+        if x2 != x:
+            io.open(PBXPROJ, 'w', encoding='utf-8', newline=chr(10)).write(x2)
+            print('  ios project           %s (build %d)' % (new_name, new_code))
+
     # The web build's cache key rides along, so a native release and a web
     # release never disagree about which version of the files is current.
     sw = open(SW, encoding='utf-8').read()
@@ -85,7 +99,10 @@ def cmd_build(args):
     print('  version               %s (build %d)\n' % (new_name, new_code))
 
     run(['npm', 'run', 'stage'], shell=True)
-    run(['npx', 'cap', 'copy', 'android'], shell=True)
+    # Both platforms, not just the one being built. Copying only Android is
+    # how the iOS project quietly falls a release behind, and the next Mac
+    # build ships last month's app.js without anybody noticing.
+    run(['npx', 'cap', 'copy'], shell=True)
     # Absolute path on purpose. cmd does not put the working directory on PATH,
     # so a bare gradlew.bat is not found even when it is sitting right there.
     android = os.path.join(ROOT, 'android')

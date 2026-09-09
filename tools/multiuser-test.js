@@ -155,6 +155,55 @@ async function runMultiuserTest({ keep = false } = {}) {
     const stillThere = await dev.elli.from('groups').select('id').eq('id', groupId).maybeSingle();
     ok('the group itself survives someone leaving', !!(stillThere.data));
 
+    /* ── Leaving takes your ticks with you ────────────────────────────
+     *
+     * Deleting the membership row used to be the whole of leaving, so
+     * everything the leaver had ticked kept its group_id and kept showing on
+     * the others' lists - attributed to somebody no longer in the members
+     * table and therefore no longer nameable. That is where a stale name
+     * comes from. leaveGroup() now detaches the rows first; this checks the
+     * shape it leaves behind.
+     */
+    const rynoTick = await dev.ryno.from('progress').upsert({
+      adventure_id: 999902, completed: true, completed_by: 'Ryno',
+      completed_by_id: id.ryno, user_id: id.ryno, group_id: groupId,
+    }, { onConflict: 'adventure_id,scope_id' });
+    cleanup.push(() => dev.ryno.from('progress').delete().eq('adventure_id', 999902));
+
+    // Rejoin so there is a membership to leave properly this time.
+    await dev.ryno.from('group_members')
+      .insert({ group_id: groupId, user_id: id.ryno, display_name: 'Ryno B' });
+    const beforeLeave = await dev.riley.from('progress').select('*').eq('adventure_id', 999902);
+    ok('the group can see a tick before the leave',
+       !rynoTick.error && (beforeLeave.data || []).length === 1,
+       rynoTick.error ? rynoTick.error.message : `${(beforeLeave.data || []).length} rows`);
+
+    // What leaveGroup() does, in order: rows home first, membership last.
+    await dev.ryno.from('progress').update({ group_id: null })
+      .eq('user_id', id.ryno).eq('group_id', groupId);
+    await dev.ryno.from('group_members').delete()
+      .eq('group_id', groupId).eq('user_id', id.ryno);
+
+    const groupSees = await dev.riley.from('progress').select('*').eq('adventure_id', 999902);
+    ok('the ticks of whoever left stop showing to the group',
+       (groupSees.data || []).length === 0,
+       `${(groupSees.data || []).length} ghost rows left behind`);
+
+    const leaverSees = await dev.ryno.from('progress').select('*').eq('adventure_id', 999902);
+    ok('the leaver keeps their own ticks',
+       (leaverSees.data || []).length === 1,
+       `${(leaverSees.data || []).length} rows, expected 1`);
+
+    const survivors = await dev.riley.from('progress').select('*').eq('adventure_id', 999901);
+    ok('the remaining members keep theirs',
+       (survivors.data || []).length === 1,
+       `${(survivors.data || []).length} rows, expected 1`);
+
+    const stillTwo = await dev.riley.from('group_members').select('user_id').eq('group_id', groupId);
+    ok('and the other two are still in the group',
+       (stillTwo.data || []).length === 2,
+       `${(stillTwo.data || []).length} members, expected 2`);
+
   } finally {
     if (!keep) {
       for (const undo of cleanup.reverse()) { try { await undo(); } catch { /* best effort */ } }

@@ -380,6 +380,132 @@ function subscribeRealtime() {
     .subscribe();
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+ *  Keeping up to date
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * Realtime carries ticks, photos and trips the moment they change, and it is
+ * the right mechanism for those. It is not the whole story:
+ *
+ *   - a websocket that dropped while the phone was asleep reconnects, but
+ *     everything that happened in between arrived nowhere;
+ *   - postgres_changes only fires for tables in the publication, so a group
+ *     being renamed or somebody joining can be missed entirely;
+ *   - a phone that has been in a pocket for an hour has no idea.
+ *
+ * So there is also a plain poll, and a gesture. Neither replaces realtime -
+ * they catch what it drops.
+ */
+
+const SYNC_EVERY = 45000;        // while the app is actually on screen
+let syncTimer = null;
+let syncing = false;
+
+/* Everything, from the server, now.
+ *
+ * Groups first: members and the active group decide what the other pulls are
+ * even allowed to see, so pulling progress before knowing the group would ask
+ * the wrong question. Quiet by default because it runs on a timer - only a
+ * refresh somebody asked for says anything.
+ */
+async function syncNow({ loud = false } = {}) {
+  if (!sb || !online || syncing) return false;
+  syncing = true;
+  try {
+    await loadGroups();
+    await pullProgress();
+    await pullPhotos();
+    await pullTrips();
+    if ($('.tab.active') && $('.tab.active').dataset.tab === 'tab-community') {
+      await pullRecommendations();
+    }
+    renderAll();
+    if (loud) toast('Up to date');
+    return true;
+  } catch (e) {
+    console.warn('sync', e);
+    if (loud) toast('Could not reach the server');
+    return false;
+  } finally {
+    syncing = false;
+  }
+}
+
+/* Poll only while somebody is looking.
+ *
+ * A timer that keeps firing in a backgrounded tab spends battery to update a
+ * screen nobody can see, and browsers throttle it to roughly a minute anyway,
+ * so the honest thing is to stop and catch up on the way back in.
+ */
+function startSyncTicker() {
+  const stop = () => { clearInterval(syncTimer); syncTimer = null; };
+  const start = () => { if (!syncTimer) syncTimer = setInterval(() => syncNow(), SYNC_EVERY); };
+
+  addEventListener('visibilitychange', () => {
+    if (document.hidden) { stop(); return; }
+    // Coming back is the moment most likely to be out of date, so do not wait
+    // for the next tick - and re-establish realtime, which a sleeping phone
+    // will usually have lost.
+    start();
+    syncNow();
+    if (!realtimeOk) resubscribeRealtime();
+  });
+
+  if (!document.hidden) start();
+}
+
+/* Pull down to refresh.
+ *
+ * Only from the very top of the page, so it can never fight a normal scroll.
+ * The drag is damped - you move the indicator a third as far as your finger -
+ * which is what makes it feel like resistance rather than a stuck element.
+ */
+function wirePullToRefresh() {
+  const el = $('#pull');
+  if (!el) return;
+  const TRIGGER = 70;
+  let startY = 0, pulling = false, distance = 0;
+
+  const atTop = () => (document.scrollingElement || document.documentElement).scrollTop <= 0;
+  const show = (y, cls) => {
+    el.classList.toggle('dragging', cls === 'dragging');
+    el.classList.toggle('settling', cls !== 'dragging');
+    el.classList.toggle('busy', cls === 'busy');
+    el.style.transform = `translateY(${y}px)`;
+    el.style.opacity = Math.min(1, Math.max(0, (y + 40) / 70));
+  };
+  const hide = () => { show(-60, 'settling'); };
+
+  addEventListener('touchstart', e => {
+    if (!atTop() || e.touches.length !== 1) return;
+    // A sheet or the lightbox scrolls inside itself; pulling the page behind
+    // one is never what was meant.
+    if ($$('.sheet:not(.hidden), .lightbox:not(.hidden)').length) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+    distance = 0;
+  }, { passive: true });
+
+  addEventListener('touchmove', e => {
+    if (!pulling) return;
+    distance = e.touches[0].clientY - startY;
+    if (distance <= 0 || !atTop()) { pulling = false; hide(); return; }
+    show(Math.min(distance / 3, 90) - 40, 'dragging');
+  }, { passive: true });
+
+  addEventListener('touchend', async () => {
+    if (!pulling) return;
+    pulling = false;
+    // The finger has to travel three times the indicator, because the drag is
+    // damped by three. Anything shorter is somebody scrolling up.
+    if (distance < TRIGGER * 3) { hide(); return; }
+    show(24, 'busy');
+    await syncNow({ loud: true });
+    hide();
+  });
+}
+
+
 // ══════════════════════════════════════════════════════════════════════
 //  Photos
 // ══════════════════════════════════════════════════════════════════════
@@ -1223,12 +1349,18 @@ async function loadMembers() {
   await pushMyName();
 }
 
-// Keep this phone's name on the server so the others can see it.
+/* Keep this phone's name on the server so the others can see it.
+ *
+ * Every group, not just the active one. Somebody in two groups who renamed
+ * themselves used to update one and stay stale in the other, which looks
+ * exactly like the app having forgotten.
+ */
 async function pushMyName() {
-  if (!sb || !userId || !activeGroupId || !who) return;
-  if (members.get(userId) === who) return;
+  if (!sb || !userId || !who) return;
+  const ids = myGroups.map(g => g.id);
+  if (!ids.length) return;
   const { error } = await sb.from('group_members')
-    .update({ display_name: who }).eq('group_id', activeGroupId).eq('user_id', userId);
+    .update({ display_name: who }).in('group_id', ids).eq('user_id', userId);
   if (error) { console.warn('name', error.message); return; }
   members.set(userId, who);
 }
@@ -1287,15 +1419,65 @@ async function joinGroup(code) {
   toast(`Joined ${data.name}`);
 }
 
+/* Leaving a group has to undo the joining, not just the membership row.
+ *
+ * It used to delete the row in group_members and stop. Everything that person
+ * had ticked, photographed or planned still carried the group_id, so:
+ *
+ *   - the others kept seeing their ticks forever, attributed to somebody who
+ *     was no longer in the members table and therefore could no longer be
+ *     named - which is where a stale name comes from;
+ *   - the leaver's photos stayed in the group's storage folder, and since the
+ *     policy keys on that folder, they lost access to their own pictures.
+ *
+ * So the rows come home first and the membership goes last. Order matters: a
+ * failure halfway through leaves somebody still in the group with some rows
+ * detached, which is recoverable. Doing it the other way round would leave
+ * them outside the group with rows they can no longer reach.
+ */
 async function leaveGroup(id) {
   if (!sb || !userId) return;
   const g = myGroups.find(x => x.id === id);
-  if (!confirm(`Leave ${g ? g.name : 'this group'}? Your own ticks stay with you; theirs stop showing.`)) return;
-  await sb.from('group_members').delete().eq('group_id', id).eq('user_id', userId);
+  if (!confirm(`Leave ${g ? g.name : 'this group'}?\n\nEverything you ticked comes with you `
+             + 'and stops showing on their list. Theirs stops showing on yours.')) return;
+
+  toast('Leaving…');
+  const failures = [];
+
+  // Ticks and trips: just change who they belong to.
+  for (const table of ['progress', 'trips']) {
+    const { error } = await sb.from(table)
+      .update({ group_id: null }).eq('user_id', userId).eq('group_id', id);
+    if (error) { console.warn(`detaching ${table}`, error.message); failures.push(table); }
+  }
+
+  // Photos additionally need the file moved, because the storage policy reads
+  // the first path segment and it currently says "this group".
+  const mine = photos.filter(p => p.user_id === userId && p.group_id === id);
+  for (const ph of mine) {
+    const to = String(ph.storage_path || '').replace(/^[^/]+\//, userId + '/');
+    if (to !== ph.storage_path) {
+      const mv = await sb.storage.from(BUCKET).move(ph.storage_path, to);
+      if (mv.error) { console.warn('photo move', mv.error.message); failures.push('a photo'); continue; }
+      signedUrls.delete(ph.storage_path);
+      ph.storage_path = to;
+    }
+    const upd = await sb.from('photos')
+      .update({ group_id: null, storage_path: ph.storage_path }).eq('id', ph.id);
+    if (upd.error) { console.warn('photo detach', upd.error.message); failures.push('a photo'); }
+  }
+
+  const { error } = await sb.from('group_members')
+    .delete().eq('group_id', id).eq('user_id', userId);
+  if (error) { toast('Could not leave — try again'); console.warn(error); return; }
+
   if (activeGroupId === id) { activeGroupId = null; localStorage.removeItem(LS.group); }
   await loadGroups();
   await pullProgress(); await pullPhotos(); await pullTrips();
   renderAll();
+  toast(failures.length
+    ? `Left the group, but ${[...new Set(failures)].join(' and ')} did not come with you`
+    : 'Left the group. Everything you ticked is still yours.');
 }
 
 // Puts rows this user already owns into the active group.
@@ -2315,13 +2497,24 @@ function renderMe() {
   const avg = rated.length ? (rated.reduce((s, n) => s + n, 0) / rated.length).toFixed(1) : '—';
   const shortlisted = [...progress.values()].filter(r => r.shortlisted && !r.completed).length;
   // Whoever has actually ticked things, rather than two hardcoded names.
+  /* Counted by account id, never by name.
+   *
+   * This used to key on the display name, so renaming yourself produced two
+   * people: you, and a ghost holding everything you had ticked under the old
+   * name. Rows from before completed_by_id existed have no id at all - those
+   * are grouped under whatever name was frozen onto them, which is the only
+   * honest thing left to do with them, but they can no longer split a person
+   * who does have an id in two.
+   */
   const byPerson = new Map();
   for (const r of progress.values()) {
     if (!r.completed) continue;
-    const name = nameOf(r.completed_by_id, r.completed_by || who || 'You');
-    byPerson.set(name, (byPerson.get(name) || 0) + 1);
+    const key = r.completed_by_id || ('name:' + (r.completed_by || who || 'You'));
+    byPerson.set(key, (byPerson.get(key) || 0) + 1);
   }
-  const people = [...byPerson.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const people = [...byPerson.entries()]
+    .map(([key, n]) => [key.startsWith('name:') ? key.slice(5) : nameOf(key), n])
+    .sort((a, b) => b[1] - a[1]).slice(0, 4);
 
   $('#usStats').innerHTML = `
     <div class="stat"><b>${d.done}</b><span>adventures done</span></div>
@@ -2898,7 +3091,11 @@ ${url}`);
   });
 
   $('#refreshBtn').onclick = async () => {
-    await pullProgress(); await pullPhotos(); signedUrls.clear(); renderAll(); toast('Refreshed');
+    // Signed photo URLs are dropped as well, which the timer does not do -
+    // this is the button for when a picture will not load, and re-signing is
+    // the thing that fixes that.
+    signedUrls.clear();
+    await syncNow({ loud: true });
   };
   $('#signOutBtn').onclick = async () => {
     if (!confirm('Sign this phone out? Your shared progress stays safe on the server.')) return;
@@ -2908,7 +3105,12 @@ ${url}`);
   };
 
   // Connectivity
-  addEventListener('online',  () => { online = true;  flushOutbox(); pullProgress(); pullPhotos().then(renderAll); flushPhotoQueue(); flushTrips(); });
+  addEventListener('online',  () => {
+    online = true;
+    flushOutbox(); flushPhotoQueue(); flushTrips();
+    syncNow();
+    if (!realtimeOk) resubscribeRealtime();
+  });
   addEventListener('offline', () => { online = false; refreshSyncBar(); });
   addEventListener('visibilitychange', () => {
     if (document.hidden) return;
@@ -3227,6 +3429,8 @@ async function enterApp() {
   await pullTrips();
   renderAll();
   subscribeRealtime();
+  startSyncTicker();
+  wirePullToRefresh();
   flushOutbox();
   flushPhotoQueue();
   flushTrips();

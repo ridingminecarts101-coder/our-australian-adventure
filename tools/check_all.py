@@ -25,6 +25,7 @@ CHECKS = [
     ('content',        'check_quality.py',   'thin regions, narrow categories, tall claims'),
     ('sql',            'check_sql.py',       'unbalanced quotes, policies on missing tables'),
     ('release tools',  'test_play.py',       'the Play commands, against a fake API'),
+    ('ios vs android', 'check_parity.py',    'do the two apps agree, prices included'),
 ]
 
 

@@ -58,6 +58,10 @@
 <!-- ───────────────────────── App ───────────────────────────────── -->
 <div id="app" class="hidden">
 
+  <!-- Pull-to-refresh. Lives outside the scrolling content and is moved by
+       transform only, so dragging it never reflows the list behind it. -->
+  <div id="pull" class="pull" aria-hidden="true"><span class="pull-spin">↻</span></div>
+
   <header class="topbar">
     <div class="topbar-main">
       <div class="eyebrow">ADVENTURES</div>
