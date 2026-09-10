@@ -1,10 +1,20 @@
 /* Geography + the world map.
  *
  * The map is drawn as a dot grid on a canvas rather than hand-authored SVG
- * coastlines: at this size a dot matrix reads clearly on a phone, stays a few
- * kilobytes, and the same boxes that decide which dots are land also decide
- * which continent a tap landed on. Coarse by design — it's a navigation
- * control, not an atlas.
+ * coastlines: at this size a dot matrix reads clearly on a phone and stays a
+ * few kilobytes. Coarse by design - it is a navigation control, not an atlas.
+ *
+ * TWO SEPARATE THINGS, and confusing them wastes an afternoon:
+ *
+ *   land.js          real coastlines, rasterised from Natural Earth polygons.
+ *                    This is what you SEE.
+ *   CONTINENT_BOXES  crude rectangles used only by continentAt(). This is
+ *                    what decides where a TAP landed.
+ *
+ * They used to be the same thing, and the comment here still said so long
+ * after they were split. Adding a box does not draw anything - which is why a
+ * country too small to render, like Cabo Verde or Tuvalu, can still be given
+ * a box so that tapping near it resolves to the right continent.
  */
 'use strict';
 
@@ -67,7 +77,18 @@ const CONTINENT_BOXES = {
     [-5, 5, 8, 42],         // equatorial
     [-18, -5, 11, 40],
     [-35, -18, 14, 33],     // southern Africa, narrowing
+    [-27, -10, 30, 41],     // Mozambique, which the two boxes above meet
+                            // around rather than cover - it sits east of the
+                            // southern box and south of the equatorial one
     [-26, -12, 43, 50],     // Madagascar
+    // Island nations, too small to draw at this dot resolution but they still
+    // have to answer correctly to a tap. Same reasoning as the Caribbean and
+    // the Pacific above.
+    [14.5, 17.5, -25.5, -22.5], // Cabo Verde, well out in the Atlantic
+    [-0.7, 2.0, 6.0, 7.8],      // Sao Tome and Principe, west of Gabon
+    [-12.6, -11.0, 43.0, 44.6], // Comoros
+    [-20.9, -19.9, 57.2, 57.9], // Mauritius
+    [-5.0, -4.0, 55.0, 56.0],   // Seychelles
   ],
   'Asia': [
     [40, 75, 40, 100],      // western Siberia

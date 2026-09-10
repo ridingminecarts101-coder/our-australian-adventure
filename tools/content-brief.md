@@ -42,6 +42,21 @@ One JSON object per line, UTF-8, in a file you create at
 
 Every field is required. No extras.
 
+**Write the file with the Write tool, not a shell heredoc.** Place names carry
+apostrophes - Baines' Baobabs, Ha'apai, N'Djamena - and an apostrophe inside a
+bash heredoc breaks the shell's quoting in a way that fails halfway through and
+leaves a truncated file. If you need several batches, Write each one to a
+scratch file and `cat` them together.
+
+**Save as you go, every two or three countries.** This work runs under a usage
+limit that can end the session without warning. Research two or three
+countries, write those entries to disk, then move on - never hold the whole
+file in your head to write at the end. Several agents have already lost an
+entire run of research because they were killed a minute before their single
+final write. If the target file already exists when you start, read it first:
+it is a previous attempt's saved progress, so keep it and continue from the
+countries it does not yet cover.
+
 | Field | Rule |
 |---|---|
 | `continent` | exactly one of: `Oceania` `Europe` `North America` `South America` `Asia` `Middle East` `Africa` |
