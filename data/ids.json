@@ -1,6 +1,6 @@
 {
  "_comment": "Adventure ids, frozen. The key is country|place. An id here must never change and must never be reused, because the app stores progress, photos and trips against it - renumbering repoints somebody's ticks at a different place. tools/build_data.py reads this and appends; it does not renumber.",
- "next": 4273,
+ "next": 4275,
  "ids": {
   "AD|Caldea": 1269,
   "AD|Casa de la Vall": 3727,
@@ -102,6 +102,7 @@
   "AR|Talampaya Canyon": 4123,
   "AR|Teatro Colon": 4091,
   "AR|Tierra del Fuego National Park": 4100,
+  "AR|Tigre Delta": 4274,
   "AR|Train to the Clouds": 4113,
   "AR|Ushuaia": 4099,
   "AS|National Park of American Samoa": 2616,
@@ -1037,6 +1038,7 @@
   "CN|Forbidden City": 1810,
   "CN|French Concession": 3174,
   "CN|Guangzhou": 1984,
+  "CN|Heming Teahouse": 4273,
   "CN|Hongcun": 3172,
   "CN|Huanglong": 3156,
   "CN|Huangshan": 3171,
