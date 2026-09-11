@@ -58,10 +58,9 @@ const CONTINENT_BOXES = {
     [50, 60, 5, 32],
     [55, 71, 5, 32],        // Scandinavia
     [44, 60, 28, 45],       // eastern Europe, north of the Caucasus
-    [40, 44, 28, 40],       // the Black Sea's western shore. Stops at 40E so that
-                            // Georgia and Armenia, filed as Asia, fall through -
-                            // Europe is tried before Asia, so a wider box here
-                            // claimed them
+    [40, 44, 28, 40],       // the Black Sea's western shore. Stops at 40E so the
+                            // Caucasus falls through to its Middle East box -
+                            // Europe is tried first, so a wider box here claimed it
     [50, 59, -11, 2],       // Britain & Ireland
     [63, 67, -25, -13],     // Iceland
     // Mediterranean islands sit below the 36-degree line the mainland
@@ -69,7 +68,6 @@ const CONTINENT_BOXES = {
     // reach across to the North African coast.
     [35.7, 36.2, 14.0, 14.7],   // Malta and Gozo
     [34.7, 35.8, 23.3, 26.5],   // Crete
-    [34.5, 35.8, 32.2, 34.7],   // Cyprus - east of Crete, west of the Levant box
   ],
   // Its own region rather than a slice of Asia. Geographically this is Western
   // Asia; every travel guide splits it out, and so does this app.
@@ -79,11 +77,15 @@ const CONTINENT_BOXES = {
                             // from 34E reached across the water and claimed
                             // Eritrea, and the Middle East is tried before Africa
     [29, 38, 34, 49],       // Levant and Iraq
-    [36, 42, 30, 43.4],     // Anatolia - the European side falls to Europe above,
-                            // and the east stops short of Armenia
+    [36, 42, 30, 43.4],     // Anatolia - the European side falls to Europe above;
+                            // the Caucasus box below covers the rest
     [25, 40, 44, 54],       // Iran, the west and the Caspian coast
     [25, 37.6, 54, 63.4],   // Iran, the east - held below 37.6N so Turkmenistan,
                             // filed as Asia, is not claimed across the border
+    [38.4, 43.7, 40.0, 50.9], // The Caucasus - Georgia, Armenia and Azerbaijan, which
+                              // the country table files with the Middle East
+    [34.5, 35.8, 32.2, 34.7], // Cyprus, which the country table also files here.
+                              // No Europe box reaches this far south and east
   ],
   'Africa': [
     [20, 37, -17, 12],      // Maghreb
