@@ -69,6 +69,35 @@ def stamp_counts(total):
         print('  updated the count in index.html')
 
 
+def stamp_listing(records):
+    """Keep the store listing draft in PLAY.md in step with the data.
+
+    PLAY.md holds the text to paste into the Play Console, and it quoted the
+    number of adventures and countries by hand. It said 2,356 and 123 while the
+    data went past 3,500 and 150 - a listing that undersells the app by a third,
+    pasted in by somebody trusting the doc. Play caps the short description at
+    80 characters, so the count written beside it is recomputed too rather than
+    left to go wrong.
+    """
+    path = 'PLAY.md'
+    if not os.path.exists(path):
+        return
+    total = len(records)
+    countries = len({r['country'] for r in records})
+    places = f'{total // 100 * 100:,}+'
+    text = io.open(path, encoding='utf-8').read()
+
+    short = f'{places} real places worth going, in {countries} countries. Tick them off together.'
+    new = re.sub(r'(\*\*Short description\*\* \(80 max, )\d+( used\):\s*\n\s*> )[^\n]*',
+                 lambda m: f'{m.group(1)}{len(short)}{m.group(2)}{short}', text)
+    new = re.sub(r'worth the trip — [\d,]+\+? of\n> them, across \d+ countries',
+                 f'worth the trip — {places} of\n> them, across {countries} countries', new)
+
+    if new != text:
+        io.open(path, 'w', encoding='utf-8', newline=chr(10)).write(new)
+        print(f'  updated the store listing counts in PLAY.md ({places}, {countries} countries)')
+
+
 IDS = os.path.join('data', 'ids.json')
 
 
@@ -226,6 +255,7 @@ def main():
     gems = sum(1 for r in records if r['hidden_gem'])
 
     stamp_counts(len(records))
+    stamp_listing(records)
     print(f'{len(records)} adventures written to data/adventures.json')
     print('  continents: ' + ', '.join(f'{k} {v}' for k, v in by_continent.most_common()))
     print('  countries:  ' + ', '.join(f'{k} {v}' for k, v in by_country.most_common()))

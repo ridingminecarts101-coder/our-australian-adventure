@@ -2,18 +2,19 @@
  *
  * WHY IT IS SHAPED LIKE THIS
  *
- * The obvious structure is seven continents at one price. It does not survive
- * contact with the data:
+ * The obvious structure is seven continents at one price, and it is the one
+ * used - with one rule that the data enforces rather than a flag:
  *
- *   - South America and Africa have no hidden gems at all yet. Selling an
- *     empty pack is not a pricing decision, it is a refund request, and Apple
- *     rejects it under the accurate-metadata rule. They are declared here so
- *     the plumbing exists, and marked unreleased until they have content.
- *   - The packs that do have content run from 34 gems to 270, an eight-fold
- *     spread. Flat pricing across that range is a deliberate trade: one price
- *     is easier to say and easier to buy, at the cost of the Middle East pack
- *     looking thin next to Oceania. If that becomes a complaint, tier it -
- *     nothing here assumes the prices are equal.
+ *   - A pack with no gems in it is never offered. Selling an empty pack is
+ *     not a pricing decision, it is a refund request, and Apple rejects it
+ *     under the accurate-metadata rule. sellablePacks() counts each pack from
+ *     the adventures themselves, so a continent's pack appears the day its
+ *     first gem is added and cannot appear a day before.
+ *   - Pack sizes vary a great deal between continents. Flat pricing across
+ *     that spread is a deliberate trade: one price is easier to say and easier
+ *     to buy, at the cost of a thin pack looking thin next to a full one. If
+ *     that becomes a complaint, tier it - nothing here assumes the prices are
+ *     equal.
  *
  * Packs are a flat $1.99 for simplicity. The bundle at $9.99 is the headline:
  * priced against the seven continents the app will eventually hold rather than
@@ -46,11 +47,10 @@ const PACKS = [
     price: '$1.99' },
   { slug: 'middle-east',   continent: 'Middle East',   name: 'Middle East gems',
     price: '$1.99' },
-  // Declared so the code path exists, not sold until there is something in them.
   { slug: 'south-america', continent: 'South America', name: 'South America gems',
-    price: '$1.99', unreleased: true },
+    price: '$1.99' },
   { slug: 'africa',        continent: 'Africa',        name: 'Africa gems',
-    price: '$1.99', unreleased: true },
+    price: '$1.99' },
 ];
 
 const productId = slug => STORE_PREFIX + slug.replace(/-/g, '_');

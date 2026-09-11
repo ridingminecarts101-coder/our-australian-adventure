@@ -166,8 +166,9 @@ declaring them falsely gets the app pulled later.
 
 ## 5. The in-app purchases
 
-Play Console → **Monetise → Products → In-app products**. Five **one-off**
-products (Play calls these "in-app products", not subscriptions), ids exactly:
+Play Console → **Monetise → Products → In-app products**. One **one-off**
+product per continent plus the bundle (Play calls these "in-app products", not
+subscriptions), ids exactly:
 
 | Product ID | Name | Price |
 |---|---|---|
@@ -176,10 +177,21 @@ products (Play calls these "in-app products", not subscriptions), ids exactly:
 | `app.wayfinder.mobile.gems.north_america` | North America gems | $1.99 |
 | `app.wayfinder.mobile.gems.europe` | Europe gems | $1.99 |
 | `app.wayfinder.mobile.gems.asia` | Asia gems | $1.99 |
+| `app.wayfinder.mobile.gems.middle_east` | Middle East gems | $1.99 |
+| `app.wayfinder.mobile.gems.south_america` | South America gems | $1.99 |
+| `app.wayfinder.mobile.gems.africa` | Africa gems | $1.99 |
 
-Do **not** create Middle East, South America or Africa. They have no gems yet
-and an empty product is a refund request. The app hides them by itself, by
-counting the data rather than a written-down number.
+**Only create the ones that hold gems.** An empty product is a refund request
+and fails review. Which ones those are changes as content is added, so do not
+trust a list written here - run:
+
+```bash
+python tools/check_parity.py
+```
+
+It counts the gems in each pack from the data and marks every product either
+*create in both* or *do not create - empty*. The same list applies to App Store
+Connect. The app hides empty packs by itself, by the same count.
 
 See `REVENUE.md` before you commit to those prices — the evidence says the
 bundle is worth $19.99.
