@@ -4,7 +4,7 @@
  * from cache (and works with no signal), while a fresh copy is fetched in the
  * background and used on the next launch. Bump CACHE_VERSION when you deploy.
  */
-const CACHE_VERSION = 'wayfinder-v43';
+const CACHE_VERSION = 'wayfinder-v44';
 const SHELL = [
   './',
   './index.html',
@@ -30,7 +30,10 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
       // addAll fails the whole install if any single file 404s, so add individually.
-      .then(cache => Promise.all(SHELL.map(url => cache.add(url).catch(() => {}))))
+      // A new Cache Storage name does not invalidate the browser's HTTP cache.
+      // Reusing that cache here can install old scripts beside a new HTML shell.
+      .then(cache => Promise.all(SHELL.map(url =>
+        cache.add(new Request(url, { cache: 'reload' })).catch(() => {}))))
       .then(() => self.skipWaiting())
   );
 });
@@ -54,7 +57,9 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.open(CACHE_VERSION).then(async cache => {
       const cached = await cache.match(request);
-      const network = fetch(request)
+      // Revalidate with the server even while the HTTP max-age is still fresh.
+      // Cache Storage supplies the immediate/offline response below.
+      const network = fetch(request, { cache: 'no-cache' })
         .then(response => {
           if (response && response.ok) cache.put(request, response.clone());
           return response;
