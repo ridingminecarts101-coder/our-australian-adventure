@@ -172,24 +172,38 @@ def check(path, all_places):
     return records, problems
 
 
-def gem_ratios(records):
+def gem_ratios(touched):
     """Gems must stay under a fifth of each region.
 
-    Counted across every source file at once, never per file. A region's
-    entries are routinely spread over several - a US state appears in
-    us-fill, us-fill2 and us-fill3 - so a single file holding one gem and one
-    Wisconsin entry looks like a total paywall and is nothing of the kind.
-    Scoping this check to a file gets it wrong every time.
+    Always counted across every source file, whatever was asked to be checked,
+    and reported only for the regions the checked files contribute to.
+
+    It used to count only the files on the command line. That is wrong both
+    ways. Checking two files, a region with more entries elsewhere looked
+    over-paid - Transylvania showed 2 gems of 9 when the full dataset holds 2
+    of 13, which is fine. And checking one file skipped the ratio entirely, so
+    an agent linting its own work could never see a real breach. A region's
+    entries are routinely spread over several files, so no subset of files
+    tells you anything true about it.
     """
+    records = []
+    for path in glob.glob(os.path.join('data', 'src', '*.jsonl')):
+        for line in io.open(path, encoding='utf-8'):
+            try:
+                records.append(json.loads(line))
+            except ValueError:
+                continue                       # a half-written line mid-agent
     out = []
     by_region = collections.defaultdict(list)
     for r in records:
         by_region[(r.get('country'), r.get('admin1'))].append(r)
-    for (country, admin1), rows in sorted(by_region.items()):
+    for key, rows in sorted(by_region.items()):
+        if touched is not None and key not in touched:
+            continue
         gems = sum(1 for r in rows if r.get('hidden_gem'))
         if gems and gems * 5 > len(rows):
             out.append('%s/%s: %d gems of %d - over one in five'
-                       % (country, admin1, gems, len(rows)))
+                       % (key[0], key[1], gems, len(rows)))
     return out
 
 
@@ -214,9 +228,10 @@ def main():
         if len(problems) > 25:
             print('    ! ...and %d more' % (len(problems) - 25))
 
-    # Ratios last, and only when the whole set was checked - looking at one
-    # file tells you nothing true about a region that spans four.
-    ratio = gem_ratios(everything) if len(targets) > 1 else []
+    # Ratios last, counted over every file and reported for the regions these
+    # files touch - see gem_ratios for why no subset of files will do.
+    touched = {(r.get('country'), r.get('admin1')) for r in everything}
+    ratio = gem_ratios(touched)
     if ratio:
         print('\n  Regions that are more than a fifth paid:')
         for r in ratio[:25]:
