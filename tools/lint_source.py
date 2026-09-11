@@ -54,6 +54,28 @@ PACK_FOR = {
 }
 
 
+def _country_table():
+    """Continent per country from tools/countries.py - parsed, never imported.
+
+    That table is the source of truth for grouping: every continent screen in
+    the app is built from it by countriesIn(). An entry filed under a different
+    continent shows up on one screen while counting towards another, and its
+    gems land in a pack the screen it appears on does not sell. A research
+    brief once told agents to file the Caucasus as Asia while the table said
+    Middle East, and nothing caught it until a map check did.
+    """
+    import ast
+    src = io.open(os.path.join('tools', 'countries.py'), encoding='utf-8').read()
+    for node in ast.walk(ast.parse(src)):
+        if isinstance(node, ast.Assign) and any(
+                getattr(t, 'id', None) == 'COUNTRIES' for t in node.targets):
+            return {k: v[1] for k, v in ast.literal_eval(node.value).items()}
+    return {}
+
+
+COUNTRY_TABLE = _country_table()
+
+
 def load_all_places():
     """Every (country, place) already claimed, across every source file.
 
@@ -119,6 +141,14 @@ def check(path, all_places):
             problems.append('%s: a pack on a free entry' % where)
         if r.get('pack') and r['pack'] not in PACKS:
             problems.append('%s: pack %r' % (where, r.get('pack')))
+        table = COUNTRY_TABLE.get(r.get('country'))
+        if table is None and COUNTRY_TABLE:
+            problems.append('%s: %s is not in the country table in tools/countries.py'
+                            % (where, r.get('country')))
+        elif table and r.get('continent') != table:
+            problems.append('%s: %s filed under %r, but the country table files it '
+                            'under %r - the continent screens are built from that table'
+                            % (where, r.get('country'), r.get('continent'), table))
         want = PACK_FOR.get(r.get('continent'))
         if r.get('hidden_gem') and want and r.get('pack') != want:
             problems.append('%s: gem in %s belongs in pack %r, not %r'
