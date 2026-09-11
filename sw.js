@@ -4,7 +4,7 @@
  * from cache (and works with no signal), while a fresh copy is fetched in the
  * background and used on the next launch. Bump CACHE_VERSION when you deploy.
  */
-const CACHE_VERSION = 'wayfinder-v44';
+const CACHE_VERSION = 'wayfinder-v45';
 const SHELL = [
   './',
   './index.html',
@@ -29,11 +29,11 @@ const SHELL = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      // addAll fails the whole install if any single file 404s, so add individually.
       // A new Cache Storage name does not invalidate the browser's HTTP cache.
       // Reusing that cache here can install old scripts beside a new HTML shell.
-      .then(cache => Promise.all(SHELL.map(url =>
-        cache.add(new Request(url, { cache: 'reload' })).catch(() => {}))))
+      // Keep the previous worker active unless the complete new shell downloads.
+      .then(cache => cache.addAll(SHELL.map(url =>
+        new Request(url, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });
@@ -41,7 +41,8 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => /^wayfinder-v\d+$/.test(k)
+        && k !== CACHE_VERSION).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -60,8 +61,11 @@ self.addEventListener('fetch', event => {
       // Revalidate with the server even while the HTTP max-age is still fresh.
       // Cache Storage supplies the immediate/offline response below.
       const network = fetch(request, { cache: 'no-cache' })
-        .then(response => {
-          if (response && response.ok) cache.put(request, response.clone());
+        .then(async response => {
+          if (response && response.ok) {
+            try { await cache.put(request, response.clone()); }
+            catch { /* A full cache must not discard a usable network response. */ }
+          }
           return response;
         })
         .catch(() => null);
@@ -69,8 +73,9 @@ self.addEventListener('fetch', event => {
       // Serve cache immediately if we have it; otherwise wait for the network.
       if (cached) { event.waitUntil(network); return cached; }
       const fresh = await network;
-      return fresh || cache.match('./index.html') ||
-             new Response('Offline', { status: 503, statusText: 'Offline' });
+      if (fresh) return fresh;
+      const fallback = request.mode === 'navigate' ? await cache.match('./index.html') : null;
+      return fallback || new Response('Offline', { status: 503, statusText: 'Offline' });
     })
   );
 });
