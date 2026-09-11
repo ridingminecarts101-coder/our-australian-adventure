@@ -38,6 +38,7 @@ const CONTINENT_BOXES = {
                                 // because North America is tested before South
                                 // America and Trinidad sits on the latter's shelf
     [11.9, 13.0, -70.3, -68.1], // Aruba, Curacao, Bonaire
+    [32.0, 32.6, -65.1, -64.5], // Bermuda, alone in the Atlantic east of the US box
   ],
   'South America': [
     [0, 12, -78, -60],      // Colombia / Venezuela
@@ -46,13 +47,21 @@ const CONTINENT_BOXES = {
     [-30, -20, -70, -40],   // tapering
     [-40, -30, -73, -50],
     [-55, -40, -75, -63],   // Patagonia to the tip
+    [1.1, 8.6, -61.4, -51.5],   // Guyana, Suriname and French Guiana - north of the
+                                // Amazon box and east of the Colombia one, so
+                                // neither reached them
+    [-53.0, -50.9, -61.5, -57.5], // Falkland Islands, east of Patagonia
   ],
   'Europe': [
     [36, 48, -10, 30],      // Iberia through the Balkans
     [43, 55, -5, 30],       // France to Poland
     [50, 60, 5, 32],
     [55, 71, 5, 32],        // Scandinavia
-    [40, 60, 28, 45],       // eastern Europe
+    [44, 60, 28, 45],       // eastern Europe, north of the Caucasus
+    [40, 44, 28, 40],       // the Black Sea's western shore. Stops at 40E so that
+                            // Georgia and Armenia, filed as Asia, fall through -
+                            // Europe is tried before Asia, so a wider box here
+                            // claimed them
     [50, 59, -11, 2],       // Britain & Ireland
     [63, 67, -25, -13],     // Iceland
     // Mediterranean islands sit below the 36-degree line the mainland
@@ -60,14 +69,21 @@ const CONTINENT_BOXES = {
     // reach across to the North African coast.
     [35.7, 36.2, 14.0, 14.7],   // Malta and Gozo
     [34.7, 35.8, 23.3, 26.5],   // Crete
+    [34.5, 35.8, 32.2, 34.7],   // Cyprus - east of Crete, west of the Levant box
   ],
   // Its own region rather than a slice of Asia. Geographically this is Western
   // Asia; every travel guide splits it out, and so does this app.
   'Middle East': [
-    [12, 32, 34, 60],       // Arabian Peninsula
+    [18, 32, 36, 60],       // Arabian Peninsula, north of the Red Sea's narrows
+    [12, 18, 42.5, 60],     // Yemen and the south. Split at 42.5E because one box
+                            // from 34E reached across the water and claimed
+                            // Eritrea, and the Middle East is tried before Africa
     [29, 38, 34, 49],       // Levant and Iraq
-    [36, 42, 30, 45],       // Anatolia - the European side falls to Europe above
-    [25, 40, 44, 63],       // Iran
+    [36, 42, 30, 43.4],     // Anatolia - the European side falls to Europe above,
+                            // and the east stops short of Armenia
+    [25, 40, 44, 54],       // Iran, the west and the Caspian coast
+    [25, 37.6, 54, 63.4],   // Iran, the east - held below 37.6N so Turkmenistan,
+                            // filed as Asia, is not claimed across the border
   ],
   'Africa': [
     [20, 37, -17, 12],      // Maghreb
@@ -89,6 +105,8 @@ const CONTINENT_BOXES = {
     [-12.6, -11.0, 43.0, 44.6], // Comoros
     [-20.9, -19.9, 57.2, 57.9], // Mauritius
     [-5.0, -4.0, 55.0, 56.0],   // Seychelles
+    [-1.8, 11.5, 41.0, 51.5],   // Somalia, the eastern Horn beyond the Sudan box.
+                                // Ends at 11.5N, below Yemen's box at 12N
   ],
   'Asia': [
     [40, 75, 40, 100],      // western Siberia

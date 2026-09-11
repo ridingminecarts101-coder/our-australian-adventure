@@ -902,7 +902,13 @@ async function whereAmI(lat, lon) {
     if (!res.ok) return fallback;
     const j = await res.json();
     return {
-      continent: continentAt(lat, lon),
+      // The country the geocoder names decides the continent, not the map's
+      // tap zones. The zones are crude rectangles tried in a fixed order, and
+      // Georgia and Armenia sat inside the Europe box, which is tried before
+      // Asia - so Near me opened the wrong continent even with a perfect fix
+      // and a working geocoder. The zones are now only the offline fallback.
+      continent: (j.countryCode && typeof COUNTRY_CONT !== 'undefined'
+                  && COUNTRY_CONT[j.countryCode]) || continentAt(lat, lon),
       country: j.countryCode || null,
       region: j.principalSubdivision || null,
       locality: j.locality || j.city || null,
