@@ -59,7 +59,7 @@ countries it does not yet cover.
 
 | Field | Rule |
 |---|---|
-| `continent` | exactly one of: `Oceania` `Europe` `North America` `South America` `Asia` `Middle East` `Africa` |
+| `continent` | exactly one of: `Oceania` `Europe` `North America` `South America` `Asia` `Middle East` `Africa` — and it **must be the continent `tools/countries.py` gives that country**, which is what the app builds every continent screen from. Do not use your own geography. Georgia, Armenia, Azerbaijan, Cyprus and Türkiye are all `Middle East` there; the Caribbean is `North America`. If a prompt disagrees with that file, the file wins |
 | `country` | 2-letter ISO code, uppercase |
 | `admin1` | the state/province/region as that country names it. Be consistent — one spelling per region, for the whole file |
 | `region` | the city or district. May equal `admin1` for small countries |
