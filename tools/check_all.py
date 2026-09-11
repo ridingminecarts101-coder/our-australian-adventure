@@ -24,8 +24,20 @@ CHECKS = [
     ('geography',      'check_geography.py', 'countries, continents and the map'),
     ('code',           'check_code.py',      'dead functions, orphan files, unheard handlers'),
     ('content',        'check_quality.py',   'thin regions, narrow categories, tall claims'),
+    ('research refs',  'check_research_sources.py', 'row sources and hidden-gem rationale'),
+    ('coverage math',  'test_content_inventory.py', 'exact one-in-five planning boundaries'),
+    ('country moves',  'test_content_migrations.py', 'country corrections preserve saved IDs'),
     ('sql',            'check_sql.py',       'unbalanced quotes, policies on missing tables'),
+    ('account client', 'check_account_groups.py', 'recoverable identity and consent-safe client contract'),
+    ('auth upgrade',    'test_auth_upgrade.js', 'verified-email sequencing and safe schema fallback'),
+    ('sync races',     'test_sync_races.js', 'deferred responses cannot cross edits or accounts'),
+    ('advisories',     'test_advisory_behavior.js', 'avoid exclusions and explicit detail warnings'),
+    ('security rules', 'check_security_migration.py', 'static preservation and RLS migration contract'),
+    ('postgres RLS',   'test_personal_ownership.mjs', 'ownership, outsiders, consent, leave and deletion in PGlite'),
+    ('community RLS',  'test_community_security.mjs', 'post authorship, votes, reports and moderation in PGlite'),
     ('release tools',  'test_play.py',       'the Play commands, against a fake API'),
+    ('billing',        'check_billing.py',   'prices, account identity and native release guards'),
+    ('bundle access',  'test_bundle_access.js', 'Antarctica exclusivity and locked-content privacy'),
     ('ios vs android', 'check_parity.py',    'do the two apps agree, prices included'),
 ]
 
@@ -36,7 +48,8 @@ def main():
         print('\n' + '-' * 68)
         print('  %s - %s' % (name, blurb))
         print('-' * 68)
-        r = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', script)], cwd=ROOT)
+        runtime = 'node' if script.endswith(('.mjs', '.js')) else sys.executable
+        r = subprocess.run([runtime, os.path.join(ROOT, 'tools', script)], cwd=ROOT)
         results.append((name, r.returncode))
 
     print('\n' + '=' * 68)

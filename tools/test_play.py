@@ -75,6 +75,8 @@ spec = importlib.util.spec_from_file_location('play', os.path.join(ROOT, 'tools'
 play = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(play)
 play.service = lambda: Fake(STATE)
+guard_calls = []
+play.store_release_guard = lambda: guard_calls.append('checked')
 
 # upload refuses without a bundle, which is correct behaviour but makes this
 # untestable on a machine that has not built one. Skip rather than fail: this
@@ -115,6 +117,7 @@ print('  status abandons its edit  OK')
 
 # ── upload --yes: right track, right status, notes attached ──────────
 c = run(['upload', '--track', 'alpha', '--notes', 'Closed test build.', '--yes'], expect_commit=True)
+assert guard_calls == ['checked'], 'a real upload must run the store-release guard'
 up = [kw for n, kw in c if n == 'tracks.update'][0]
 rel = up['body']['releases'][0]
 assert up['track'] == 'alpha', up['track']
@@ -125,6 +128,7 @@ print('  upload to a closed track  OK')
 
 # ── percentages are sent as a fraction, not a percentage ─────────────
 c = run(['upload', '--track', 'production', '--percent', '10', '--yes'], expect_commit=True)
+assert guard_calls == ['checked', 'checked'], 'every real upload must run the store-release guard'
 rel = [kw for n, kw in c if n == 'tracks.update'][0]['body']['releases'][0]
 assert rel['status'] == 'inProgress', rel
 assert abs(rel['userFraction'] - 0.10) < 1e-9, rel['userFraction']

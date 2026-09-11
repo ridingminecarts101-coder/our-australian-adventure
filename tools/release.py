@@ -14,6 +14,7 @@ build gets rejected at 11pm for reusing a versionCode. The rules Play enforces:
     python tools/release.py build                  # bump code, keep name
     python tools/release.py build --version 1.1.0  # bump both
     python tools/release.py build --no-bump        # rebuild the same version
+    python tools/release.py build --store-release  # require sale prerequisites
 """
 import argparse
 import io
@@ -66,6 +67,14 @@ def cmd_show(_):
 
 
 def cmd_build(args):
+    # Run before changing either platform's version. Ordinary builds validate
+    # billing behaviour; a store candidate also requires real public SDK keys
+    # while the ordinary guard proves developer preview is local-browser only.
+    guard = [sys.executable, os.path.join(ROOT, 'tools', 'check_billing.py')]
+    if args.store_release:
+        guard.extend(['--store-release', '--platform', 'android'])
+    run(guard)
+
     s, code, name = read_gradle()
     new_code = code if args.no_bump else code + 1
     new_name = args.version or name
@@ -130,6 +139,8 @@ def main():
     b.add_argument('--no-bump', action='store_true',
                    help='rebuild without changing anything; Play will reject '
                         'the upload as a duplicate versionCode')
+    b.add_argument('--store-release', action='store_true',
+                   help='require configured billing and sale-safe preview guards before building')
     args = p.parse_args()
     {'show': cmd_show, 'build': cmd_build}[args.cmd](args)
 

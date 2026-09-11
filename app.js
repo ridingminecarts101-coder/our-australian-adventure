@@ -12,6 +12,7 @@
 // ── Constants ────────────────────────────────────────────────────────
 const LS = {
   progress: 'oaa.progress.v1',
+  personalProgress: 'oaa.personal-progress.v1',
   outbox:   'oaa.outbox.v1',
   who:      'oaa.who.v1',
   adv:      'oaa.adventures.v1',
@@ -20,6 +21,9 @@ const LS = {
   notify:   'oaa.notify.v1',
   notifyLast: 'oaa.notifylast.v1',
   tripOutbox: 'oaa.tripoutbox.v1',
+  view:     'oaa.view.v1',
+  owner:    'oaa.local-owner.v1',
+  accountUpgrade: 'oaa.account-upgrade.v1',
 };
 
 const STATE_NAMES = {
@@ -42,11 +46,20 @@ const DIFF_LABEL = ['', 'Very easy', 'Easy', 'Moderate', 'Hard', 'Serious undert
 let sb = null;                 // supabase client
 let ADV = [];                  // all 500 adventures
 let progress = new Map();      // adventure_id -> row
+let personalProgress = new Map(); // canonical rows used when editing a group aggregate
+let personalCacheReady = false;
 let who = localStorage.getItem(LS.who) || null;
 let online = navigator.onLine;
 let realtimeOk = false;
 let realtimeStatus = 'not started';
 let openId = null;
+let accountUser = null;
+let accountIsAnonymous = false;
+let passwordRecoveryMode = false;
+let accountUpgradeBusy = false;
+let authGeneration = 0;
+let signOutHandling = false;
+let accountDeletionInProgress = false;
 
 const filters = { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 4, dog: 'All' };
 
@@ -61,6 +74,13 @@ const DOG_LABEL = {
 
 const $  = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+let queueRevisionCounter = 0;
+
+function nextQueueRevision() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  queueRevisionCounter++;
+  return `${Date.now().toString(36)}-${queueRevisionCounter}-${Math.random().toString(36).slice(2)}`;
+}
 
 // ── Small helpers ────────────────────────────────────────────────────
 function readLS(key, fallback) {
@@ -161,9 +181,48 @@ async function loadAdventures() {
 
 function loadLocalProgress() {
   progress = new Map(readLS(LS.progress, []).map(r => [r.adventure_id, r]));
+  const cachedPersonal = readLS(LS.personalProgress, null);
+  if (Array.isArray(cachedPersonal)) {
+    personalProgress = new Map(cachedPersonal.map(r => [r.adventure_id, r]));
+    personalCacheReady = true;
+  } else if (progressView !== 'group') {
+    personalProgress = new Map(progress);
+    personalCacheReady = true;
+  } else {
+    personalProgress = new Map();
+    personalCacheReady = false;
+  }
 }
 function saveLocalProgress() {
   writeLS(LS.progress, [...progress.values()]);
+  if (personalCacheReady) writeLS(LS.personalProgress, [...personalProgress.values()]);
+}
+
+async function bindLocalDataToUser() {
+  if (!userId) return;
+  const previous = localStorage.getItem(LS.owner);
+  const privateKeys = [LS.progress, LS.personalProgress, LS.outbox, LS.trips,
+    LS.tripOutbox, LS.group, LS.who, LS.view, LS.accountUpgrade];
+  if (previous && previous !== userId) {
+    for (const key of privateKeys) localStorage.removeItem(key);
+    progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
+    trips = []; who = null; activeGroupId = null; progressView = 'personal';
+    try {
+      const db = await idb();
+      await new Promise((resolve, reject) => {
+        const req = db.transaction('queue', 'readwrite').objectStore('queue').clear();
+        req.onsuccess = () => resolve(); req.onerror = () => reject(req.error);
+      });
+    } catch { /* no queued photos */ }
+  } else {
+    const outbox = readLS(LS.outbox, []).map(x => ({ ...x, owner_id: x.owner_id || userId,
+      queue_rev: x.queue_rev || nextQueueRevision() }));
+    const tripOutbox = readLS(LS.tripOutbox, []).map(x => ({ ...x, owner_id: x.owner_id || userId,
+      queue_rev: x.queue_rev || nextQueueRevision() }));
+    writeLS(LS.outbox, outbox); writeLS(LS.tripOutbox, tripOutbox);
+  }
+  localStorage.setItem(LS.owner, userId);
+  loadLocalProgress(); loadLocalTrips();
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -195,9 +254,21 @@ function cleanPatch(patch) {
 }
 
 function applyPatch(id, patch) {
+  if (accountDeletionInProgress) return false;
+  if (progressView === 'group' && !personalCacheReady) {
+    toast('Reconnect before editing your personal progress from the group view');
+    return false;
+  }
   patch = cleanPatch(patch);
-  const merged = { ...row(id), ...patch, adventure_id: id, updated_by: who, updated_at: new Date().toISOString() };
+  const base = progressView === 'group'
+    ? (personalProgress.get(id) || { adventure_id: id, completed: false, shortlisted: false, rating: null, memory: null })
+    : row(id);
+  const merged = { ...base, ...patch, adventure_id: id, owner_id: userId,
+    queue_rev: nextQueueRevision(),
+    updated_by: who, updated_at: new Date().toISOString() };
   progress.set(id, merged);
+  personalProgress.set(id, merged);
+  personalCacheReady = true;
   saveLocalProgress();
 
   const outbox = readLS(LS.outbox, []);
@@ -211,77 +282,158 @@ function applyPatch(id, patch) {
 }
 
 async function flushOutbox() {
-  if (!sb || !online) return refreshSyncBar();
+  if (!sb || !online || accountDeletionInProgress) return refreshSyncBar();
+  if (flushOutbox.busy) { flushOutbox.requested = true; return; }
+  flushOutbox.busy = true;
+  const runOwner = userId, runGeneration = authGeneration;
   const outbox = readLS(LS.outbox, []);
-  if (!outbox.length) return refreshSyncBar();
+  if (!outbox.length) { flushOutbox.busy = false; return refreshSyncBar(); }
 
   refreshSyncBar();
-  const stillPending = [];
-  for (const item of outbox) {
-    const payload = {
-      adventure_id: item.adventure_id,
-      completed:    !!item.completed,
-      completed_at: item.completed ? (item.completed_at || new Date().toISOString()) : null,
-      completed_by: item.completed ? (item.completed_by || who) : null,
-      completed_by_id: item.completed ? (item.completed_by_id || userId) : null,
-      shortlisted:  !!item.shortlisted,
-      rating:       item.rating ?? null,
-      memory:       item.memory ?? null,
-      updated_by:   item.updated_by || who,
-      ...ownership(),
-    };
-    const { error } = await sb.from('progress')
-      // (adventure_id, scope_id) is the unique pair once the cutover has run;
-      // before that the table is keyed on adventure_id alone. Try the new
-      // shape and fall back, so the app works either side of the migration.
-      .upsert(payload, { onConflict: 'adventure_id,scope_id' });
-    if (error && /no unique|constraint matching|scope_id/i.test(error.message || '')) {
-      const retry = await sb.from('progress').upsert(payload, { onConflict: 'adventure_id' });
-      if (!retry.error) { continue; }
-    }
-    if (error) {
-      // A row the server will never accept - a constraint it violates, say -
-      // would otherwise be retried on every flush for the life of the install,
-      // with the sync bar permanently claiming changes are waiting. Count the
-      // attempts and give up out loud rather than pretending forever.
-      item.tries = (item.tries || 0) + 1;
-      console.warn('sync failed', item.adventure_id, error.message, `(attempt ${item.tries})`);
-      if (item.tries < OUTBOX_MAX_TRIES) {
-        stillPending.push(item);
-      } else {
-        console.error('giving up on', item.adventure_id, error.message);
-        toast('One change could not be saved to the server');
+  try {
+    for (const item of outbox) {
+      if (runGeneration !== authGeneration || runOwner !== userId || item.owner_id !== runOwner) break;
+      const payload = {
+        adventure_id: item.adventure_id,
+        completed:    !!item.completed,
+        completed_at: item.completed ? (item.completed_at || new Date().toISOString()) : null,
+        completed_by: item.completed ? who : null,
+        completed_by_id: item.completed ? runOwner : null,
+        shortlisted:  !!item.shortlisted,
+        rating:       item.rating ?? null,
+        memory:       item.memory ?? null,
+        updated_by:   item.updated_by || who,
+        user_id: runOwner, group_id: null,
+      };
+      let { error } = await sb.from('progress')
+        .upsert(payload, { onConflict: 'adventure_id,scope_id' });
+      if (runGeneration !== authGeneration || runOwner !== userId) break;
+      if (error && /no unique|constraint matching|scope_id/i.test(error.message || '')) {
+        ({ error } = await sb.from('progress').upsert(payload, { onConflict: 'adventure_id' }));
+        if (runGeneration !== authGeneration || runOwner !== userId) break;
       }
+
+      // Mutate only the exact version sent. A newer edit with the same
+      // adventure id may have arrived while the request was in flight.
+      const current = readLS(LS.outbox, []);
+      const index = current.findIndex(x => x.adventure_id === item.adventure_id
+        && x.owner_id === item.owner_id && x.queue_rev === item.queue_rev);
+      if (index < 0) continue;
+      if (!error) current.splice(index, 1);
+      else {
+        current[index].tries = (current[index].tries || 0) + 1;
+        console.warn('sync failed', item.adventure_id, error.message, `(attempt ${current[index].tries})`);
+        if (current[index].tries >= OUTBOX_MAX_TRIES) {
+          console.error('giving up on', item.adventure_id, error.message);
+          current.splice(index, 1);
+          toast('One change could not be saved to the server');
+        }
+      }
+      writeLS(LS.outbox, current);
+    }
+  } finally {
+    flushOutbox.busy = false;
+    refreshSyncBar();
+    if (flushOutbox.requested && runGeneration === authGeneration && runOwner === userId) {
+      flushOutbox.requested = false;
+      queueMicrotask(flushOutbox);
     }
   }
-  writeLS(LS.outbox, stillPending);
-  refreshSyncBar();
 }
 
 // ══════════════════════════════════════════════════════════════════════
 //  Reading from the server
 // ══════════════════════════════════════════════════════════════════════
+const PROGRESS_PAGE_SIZE = 500;
+
+async function fetchAllPersonalProgress(ownerId) {
+  const rows = [];
+  for (let from = 0; ; from += PROGRESS_PAGE_SIZE) {
+    const { data, error } = await sb.from('progress').select('*').eq('user_id', ownerId)
+      .order('id').range(from, from + PROGRESS_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < PROGRESS_PAGE_SIZE) return { data: rows, error: null };
+  }
+}
+
+async function fetchAllGroupCompletions(groupId) {
+  const rows = [];
+  for (let from = 0; ; from += PROGRESS_PAGE_SIZE) {
+    const { data, error } = await sb.rpc('group_completion_feed', { p_group_id: groupId })
+      .order('adventure_id').order('completed_by_id').range(from, from + PROGRESS_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < PROGRESS_PAGE_SIZE) return { data: rows, error: null };
+  }
+}
+
+function canonicalPersonalProgress(rows) {
+  const best = new Map();
+  for (const row of rows || []) {
+    const prior = best.get(row.adventure_id);
+    if (!prior) { best.set(row.adventure_id, row); continue; }
+    const rowIsPersonal = row.group_id == null, priorIsPersonal = prior.group_id == null;
+    if (rowIsPersonal !== priorIsPersonal) {
+      if (rowIsPersonal) best.set(row.adventure_id, row);
+      continue;
+    }
+    const rowKey = `${row.updated_at || ''}|${row.id || ''}`;
+    const priorKey = `${prior.updated_at || ''}|${prior.id || ''}`;
+    if (rowKey > priorKey) best.set(row.adventure_id, row);
+  }
+  return best;
+}
+
 async function pullProgress() {
   if (!sb || !online) return;
-  const { data, error } = await sb.from('progress').select('*');
+  const runOwner = userId, runGeneration = authGeneration;
+  const runView = progressView, runGroup = activeGroupId;
+  const stillCurrent = () => runGeneration === authGeneration && runOwner === userId
+    && runView === progressView && runGroup === activeGroupId;
+  let data, error;
+  if (runView === 'group' && runGroup) {
+    ({ data, error } = await fetchAllGroupCompletions(runGroup));
+    if (!stillCurrent()) return;
+    const own = await fetchAllPersonalProgress(runOwner);
+    if (!stillCurrent()) return;
+    if (!own.error) {
+      const ownRows = canonicalPersonalProgress(own.data);
+      for (const pending of readLS(LS.outbox, [])) {
+        if (pending.owner_id === runOwner) ownRows.set(pending.adventure_id, pending);
+      }
+      personalProgress = ownRows;
+      personalCacheReady = true;
+    }
+  } else {
+    ({ data, error } = await fetchAllPersonalProgress(runOwner));
+  }
+  if (!stillCurrent()) return;
   if (error) { console.warn('pull failed', error.message); return; }
+  if (runView === 'personal') data = [...canonicalPersonalProgress(data).values()];
 
   // Anything sitting in the outbox is newer than the server — don't stomp it.
-  const pendingIds = new Set(readLS(LS.outbox, []).map(o => o.adventure_id));
-  // You can hold a personal row and a group row for the same adventure - one
-  // from before you joined, one from after. The group's is the shared truth,
-  // so it wins; otherwise the list would flicker between the two.
+  const pendingRows = readLS(LS.outbox, []).filter(o => o.owner_id === runOwner);
+  const pendingIds = new Set(pendingRows.map(o => o.adventure_id));
+  // A group can contain one canonical row per person for the same adventure.
+  // Completed wins, then the latest edit supplies the attribution/details.
   const best = new Map();
   for (const r of data) {
     if (pendingIds.has(r.adventure_id)) continue;
     const prev = best.get(r.adventure_id);
     if (!prev) { best.set(r.adventure_id, r); continue; }
-    const mine = r.group_id && r.group_id === activeGroupId;
-    const theirs = prev.group_id && prev.group_id === activeGroupId;
-    if (mine && !theirs) best.set(r.adventure_id, r);
-    else if (mine === theirs && (r.updated_at || '') > (prev.updated_at || '')) best.set(r.adventure_id, r);
+    if (r.completed && !prev.completed) best.set(r.adventure_id, r);
+    else if (!!r.completed === !!prev.completed && (r.updated_at || '') > (prev.updated_at || '')) best.set(r.adventure_id, r);
   }
-  for (const [id, r] of best) progress.set(id, r);
+  for (const item of pendingRows) best.set(item.adventure_id, item);
+  if (!stillCurrent()) return;
+  progress = best;
+  if (progressView === 'personal') {
+    personalProgress = new Map(best);
+    personalCacheReady = true;
+  }
   saveLocalProgress();
   renderAll();
 }
@@ -302,7 +454,7 @@ async function resubscribeRealtime() {
   }
 }
 
-const RT_CHANNELS = ['progress-sync', 'member-sync', 'photo-sync', 'trip-sync'];
+const RT_CHANNELS = ['progress-sync', 'group-progress-sync', 'member-sync', 'photo-sync', 'trip-sync'];
 
 function subscribeRealtime() {
   if (!sb) return;
@@ -321,6 +473,9 @@ function subscribeRealtime() {
   sb.channel('progress-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'progress' }, payload => {
       const r = payload.new;
+      if (progressView === 'group') { pullProgress(); return; }
+      const changed = payload.new || payload.old;
+      if (changed && changed.user_id !== userId) return;
       if (payload.eventType === 'DELETE') progress.delete(payload.old.adventure_id);
       else if (r) {
         // Ignore echoes of our own unsynced edits.
@@ -342,6 +497,12 @@ function subscribeRealtime() {
       refreshSyncBar();
       renderMe();
     });
+
+  sb.channel('group-progress-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'group_progress' }, () => {
+      if (progressView === 'group') pullProgress();
+    })
+    .subscribe();
 
   // Someone renaming themselves has to reach the other phones straight away,
   // or "ticked by" goes stale again in a different way.
@@ -570,6 +731,14 @@ async function idbDelete(id) {
   } catch { /* nothing to do */ }
 }
 
+async function idbClear() {
+  const db = await idb();
+  await new Promise((resolve, reject) => {
+    const req = db.transaction('queue', 'readwrite').objectStore('queue').clear();
+    req.onsuccess = () => resolve(); req.onerror = () => reject(req.error);
+  });
+}
+
 // ── EXIF: the camera's own timestamp ─────────────────────────────────
 // The file's lastModified date is the filesystem's, and it changes whenever
 // a photo is copied or synced. EXIF DateTimeOriginal is what the camera
@@ -673,6 +842,7 @@ async function downscale(file) {
 
 // ── Adding photos ────────────────────────────────────────────────────
 async function addPhotos(adventureId, files) {
+  if (accountDeletionInProgress) return;
   const list = [...files].filter(f => f.type.startsWith('image/'));
   if (!list.length) { toast('No images in that selection'); return; }
 
@@ -697,6 +867,7 @@ async function addPhotos(adventureId, files) {
         taken_at: takenAt.toISOString(),
         taken_at_source: source,
         uploaded_by: who,
+        owner_id: userId,
       };
       pendingPhotos.push(item);
       await idbPut(item);
@@ -721,16 +892,18 @@ async function addPhotos(adventureId, files) {
  */
 async function migrateLegacyPhotos() {
   if (!sb || !online || !userId) return;
-  const scope = activeGroupId || userId;
-  const legacy = photos.filter(p => p.user_id === userId && /^\d+\//.test(p.storage_path || ''));
+  const scope = userId, runGeneration = authGeneration;
+  const legacy = photos.filter(p => p.user_id === scope && /^\d+\//.test(p.storage_path || ''));
   if (!legacy.length) return;
 
   let moved = 0;
   for (const p of legacy) {
     const to = `${scope}/${p.storage_path}`;
     const { error } = await sb.storage.from(BUCKET).move(p.storage_path, to);
+    if (runGeneration !== authGeneration || scope !== userId) return;
     if (error) { console.warn('photo move', error.message); continue; }
     const upd = await sb.from('photos').update({ storage_path: to }).eq('id', p.id);
+    if (runGeneration !== authGeneration || scope !== userId) return;
     if (upd.error) { console.warn('photo path', upd.error.message); continue; }
     signedUrls.delete(p.storage_path);
     p.storage_path = to;
@@ -740,21 +913,24 @@ async function migrateLegacyPhotos() {
 }
 
 async function flushPhotoQueue() {
-  if (!sb || !online || flushPhotoQueue.busy) { renderPhotoStatus(); return; }
+  if (!sb || !online || accountDeletionInProgress) { renderPhotoStatus(); return; }
+  if (flushPhotoQueue.busy) { flushPhotoQueue.requested = true; renderPhotoStatus(); return; }
   if (!pendingPhotos.length) { renderPhotoStatus(); return; }
   flushPhotoQueue.busy = true;
+  const runOwner = userId, runGeneration = authGeneration;
 
-  for (const item of [...pendingPhotos]) {
-    try {
+  try {
+    for (const item of [...pendingPhotos]) {
+      if (runGeneration !== authGeneration || runOwner !== userId || item.owner_id !== runOwner) break;
+      try {
       // <scope>/<adventure>/<id>.jpg — the first segment is what the storage
       // policy checks, so a stranger cannot read someone else's memories by
       // guessing a path. Older objects have no prefix; migrateLegacyPhotos
       // moves them across once, in the background.
-      const scope = activeGroupId || userId;
-      const path = scope ? `${scope}/${item.adventure_id}/${item.id}.jpg`
-                         : `${item.adventure_id}/${item.id}.jpg`;
+      const path = `${runOwner}/${item.adventure_id}/${item.id}.jpg`;
       const up = await sb.storage.from(BUCKET)
         .upload(path, item.blob, { contentType: 'image/jpeg', upsert: true });
+      if (runGeneration !== authGeneration || runOwner !== userId) break;
       if (up.error) throw up.error;
 
       const ins = await sb.from('photos').insert({
@@ -764,26 +940,36 @@ async function flushPhotoQueue() {
         taken_at_source: item.taken_at_source,
         width: item.width, height: item.height, bytes: item.bytes,
         uploaded_by: item.uploaded_by || who,
-        ...ownership(),
+        user_id: runOwner, group_id: null,
       }).select().single();
+      if (runGeneration !== authGeneration || runOwner !== userId) break;
       if (ins.error) throw ins.error;
 
       photos.push(ins.data);
       pendingPhotos = pendingPhotos.filter(p => p.id !== item.id);
       await idbDelete(item.id);
+      if (runGeneration !== authGeneration || runOwner !== userId) break;
       renderAll();
-    } catch (err) {
-      console.warn('upload failed, will retry', err.message || err);
-      break;                                    // stop on first failure; try again later
+      } catch (err) {
+        console.warn('upload failed, will retry', err.message || err);
+        break;                                  // stop on first failure; try again later
+      }
+    }
+  } finally {
+    flushPhotoQueue.busy = false;
+    renderPhotoStatus();
+    if (flushPhotoQueue.requested && runGeneration === authGeneration && runOwner === userId) {
+      flushPhotoQueue.requested = false;
+      queueMicrotask(flushPhotoQueue);
     }
   }
-  flushPhotoQueue.busy = false;
-  renderPhotoStatus();
 }
 
 async function pullPhotos() {
   if (!sb || !online) return;
+  const runOwner = userId, runGeneration = authGeneration;
   const { data, error } = await sb.from('photos').select('*').order('taken_at', { ascending: false });
+  if (runGeneration !== authGeneration || runOwner !== userId) return;
   if (error) { console.warn('photo pull failed', error.message); return; }
   photos = data || [];
 }
@@ -1168,6 +1354,15 @@ async function showNotification(title, body, tag) {
   try { new Notification(title, opts); return true; } catch { return false; }
 }
 
+/* Automatic discovery must never suggest a destination whose saved advisory is
+ * "do not travel". Those adventures stay in the catalogue for history and
+ * explicit browsing, and "take care" destinations remain eligible.
+ */
+function automaticDiscoveryAllowed(a) {
+  const adv = a && advisoryFor(a.country);
+  return !adv || adv.level !== 'avoid';
+}
+
 // The real nudge can be months away, so make it possible to see one now.
 async function previewReminder() {
   if (!notificationsSupported() || await notificationPermission() !== 'granted') {
@@ -1176,8 +1371,10 @@ async function previewReminder() {
   // The sample used to be drawn from hidden gems, which put paid text into a
   // notification. Anything unlocked and in season makes a better example
   // anyway, because it shows what a real one will look like.
-  const pool = ADV.filter(a => row(a.id).shortlisted && !isDone(a.id) && !isLocked(a));
-  const sample = ADV.filter(a => !isLocked(a) && inSeason(a.season));
+  const pool = ADV.filter(a => automaticDiscoveryAllowed(a) &&
+    row(a.id).shortlisted && !isDone(a.id) && !isLocked(a));
+  const sample = ADV.filter(a => automaticDiscoveryAllowed(a) &&
+    !isLocked(a) && inSeason(a.season));
   const from = pool.length ? pool : sample;
   const pick = from[Math.floor(Math.random() * from.length)];
   if (!pick) return toast('Nothing to preview');
@@ -1242,7 +1439,7 @@ async function seasonalNudge() {
 
   // Locked gems are excluded: a notification is no place to put paid text,
   // and it would be a strange thing to be nudged about.
-  const due = ADV.filter(a =>
+  const due = ADV.filter(a => automaticDiscoveryAllowed(a) &&
     row(a.id).shortlisted && !isDone(a.id) && !isLocked(a) && inSeason(a.season));
   if (!due.length) return;
 
@@ -1264,6 +1461,8 @@ let myGroups = [];             // groups this user belongs to
 let activeGroupId = null;      // the group new rows are written into
 let members = new Map();       // user_id -> display name, for everyone in the group
 let pushedName = null;         // the display name last written to the server
+let groupSchemaReady = true;
+let progressView = localStorage.getItem(LS.view) === 'group' ? 'group' : 'personal';
 
 /* Names used to be frozen into completed_by at the moment of ticking, so
  * renaming yourself never changed anything you had already done, and a new
@@ -1275,22 +1474,6 @@ function nameOf(id, fallback) {
   if (id && members.has(id)) return members.get(id);
   if (id && id === userId) return who || 'You';
   return fallback || 'Someone';
-}
-
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // no I/O/0/1
-
-function makeJoinCode() {
-  let out = '';
-  const buf = new Uint8Array(6);
-  (crypto.getRandomValues ? crypto : { getRandomValues: a => a.forEach((_, i) => a[i] = Math.random() * 256) })
-    .getRandomValues(buf);
-  for (const b of buf) out += CODE_ALPHABET[b % CODE_ALPHABET.length];
-  return out;
-}
-
-// Stamped onto every row we write, so RLS can decide who may see it.
-function ownership() {
-  return { user_id: userId, group_id: activeGroupId };
 }
 
 /* Ask for a name, but only when it will actually be seen.
@@ -1323,19 +1506,39 @@ async function loadGroups() {
   if (!sb || !online || !userId) return;
   const { data, error } = await sb
     .from('group_members')
-    .select('group_id, display_name, groups(id, name, join_code)')
+    .select('group_id, display_name, share_completions, groups(id, name, join_code)')
     .eq('user_id', userId);
   if (error) {
     // The tables may simply not exist yet - that is a valid state, not a fault.
     if (!/does not exist|schema cache/i.test(error.message)) console.warn('groups', error.message);
+    groupSchemaReady = false;
     myGroups = [];
+    activeGroupId = null;
+    members = new Map();
+    localStorage.removeItem(LS.group);
+    if (progressView === 'group') {
+      progressView = 'personal';
+      localStorage.setItem(LS.view, progressView);
+      // Never leave a cached group aggregate mounted as personal data. The
+      // next pull refreshes this from the owner rows; until then show only the
+      // separate personal cache (or nothing if this older install lacks one).
+      progress = personalCacheReady ? new Map(personalProgress) : new Map();
+      saveLocalProgress();
+    }
     return;
   }
-  myGroups = (data || []).map(r => r.groups).filter(Boolean);
+  groupSchemaReady = true;
+  myGroups = (data || []).map(r => r.groups
+    ? { ...r.groups, share_completions: !!r.share_completions }
+    : null).filter(Boolean);
   const saved = localStorage.getItem(LS.group);
   activeGroupId = myGroups.some(g => g.id === saved) ? saved
                 : (myGroups[0] ? myGroups[0].id : null);
   if (activeGroupId) localStorage.setItem(LS.group, activeGroupId);
+  else if (progressView === 'group') {
+    progressView = 'personal';
+    localStorage.setItem(LS.view, progressView);
+  }
   await loadMembers();
 }
 
@@ -1386,75 +1589,77 @@ async function pushMyName() {
   members.set(userId, who);
 }
 
+function rpcRow(data) { return Array.isArray(data) ? data[0] : data; }
+
+async function setCompletionSharing(groupId, enabled) {
+  const { error } = await sb.rpc('set_group_completion_sharing', {
+    p_group_id: groupId, p_enabled: !!enabled,
+  });
+  if (error) { console.warn('completion sharing', error.message); return false; }
+  const group = myGroups.find(g => g.id === groupId);
+  if (group) group.share_completions = !!enabled;
+  return true;
+}
+
+async function setProgressView(view) {
+  const next = view === 'group' && activeGroupId ? 'group' : 'personal';
+  if (!online && next !== progressView) {
+    if (next !== 'personal' || !personalCacheReady) return toast('Reconnect to change progress view');
+    progressView = 'personal';
+    progress = new Map(personalProgress);
+    localStorage.setItem(LS.view, progressView);
+    saveLocalProgress();
+    renderAll();
+    return;
+  }
+  progressView = next;
+  localStorage.setItem(LS.view, progressView);
+  await pullProgress();
+  renderAll();
+}
+
 async function createGroup(name) {
   if (!sb || !userId) return toast('Not connected');
   if (!await requireName('You are about to share a list.')) return;
-  // join_code is unique in the database, so a collision is a hard failure
-  // rather than something to shrug at. Rare, but the fix is to try again with
-  // a different code rather than to tell somebody their group could not be
-  // made and leave them to guess why.
-  let code, data, error;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    code = makeJoinCode();
-    ({ data, error } = await sb.from('groups')
-      .insert({ name, join_code: code, created_by: userId }).select().single());
-    if (!error) break;
-    if (!/duplicate|unique/i.test(error.message || '')) break;
+  const sharePast = confirm('Share your past and future completion ticks with this group?\n\nNotes, ratings and shortlist stay private. Choose Cancel to join privately and share later. Your personal list stays yours either way.');
+  const result = await sb.rpc('create_group', { p_name: name, p_display_name: who });
+  const data = rpcRow(result.data);
+  if (result.error || !data) {
+    toast('Groups need the current database update'); console.warn(result.error); return;
   }
-  if (error) { toast('Could not create the group'); console.warn(error); return; }
-  const join = await sb.from('group_members')
-    .insert({ group_id: data.id, user_id: userId, display_name: who });
-  if (join.error) { toast('Group made, but joining it failed'); console.warn(join.error); return; }
-
-  activeGroupId = data.id;
+  activeGroupId = data.group_id;
   localStorage.setItem(LS.group, activeGroupId);
   await loadGroups();
-  // Everything already on this phone joins the group, otherwise the other
-  // person sees an empty list on day one.
-  await adoptExistingRowsIntoGroup();
+  if (sharePast) await setCompletionSharing(activeGroupId, true);
+  await setProgressView('group');
   renderMe();
-  toast(`Share the code ${code}`);
+  toast(`Share the code ${data.join_code}`);
 }
 
 async function joinGroup(code) {
   if (!sb || !userId) return toast('Not connected');
   if (!await requireName('You are about to join a shared list.')) return;
   const clean = code.trim().toUpperCase();
-  const { data, error } = await sb.from('groups')
-    .select('id, name').eq('join_code', clean).maybeSingle();
-  if (error || !data) { toast('No group with that code'); return; }
-
-  const join = await sb.from('group_members')
-    .insert({ group_id: data.id, user_id: userId, display_name: who });
-  if (join.error && !/duplicate|unique/i.test(join.error.message)) {
-    toast('Could not join'); console.warn(join.error); return;
-  }
-  activeGroupId = data.id;
+  if (!/^[A-Z0-9]{6,12}$/.test(clean)) return toast('That join code is not valid');
+  const sharePast = confirm('Share your past and future completion ticks with this group?\n\nNotes, ratings and shortlist stay private. Choose Cancel to join privately and share later.');
+  const result = await sb.rpc('join_group_by_code', {
+    p_join_code: clean, p_display_name: who,
+  });
+  const data = rpcRow(result.data);
+  if (result.error || !data) { toast('No group with that code'); console.warn(result.error); return; }
+  activeGroupId = data.group_id;
   localStorage.setItem(LS.group, activeGroupId);
   await loadGroups();
-  // Anything this phone did before joining comes with it, otherwise the
-  // person who just joined appears to have done nothing.
-  await adoptExistingRowsIntoGroup();
-  await pullProgress(); await pullPhotos(); await pullTrips();
+  if (sharePast) await setCompletionSharing(activeGroupId, true);
+  await setProgressView('group');
+  await pullPhotos(); await pullTrips();
   renderAll();
-  toast(`Joined ${data.name}`);
+  toast(`Joined ${data.group_name}`);
 }
 
-/* Leaving a group has to undo the joining, not just the membership row.
- *
- * It used to delete the row in group_members and stop. Everything that person
- * had ticked, photographed or planned still carried the group_id, so:
- *
- *   - the others kept seeing their ticks forever, attributed to somebody who
- *     was no longer in the members table and therefore could no longer be
- *     named - which is where a stale name comes from;
- *   - the leaver's photos stayed in the group's storage folder, and since the
- *     policy keys on that folder, they lost access to their own pictures.
- *
- * So the rows come home first and the membership goes last. Order matters: a
- * failure halfway through leaves somebody still in the group with some rows
- * detached, which is recoverable. Doing it the other way round would leave
- * them outside the group with rows they can no longer reach.
+/* Leaving removes only the consent projections and membership. The canonical
+ * rows stay owned by the person throughout, so no data has to be moved and a
+ * partially failed client sequence cannot strand it behind group access.
  */
 async function leaveGroup(id) {
   if (!sb || !userId) return;
@@ -1463,54 +1668,15 @@ async function leaveGroup(id) {
              + 'and stops showing on their list. Theirs stops showing on yours.')) return;
 
   toast('Leaving…');
-  const failures = [];
-
-  // Ticks and trips: just change who they belong to.
-  for (const table of ['progress', 'trips']) {
-    const { error } = await sb.from(table)
-      .update({ group_id: null }).eq('user_id', userId).eq('group_id', id);
-    if (error) { console.warn(`detaching ${table}`, error.message); failures.push(table); }
-  }
-
-  // Photos additionally need the file moved, because the storage policy reads
-  // the first path segment and it currently says "this group".
-  const mine = photos.filter(p => p.user_id === userId && p.group_id === id);
-  for (const ph of mine) {
-    const to = String(ph.storage_path || '').replace(/^[^/]+\//, userId + '/');
-    if (to !== ph.storage_path) {
-      const mv = await sb.storage.from(BUCKET).move(ph.storage_path, to);
-      if (mv.error) { console.warn('photo move', mv.error.message); failures.push('a photo'); continue; }
-      signedUrls.delete(ph.storage_path);
-      ph.storage_path = to;
-    }
-    const upd = await sb.from('photos')
-      .update({ group_id: null, storage_path: ph.storage_path }).eq('id', ph.id);
-    if (upd.error) { console.warn('photo detach', upd.error.message); failures.push('a photo'); }
-  }
-
-  const { error } = await sb.from('group_members')
-    .delete().eq('group_id', id).eq('user_id', userId);
+  const { error } = await sb.rpc('leave_group', { p_group_id: id });
   if (error) { toast('Could not leave — try again'); console.warn(error); return; }
 
   if (activeGroupId === id) { activeGroupId = null; localStorage.removeItem(LS.group); }
   await loadGroups();
-  await pullProgress(); await pullPhotos(); await pullTrips();
+  await setProgressView('personal');
+  await pullPhotos(); await pullTrips();
   renderAll();
-  toast(failures.length
-    ? `Left the group, but ${[...new Set(failures)].join(' and ')} did not come with you`
-    : 'Left the group. Everything you ticked is still yours.');
-}
-
-// Puts rows this user already owns into the active group.
-async function adoptExistingRowsIntoGroup() {
-  if (!sb || !userId || !activeGroupId) return;
-  for (const table of ['progress', 'photos', 'trips']) {
-    const { error } = await sb.from(table)
-      .update({ group_id: activeGroupId })
-      .eq('user_id', userId)
-      .is('group_id', null);
-    if (error) console.warn(`adopting ${table}`, error.message);
-  }
+  toast('Left the group. Your personal data is still yours.');
 }
 
 /* The shop, such as it is. Counts come from the data, so a pack can never
@@ -1523,9 +1689,10 @@ function renderStore() {
   if (row) {
     row.classList.toggle('hidden', !previewAvailable());
     $('#previewBtn').textContent = previewOn()
-      ? 'Turn preview off' : 'Preview the hidden gems';
+      ? 'Turn preview off' : 'Preview paid adventures';
   }
   const counts = packStats(ADV);
+  const bundleOnly = bundleOnlyStats(ADV);
   const packs = sellablePacks(ADV);
   const hasAll = ownsPack('all');
 
@@ -1533,20 +1700,22 @@ function renderStore() {
     const n = counts[p.slug] || 0;
     const got = ownsPack(p.slug);
     const sub = p.slug === 'all'
-      ? `${n} gems across every continent${p.blurb ? ' · ' + p.blurb : ''}`
+      ? `${n} hidden gems${bundleOnly ? ` · ${bundleOnly} bundle-only Antarctica adventures included` : ''}${p.blurb ? ' · ' + p.blurb : ''}`
       : `${n} gems`;
-    return `<div class="packrow${got ? ' owned' : ''}">
+    return `<div class="packrow${p.slug === 'all' ? ' bundle' : ''}${got ? ' owned' : ''}">
       <div>
         <b>${esc(p.name)}</b>
         <span>${esc(sub)}</span>
       </div>
       ${got ? '<span class="packowned">Unlocked</span>'
-            : `<button class="btn-buy" data-buy="${esc(p.slug)}">${esc(priceFor(p.slug))}</button>`}
+            : Billing.mode === 'unavailable'
+              ? '<span class="packowned">Mobile app</span>'
+              : `<button class="btn-buy" data-buy="${esc(p.slug)}">${esc(priceFor(p.slug))}</button>`}
     </div>`;
   }).join('') + (hasAll ? '' :
-    '<p class="fineprint">Every pack is a single payment, kept forever. ' +
-    'Buying all of them costs less than any three separately, and covers ' +
-    'continents added later.</p>');
+    '<p class="fineprint">One payment for your account, with no subscription. ' +
+    'The all-continents bundle includes every hidden gem, Antarctica and future additions. ' +
+    'Travel, admission and guide fees are separate.</p>');
 }
 
 // Buying, from wherever the button was pressed.
@@ -1565,11 +1734,25 @@ function renderMe_groups() {
   const el = $('#groupPanel');
   if (!el) return;
   if (!sb) { el.innerHTML = '<p class="muted">Not connected, so sharing is unavailable.</p>'; return; }
+  if (!groupSchemaReady) {
+    el.innerHTML = '<p class="muted warn">Group sharing is temporarily unavailable while the privacy update is applied. Your existing data has not been changed.</p>';
+    return;
+  }
 
   const active = myGroups.find(g => g.id === activeGroupId);
   el.innerHTML = `
     ${active ? `
-      <p>Sharing with <strong>${esc(active.name)}</strong>.</p>
+      <p>Group: <strong>${esc(active.name)}</strong>.</p>
+      <div class="view-switch" role="group" aria-label="Progress view">
+        <button class="btn-ghost${progressView === 'personal' ? ' on' : ''}" data-groupact="view" data-view="personal">My progress</button>
+        <button class="btn-ghost${progressView === 'group' ? ' on' : ''}" data-groupact="view" data-view="group">Group progress</button>
+      </div>
+      <p class="fineprint">${active.share_completions
+        ? 'Your existing and future completion ticks are visible to this group. Notes, ratings and shortlist stay private.'
+        : 'Your personal completions are private from this group.'}</p>
+      <button class="btn-ghost" data-groupact="sharing" data-enabled="${active.share_completions ? 'false' : 'true'}">
+        ${active.share_completions ? 'Stop sharing my completion ticks' : 'Share my completion ticks'}
+      </button>
       <p class="fineprint">Join code <code class="joincode">${esc(active.join_code)}</code> — read it
          out, or send the link below and they will be asked to confirm.</p>
       <button class="btn-ghost" data-groupact="invite">↗ Send an invite link</button>
@@ -1579,35 +1762,117 @@ function renderMe_groups() {
       <button class="btn-ghost" data-groupact="create">Create a group</button>
       <button class="btn-ghost" data-groupact="join">Join with a code</button>
     `}
-    ${myGroups.length > 1 ? `<p class="fineprint">You belong to ${myGroups.length} groups; new ticks go into the one above.</p>` : ''}`;
+    ${myGroups.length > 1 ? `<div class="group-list"><p class="fineprint">Switch group:</p>${myGroups
+      .map(g => `<button class="btn-ghost${g.id === activeGroupId ? ' on' : ''}" data-groupact="switch" data-id="${esc(g.id)}">${esc(g.name)}</button>`).join('')}</div>` : ''}`;
+}
+
+function renderAccountPanel() {
+  const el = $('#accountPanel');
+  if (!el) return;
+  if (!sb) {
+    el.innerHTML = '<b>Account</b><p class="muted">Offline on this phone. Sign in when a connection is available to sync and recover your data.</p>';
+    return;
+  }
+  if (passwordRecoveryMode) {
+    el.innerHTML = `
+      <b>Choose a new password</b>
+      <p class="muted">This recovery link has signed you in. Set the password you want to use next time.</p>
+      <input id="recoveryPassword" type="password" autocomplete="new-password" minlength="6" placeholder="New password (at least 6 characters)">
+      <button class="btn-primary" data-authact="new-password">Save new password</button>`;
+    return;
+  }
+  if (accountIsAnonymous) {
+    const upgrade = accountUpgradeFor(accountUser);
+    el.innerHTML = `
+      <b>Protect this account</b>
+      <p class="muted">${upgrade
+        ? 'Check your email and open the verification link. Your progress stays with this account.'
+        : 'Add a verified email first, then choose a password without changing your identity or moving any data.'}</p>
+      ${upgrade ? '' : `<input id="upgradeEmail" type="email" autocomplete="email" placeholder="Email">
+      <button class="btn-primary" data-authact="upgrade">Send verification email</button>`}`;
+    return;
+  }
+  const email = accountUser && accountUser.email ? accountUser.email : 'Signed-in account';
+  const verified = !!(accountUser && accountUser.email_confirmed_at);
+  el.innerHTML = `
+    <b>Account</b>
+    <p class="account-email">${esc(email)}</p>
+    <p class="fineprint">${verified ? 'Email verified. Progress and purchases use this personal identity.'
+      : 'Check your inbox to verify this email.'}</p>
+    <button class="btn-ghost" data-authact="recovery">Send password recovery email</button>`;
 }
 
 // ── Deleting the account, which Apple requires to be possible in-app ──
+async function allOwnedPhotoPaths(ownerId, pageSize = 500) {
+  const paths = new Set();
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await sb.from('photos').select('storage_path')
+      .eq('user_id', ownerId).range(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = data || [];
+    for (const row of page) if (row.storage_path) paths.add(row.storage_path);
+    if (page.length < pageSize) break;
+  }
+
+  // Include orphaned objects that have no metadata row. Supabase list() is
+  // one directory at a time, so walk every folder below the account prefix.
+  const folders = [ownerId];
+  while (folders.length) {
+    const prefix = folders.pop();
+    for (let offset = 0; ; offset += 100) {
+      const { data, error } = await sb.storage.from(BUCKET).list(prefix, {
+        limit: 100, offset, sortBy: { column: 'name', order: 'asc' },
+      });
+      if (error) throw error;
+      const page = data || [];
+      for (const item of page) {
+        const path = `${prefix}/${item.name}`;
+        if (item.id == null && item.metadata == null) folders.push(path); else paths.add(path);
+      }
+      if (page.length < 100) break;
+    }
+  }
+  return [...paths];
+}
+
+async function removeOwnedStorage(ownerId) {
+  const paths = await allOwnedPhotoPaths(ownerId);
+  for (let i = 0; i < paths.length; i += 100) {
+    const { error } = await sb.storage.from(BUCKET).remove(paths.slice(i, i + 100));
+    if (error) throw error;
+  }
+  return paths.length;
+}
+
 async function deleteAccount() {
-  if (!sb || !userId) return;
+  if (!sb || !userId || accountDeletionInProgress) return;
+  if (!online) return toast('Reconnect before deleting your account');
   const typed = prompt('This deletes your account, every tick, every photo and every trip. '
                      + 'It cannot be undone.\n\nType DELETE to confirm.');
   if (typed !== 'DELETE') { toast('Cancelled'); return; }
 
+  const deletingOwner = userId;
+  accountDeletionInProgress = true;
+  authGeneration++; // invalidate every read/write already in flight
   toast('Deleting…');
   try {
-    // Storage objects are not covered by the database cascade, so clear them first.
-    const mine = photos.filter(p => p.user_id === userId).map(p => p.storage_path);
-    if (mine.length) await sb.storage.from(BUCKET).remove(mine);
+    // Let an upload already inside the Storage request observe the generation
+    // change, then enumerate. That ordering catches an object created at the
+    // same moment deletion began.
+    while (flushPhotoQueue.busy) await new Promise(resolve => setTimeout(resolve, 25));
+    if (userId !== deletingOwner) throw new Error('account changed during deletion');
+    await removeOwnedStorage(deletingOwner);
+    if (userId !== deletingOwner) throw new Error('account changed during deletion');
 
     const { error } = await sb.rpc('delete_my_account');
     if (error) throw error;
 
-    localStorage.clear();
-    try {
-      const db = await idb();
-      db.transaction('queue', 'readwrite').objectStore('queue').clear();
-    } catch { /* nothing queued */ }
-    await sb.auth.signOut();
-    location.reload();
+    try { await sb.auth.signOut(); } catch { /* identity has already been deleted */ }
+    await handleSignedOut('Account deleted.');
   } catch (err) {
+    accountDeletionInProgress = false;
     console.warn(err);
-    toast('Could not delete the account — try again, or ask for help');
+    toast('Deletion stopped before the account was removed. Try again or ask for help.');
   }
 }
 
@@ -1630,16 +1895,30 @@ function goTo(level, opts = {}) {
  * change faster than an app gets updated, so it points at the government
  * advice rather than pretending to be it.
  */
+const ADVISORY_SOURCE_URL = 'https://www.smartraveller.gov.au/destinations';
+
+function advisoryContents(code) {
+  const adv = advisoryFor(code);
+  if (!adv) return '';
+  return `
+    <div class="advisory-head">${adv.level === 'avoid' ? '⛔ Do not travel' : '⚠️ Take care'}</div>
+    <p>${esc(adv.note)}</p>
+    <p class="fineprint">Conditions change faster than this app does.
+      <a href="${ADVISORY_SOURCE_URL}" target="_blank" rel="noopener">Check current advice on Smartraveller</a>
+      before you book anything.</p>`;
+}
+
+function advisoryPanelHTML(code) {
+  const adv = advisoryFor(code);
+  return adv ? `<div class="advisory-box ${adv.level}">${advisoryContents(code)}</div>` : '';
+}
+
 function renderAdvisory(code) {
   const box = $('#advisory');
   const adv = advisoryFor(code);
   if (!adv) { box.className = 'advisory-box hidden'; box.innerHTML = ''; return; }
   box.className = 'advisory-box ' + adv.level;
-  box.innerHTML = `
-    <div class="advisory-head">${adv.level === 'avoid' ? '⛔ Do not travel' : '⚠️ Take care'}</div>
-    <p>${esc(adv.note)}</p>
-    <p class="fineprint">Conditions change faster than this app does. Check your
-       government's current travel advice before you book anything.</p>`;
+  box.innerHTML = advisoryContents(code);
 }
 
 /* A locked gem is still listed, still counted, and still says where it is -
@@ -1660,8 +1939,7 @@ function safeTitle(a) {
 }
 
 function lockedTitle(a) {
-  const pack = packFor(a.continent);
-  return `Hidden gem in ${regionName(a)}`;
+  return a.bundle_only ? 'Antarctica adventure' : `Hidden gem in ${regionName(a)}`;
 }
 
 function lockNote(a) {
@@ -1912,6 +2190,7 @@ function cardHTML(a) {
         <span class="badge">${a.cost === 0 ? 'Free' : '$'.repeat(a.cost)}</span>
         ${a.dog_friendly === 'yes' ? '<span class="badge dog">🐾 Dogs</span>' : ''}
         ${a.hidden_gem ? `<span class="badge gem">💎 Hidden gem${isLocked(a) ? ' · locked' : ''}</span>` : ''}
+        ${a.bundle_only ? `<span class="badge">🔒 Bundle exclusive${isLocked(a) ? ' · locked' : ''}</span>` : ''}
         ${r.shortlisted ? '<span class="badge star">⭐ Shortlist</span>' : ''}
       </div>
     </div>
@@ -1944,6 +2223,12 @@ function renderHeader() {
   const total = countableTotal();
   $('#progressCount').textContent = `${done} / ${total}`;
   $('#progressFill').style.width = `${(done / Math.max(total, 1)) * 100}%`;
+  const view = $('#progressViewBtn');
+  view.classList.toggle('hidden', !activeGroupId);
+  view.textContent = progressView === 'group' ? 'Group' : 'Me';
+  view.setAttribute('aria-label', progressView === 'group'
+    ? 'Showing group progress. Switch to my progress'
+    : 'Showing my progress. Switch to group progress');
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2081,42 +2366,64 @@ function removeTrip(id) {
 }
 
 function queueTripSync(trip) {
+  if (accountDeletionInProgress) return;
   const q = readLS(LS.tripOutbox, []).filter(t => t.id !== trip.id);
-  q.push(trip);
+  q.push({ ...trip, owner_id: userId, queue_rev: nextQueueRevision() });
   writeLS(LS.tripOutbox, q);
   flushTrips();
 }
 
 async function flushTrips() {
-  if (!sb || !online) return;
+  if (!sb || !online || accountDeletionInProgress) return;
+  if (flushTrips.busy) { flushTrips.requested = true; return; }
+  flushTrips.busy = true;
+  const runOwner = userId, runGeneration = authGeneration;
   const q = readLS(LS.tripOutbox, []);
-  if (!q.length) return;
-  const left = [];
-  for (const t of q) {
-    const { error } = await sb.from('trips').upsert({
-      id: t.id, name: t.name, starts_on: t.starts_on || null, ends_on: t.ends_on || null,
-      adventure_ids: t.adventure_ids || [], notes: t.notes || null,
-      created_by: t.created_by || who,
-      ...ownership(),
-    }, { onConflict: 'id' });
-    if (error) {
-      // Same rule as the progress outbox: a row the server will never accept
-      // must not be retried on every flush for the life of the install.
-      t.tries = (t.tries || 0) + 1;
-      console.warn('trip sync failed', error.message, `(attempt ${t.tries})`);
-      if (t.tries < OUTBOX_MAX_TRIES) left.push(t);
-      else { console.error('giving up on trip', t.id, error.message);
-             toast('A trip could not be saved to the server'); }
+  if (!q.length) { flushTrips.busy = false; return; }
+  try {
+    for (const t of q) {
+      if (runGeneration !== authGeneration || runOwner !== userId || t.owner_id !== runOwner) break;
+      const { error } = await sb.from('trips').upsert({
+        id: t.id, name: t.name, starts_on: t.starts_on || null, ends_on: t.ends_on || null,
+        adventure_ids: t.adventure_ids || [], notes: t.notes || null,
+        created_by: t.created_by || who,
+        user_id: runOwner, group_id: null,
+      }, { onConflict: 'id' });
+      if (runGeneration !== authGeneration || runOwner !== userId) break;
+
+      const current = readLS(LS.tripOutbox, []);
+      const index = current.findIndex(x => x.id === t.id && x.owner_id === t.owner_id
+        && x.queue_rev === t.queue_rev);
+      if (index < 0) continue;
+      if (!error) current.splice(index, 1);
+      else {
+        current[index].tries = (current[index].tries || 0) + 1;
+        console.warn('trip sync failed', error.message, `(attempt ${current[index].tries})`);
+        if (current[index].tries >= OUTBOX_MAX_TRIES) {
+          console.error('giving up on trip', t.id, error.message);
+          current.splice(index, 1);
+          toast('A trip could not be saved to the server');
+        }
+      }
+      writeLS(LS.tripOutbox, current);
+    }
+  } finally {
+    flushTrips.busy = false;
+    if (flushTrips.requested && runGeneration === authGeneration && runOwner === userId) {
+      flushTrips.requested = false;
+      queueMicrotask(flushTrips);
     }
   }
-  writeLS(LS.tripOutbox, left);
 }
 
 async function pullTrips() {
   if (!sb || !online) return;
+  const runOwner = userId, runGeneration = authGeneration;
   const { data, error } = await sb.from('trips').select('*').order('created_at');
+  if (runGeneration !== authGeneration || runOwner !== userId) return;
   if (error) { console.warn('trip pull failed', error.message); return; }
-  const pending = new Set(readLS(LS.tripOutbox, []).map(t => t.id));
+  const pending = new Set(readLS(LS.tripOutbox, [])
+    .filter(t => t.owner_id === runOwner).map(t => t.id));
   const byId = new Map(trips.map(t => [t.id, t]));
   for (const t of data || []) if (!pending.has(t.id)) byId.set(t.id, t);
   trips = [...byId.values()];
@@ -2560,6 +2867,7 @@ function renderMe() {
        </div>`).join('');
 
   renderStore();
+  renderAccountPanel();
   $('#whoLabel').textContent = who || 'You';
   const nb = $('#notifyBtn');
   if (nb) {
@@ -2611,15 +2919,22 @@ function renderSheet(id) {
   // button that changes that. No teaser copy pretending to be a description.
   if (isLocked(a)) {
     const pack = packFor(a.continent);
-    const n = packStats(ADV)[a.pack] || 0;
+    const bundleOnly = !!a.bundle_only;
+    const n = bundleOnly ? bundleOnlyStats(ADV) : (packStats(ADV)[a.pack] || 0);
     $('#sheetBody').innerHTML = `
-      <h2>💎 ${esc(lockedTitle(a))}</h2>
+      <h2>${bundleOnly ? '🔒' : '💎'} ${esc(lockedTitle(a))}</h2>
       <div class="sheet-place">${esc(a.category)} · ${esc(a.continent)}</div>
-      <p>Hidden gems are the places people who live there send you to, rather
-         than the ones on every list. This is one of ${n} in ${esc(a.continent)}.</p>
-      ${pack ? `<button class="btn-primary" data-buy="${esc(pack.slug)}">Unlock ${esc(pack.name)} · ${esc(priceFor(pack.slug))}</button>
-      <button class="btn-ghost" data-buy="all">Or every continent · ${esc(priceFor('all'))}</button>
-      <p class="fineprint">One payment, kept forever, restorable on a new phone.</p>` : ''}`;
+      ${advisoryPanelHTML(a.country)}
+      <p>${bundleOnly
+        ? `Bundle exclusive. Explore the complete Antarctica collection. This is one of ${n} adventures available with All continents.`
+        : `Discover quieter places, small local experiences and unusual adventures. This is one of ${n} hidden gems in ${esc(a.continent)}.`}</p>
+      ${pack ? (Billing.mode === 'unavailable'
+        ? `<p class="fineprint">${bundleOnly ? 'All continents' : 'Hidden-gem packs'} are available in the mobile app.</p>`
+        : `<button class="btn-primary" data-buy="all">Unlock every continent · ${esc(priceFor('all'))}</button>
+      ${bundleOnly ? '' : `<button class="btn-ghost" data-buy="${esc(pack.slug)}">Only ${esc(pack.name)} · ${esc(priceFor(pack.slug))}</button>`}
+      <p class="fineprint">One payment for your account. No subscription. ${bundleOnly
+        ? 'Includes the Antarctica collection and future bundle additions.'
+        : 'Includes future gems in your chosen packs.'} Travel, admission and guide fees are separate.</p>`) : ''}`;
     return;
   }
 
@@ -2627,6 +2942,7 @@ function renderSheet(id) {
     <h2>${esc(a.title)}</h2>
     <div class="sheet-place">${esc([a.place, a.region, regionName(a)].filter((v, i, arr) => v && arr.indexOf(v) === i).join(' · '))} · ${countryFlag(a.country)} ${esc(countryName(a.country))}</div>
     ${a.hidden_gem ? '<span class="badge gem">💎 Hidden gem</span>' : ''}
+    ${advisoryPanelHTML(a.country)}
     <p class="sheet-desc">${esc(a.description)}</p>
 
     <div class="factgrid">
@@ -2702,7 +3018,9 @@ function closeSheet() {
 }
 
 function toggleDone(id) {
-  const r = row(id);
+  const r = progressView === 'group'
+    ? (personalProgress.get(id) || { completed: false })
+    : row(id);
   const nowDone = !r.completed;
   applyPatch(id, {
     completed: nowDone,
@@ -3059,7 +3377,8 @@ function wireUI() {
   $('#randomBtn').onclick = () => {
     // Never offer something they cannot open. "Pick me an adventure" landing
     // on a buy button is a poor answer to the question asked.
-    const pool = filtered().filter(a => !isDone(a.id) && !isLocked(a));
+    const pool = filtered().filter(a => automaticDiscoveryAllowed(a) &&
+      !isDone(a.id) && !isLocked(a));
     if (!pool.length) {
       return toast(filtered().some(a => !isDone(a.id))
         ? 'Only locked gems left here'
@@ -3067,6 +3386,7 @@ function wireUI() {
     }
     openSheet(pool[Math.floor(Math.random() * pool.length)].id);
   };
+  $('#progressViewBtn').onclick = () => setProgressView(progressView === 'group' ? 'personal' : 'group');
 
   // Settings
   $('#switchWho').onclick = () => {
@@ -3081,6 +3401,26 @@ function wireUI() {
   $('#notifyBtn').onclick = toggleNotifications;
   $('#previewNotifyBtn').onclick = previewReminder;
   $('#deleteAccountBtn').onclick = deleteAccount;
+  $('#accountPanel').addEventListener('click', async e => {
+    const b = e.target.closest('[data-authact]');
+    if (!b) return;
+    if (b.dataset.authact === 'upgrade') {
+      const panel = $('#accountPanel');
+      await startAnonymousUpgrade(panel.querySelector('[type="email"]').value.trim());
+    }
+    if (b.dataset.authact === 'recovery') {
+      await sendPasswordReset(accountUser && accountUser.email, 'app');
+    }
+    if (b.dataset.authact === 'new-password') {
+      const password = $('#accountPanel').querySelector('[type="password"]').value;
+      if (password.length < 6) return toast('Use at least 6 characters');
+      const { error } = await sb.auth.updateUser({ password });
+      if (error) return toast(error.message || 'Could not change the password');
+      passwordRecoveryMode = false;
+      renderMe();
+      toast('Password updated');
+    }
+  });
 
   $('#cameraInput').addEventListener('change', async e => {
     const files = e.target.files, target = photoTargetId;
@@ -3105,8 +3445,22 @@ ${url}`);
       if (name && name.trim()) await createGroup(name.trim());
     }
     if (b.dataset.groupact === 'join') {
-      const code = prompt('Enter the six-character join code');
+      const code = prompt('Enter the join code');
       if (code && code.trim()) await joinGroup(code);
+    }
+    if (b.dataset.groupact === 'view') await setProgressView(b.dataset.view);
+    if (b.dataset.groupact === 'switch') {
+      activeGroupId = b.dataset.id;
+      localStorage.setItem(LS.group, activeGroupId);
+      await loadMembers();
+      await setProgressView(progressView);
+    }
+    if (b.dataset.groupact === 'sharing') {
+      const enabled = b.dataset.enabled === 'true';
+      if (!await setCompletionSharing(activeGroupId, enabled)) return toast('Could not change sharing');
+      await pullProgress();
+      renderAll();
+      toast(enabled ? 'Your progress is shared with this group' : 'Your progress is private again');
     }
     if (b.dataset.groupact === 'leave') await leaveGroup(b.dataset.id);
   });
@@ -3119,10 +3473,10 @@ ${url}`);
     await syncNow({ loud: true });
   };
   $('#signOutBtn').onclick = async () => {
-    if (!confirm('Sign this phone out? Your shared progress stays safe on the server.')) return;
+    if (!confirm('Sign this phone out? Synced progress stays safe in your account. Unsynced changes on this phone will be removed.')) return;
+    await Billing.signOut();
     if (sb) await sb.auth.signOut();
-    localStorage.removeItem(LS.progress);
-    location.reload();
+    await handleSignedOut();
   };
 
   // Connectivity
@@ -3408,32 +3762,296 @@ async function saveRec(id) {
 // ══════════════════════════════════════════════════════════════════════
 //  Sign in
 // ══════════════════════════════════════════════════════════════════════
-async function trySignIn(passphrase) {
-  const msg = $('#lockMsg');
-  const btn = $('#lockBtn');
-  if (!sb) { msg.textContent = 'Can’t reach the server. Check your connection.'; return false; }
-  btn.disabled = true; msg.className = 'lock-msg'; msg.textContent = 'Checking…';
+function authRedirectUrl() {
+  const configured = window.OAA_CONFIG && OAA_CONFIG.shareBase;
+  return configured || `${location.origin}${location.pathname}`;
+}
 
-  const { error } = await sb.auth.signInWithPassword({
-    email: window.OAA_CONFIG.sharedEmail,
-    password: passphrase,
-  });
-  btn.disabled = false;
-  if (error) { msg.textContent = 'That passphrase didn’t work.'; return false; }
-  msg.className = 'lock-msg ok'; msg.textContent = 'Welcome back.';
+function setAuthMessage(text, ok = false) {
+  const msg = $('#lockMsg');
+  msg.className = 'lock-msg' + (ok ? ' ok' : '');
+  msg.textContent = text || '';
+}
+
+const ACCOUNT_UPGRADE_STAGES = new Set(['awaiting-email', 'set-password']);
+
+function readAccountUpgrade() {
+  const value = readLS(LS.accountUpgrade, null);
+  if (!value || typeof value.owner_id !== 'string' || !ACCOUNT_UPGRADE_STAGES.has(value.stage)) {
+    localStorage.removeItem(LS.accountUpgrade);
+    return null;
+  }
+  return { owner_id: value.owner_id, stage: value.stage };
+}
+
+function writeAccountUpgrade(ownerId, stage) {
+  if (!ownerId || !ACCOUNT_UPGRADE_STAGES.has(stage)) return false;
+  // Intentionally persist only the owner and stage. Email comes back from the
+  // verified Supabase user; passwords never touch localStorage.
+  writeLS(LS.accountUpgrade, { owner_id: ownerId, stage });
   return true;
 }
 
+function clearAccountUpgrade(ownerId = null) {
+  const current = readAccountUpgrade();
+  if (!ownerId || !current || current.owner_id === ownerId) {
+    localStorage.removeItem(LS.accountUpgrade);
+  }
+}
+
+function isAnonymousUser(user) {
+  return !!(user && (user.is_anonymous
+    || (user.app_metadata && user.app_metadata.provider === 'anonymous')));
+}
+
+function hasVerifiedEmail(user) {
+  return !!(user && user.email && (user.email_confirmed_at || user.confirmed_at));
+}
+
+function accountUpgradeFor(user) {
+  const upgrade = readAccountUpgrade();
+  if (!upgrade) return null;
+  if (!user || upgrade.owner_id !== user.id) {
+    clearAccountUpgrade();
+    return null;
+  }
+  if (upgrade.stage === 'awaiting-email' && !isAnonymousUser(user) && hasVerifiedEmail(user)) {
+    writeAccountUpgrade(user.id, 'set-password');
+    return { owner_id: user.id, stage: 'set-password' };
+  }
+  if (upgrade.stage === 'set-password' && (isAnonymousUser(user) || !hasVerifiedEmail(user))) {
+    // A stale or manually altered marker cannot skip email verification.
+    if (isAnonymousUser(user)) { clearAccountUpgrade(user.id); return null; }
+    writeAccountUpgrade(user.id, 'awaiting-email');
+    return { owner_id: user.id, stage: 'awaiting-email' };
+  }
+  return upgrade;
+}
+
+function configureAccountLock({ email, password, form = true }) {
+  $('#lockForm').classList.toggle('hidden', !form);
+  $('#accountEmailLabel').classList.toggle('hidden', !email);
+  $('#accountEmail').classList.toggle('hidden', !email);
+  $('#accountEmail').required = !!email;
+  $('#accountPasswordLabel').classList.toggle('hidden', !password);
+  $('#accountPassword').classList.toggle('hidden', !password);
+  $('#accountPassword').required = !!password;
+}
+
+async function trySignIn(email, password) {
+  const btn = $('#lockBtn');
+  if (!sb) { setAuthMessage('Can’t reach the server. Check your connection.'); return false; }
+  btn.disabled = true; setAuthMessage('Signing in…');
+
+  const { error } = await sb.auth.signInWithPassword({
+    email: email.trim(), password,
+  });
+  btn.disabled = false;
+  if (error) { setAuthMessage(error.message || 'That email or password didn’t work.'); return false; }
+  setAuthMessage('Welcome back.', true);
+  return true;
+}
+
+function wireAccountLock() {
+  $('#lockForm').onsubmit = async e => {
+    e.preventDefault();
+    if (await trySignIn($('#accountEmail').value, $('#accountPassword').value)) enterApp();
+  };
+  $('#createAccountBtn').onclick = () => createAccount(
+    $('#accountEmail').value, $('#accountPassword').value);
+  $('#forgotPasswordBtn').onclick = () => sendPasswordReset($('#accountEmail').value);
+}
+
+function showAccountLock(message = '') {
+  $('#app').classList.add('hidden');
+  $('#lock').classList.remove('hidden');
+  $('.lock-sub').textContent = 'Keep your places, purchases and groups when you change devices.';
+  $('#lockBtn').textContent = 'Sign in';
+  $('#createAccountBtn').classList.remove('hidden');
+  $('#forgotPasswordBtn').classList.remove('hidden');
+  configureAccountLock({ email: true, password: true });
+  $('#accountPassword').autocomplete = 'current-password';
+  wireAccountLock();
+  setAuthMessage(message);
+}
+
+async function handleSignedOut(message = 'Signed out. Sign in to continue.') {
+  if (signOutHandling) return;
+  signOutHandling = true;
+  authGeneration++;
+  userId = null; accountUser = null; accountIsAnonymous = false;
+  progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
+  photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
+  activeGroupId = null; signedUrls.clear();
+  flushOutbox.requested = false; flushPhotoQueue.requested = false; flushTrips.requested = false;
+  showAccountLock(message); // remove private UI before asynchronous cleanup
+  for (const key of [LS.progress, LS.personalProgress, LS.outbox, LS.trips,
+    LS.tripOutbox, LS.group, LS.who, LS.view, LS.owner]) localStorage.removeItem(key);
+  try { if (sb) await sb.removeAllChannels(); } catch { /* already disconnected */ }
+  try { await idbClear(); } catch { /* nothing queued */ }
+  try { await Billing.signOut(); } catch { /* store SDK unavailable */ }
+  accountDeletionInProgress = false;
+  signOutHandling = false;
+}
+
+async function createAccount(email, password) {
+  if (!sb) return setAuthMessage('Can’t reach the server. Check your connection.');
+  if (password.length < 6) return setAuthMessage('Use at least 6 characters for your password.');
+  $('#createAccountBtn').disabled = true;
+  setAuthMessage('Creating your account…');
+  const { data, error } = await sb.auth.signUp({
+    email: email.trim(), password,
+    options: { emailRedirectTo: authRedirectUrl() },
+  });
+  $('#createAccountBtn').disabled = false;
+  if (error) return setAuthMessage(error.message || 'Could not create the account.');
+  if (data && data.session) { setAuthMessage('Account created.', true); return enterApp(); }
+  setAuthMessage('Check your email to verify the account, then sign in.', true);
+}
+
+async function sendPasswordReset(email, target = 'lock') {
+  const clean = String(email || '').trim();
+  if (!clean || !clean.includes('@')) {
+    if (target === 'lock') setAuthMessage('Enter your email first.'); else toast('Enter your email first');
+    return;
+  }
+  const { error } = await sb.auth.resetPasswordForEmail(clean, { redirectTo: authRedirectUrl() });
+  const message = error ? (error.message || 'Could not send the recovery email.')
+                        : 'Recovery email sent. Check your inbox.';
+  if (target === 'lock') setAuthMessage(message, !error); else toast(message);
+}
+
+async function startAnonymousUpgrade(email) {
+  const clean = String(email || '').trim();
+  if (!sb || !accountIsAnonymous || !userId || !accountUser || accountUser.id !== userId) return false;
+  if (!clean || !clean.includes('@')) {
+    toast('Enter the email you want to use for recovery');
+    return false;
+  }
+  if (accountUpgradeBusy) return false;
+  const before = userId, generation = authGeneration;
+  accountUpgradeBusy = true;
+  setAuthMessage('Sending verification email…');
+  try {
+    const { data, error } = await sb.auth.updateUser({ email: clean }, {
+      emailRedirectTo: authRedirectUrl(),
+    });
+    if (generation !== authGeneration || userId !== before) return false;
+    if (error) {
+      toast(error.message || 'Could not send the verification email');
+      showAnonymousUpgradeScreen();
+      return false;
+    }
+    if (!data || !data.user || data.user.id !== before) {
+      console.error('Anonymous email link changed identity; refusing to continue');
+      toast('Account upgrade could not be verified');
+      return false;
+    }
+    accountUser = data.user;
+    accountIsAnonymous = isAnonymousUser(data.user);
+    writeAccountUpgrade(before, 'awaiting-email');
+    showAnonymousUpgradeScreen('awaiting-email');
+    return true;
+  } finally {
+    accountUpgradeBusy = false;
+  }
+}
+
+async function finishAnonymousUpgrade(password) {
+  const upgrade = accountUpgradeFor(accountUser);
+  if (!sb || !upgrade || upgrade.owner_id !== userId || upgrade.stage !== 'set-password'
+      || !hasVerifiedEmail(accountUser) || isAnonymousUser(accountUser)) {
+    toast('Verify the email before choosing a password');
+    return false;
+  }
+  if (String(password || '').length < 6) {
+    toast('Use at least 6 characters for your password');
+    return false;
+  }
+  if (accountUpgradeBusy) return false;
+  const before = userId, generation = authGeneration;
+  accountUpgradeBusy = true;
+  setAuthMessage('Saving password…');
+  try {
+    const { data, error } = await sb.auth.updateUser({ password });
+    if (generation !== authGeneration || userId !== before) return false;
+    if (error) {
+      toast(error.message || 'Could not save the password');
+      showAnonymousUpgradeScreen('set-password');
+      return false;
+    }
+    if (!data || !data.user || data.user.id !== before) {
+      console.error('Anonymous password setup changed identity; refusing to continue');
+      toast('Account upgrade could not be verified');
+      return false;
+    }
+    accountUser = data.user;
+    accountIsAnonymous = isAnonymousUser(data.user);
+    clearAccountUpgrade(before);
+    await enterApp();
+    return true;
+  } finally {
+    accountUpgradeBusy = false;
+  }
+}
+
+function showAnonymousUpgradeScreen(requestedStage = null) {
+  $('#lock').classList.remove('hidden');
+  $('#app').classList.add('hidden');
+  $('#createAccountBtn').classList.add('hidden');
+  $('#forgotPasswordBtn').classList.add('hidden');
+  const upgrade = accountUpgradeFor(accountUser);
+  const stage = requestedStage || (upgrade && upgrade.stage) || 'email';
+  if (stage === 'awaiting-email') {
+    $('.lock-sub').textContent = 'Open the verification link we sent. Your existing progress stays on this account.';
+    configureAccountLock({ email: false, password: false, form: false });
+    setAuthMessage('Waiting for email verification. Return here after opening the link.', true);
+    return;
+  }
+  if (stage === 'set-password') {
+    $('.lock-sub').textContent = 'Email verified. Choose a password to finish protecting this account.';
+    configureAccountLock({ email: false, password: true });
+    $('#accountPassword').autocomplete = 'new-password';
+    $('#accountPassword').value = '';
+    $('#lockBtn').textContent = 'Save password';
+    $('#lockForm').onsubmit = async e => {
+      e.preventDefault();
+      await finishAnonymousUpgrade($('#accountPassword').value);
+    };
+    return;
+  }
+  $('.lock-sub').textContent = 'Protect the progress already on this account without moving or replacing it.';
+  configureAccountLock({ email: true, password: false });
+  $('#lockBtn').textContent = 'Send verification email';
+  $('#lockForm').onsubmit = async e => {
+    e.preventDefault();
+    await startAnonymousUpgrade($('#accountEmail').value);
+  };
+}
+
 async function enterApp() {
+  if (sb) {
+    // getSession reads the persisted session locally. getUser validates over
+    // the network and would lock a previously signed-in traveller out offline.
+    const { data } = await sb.auth.getSession();
+    accountUser = data && data.session ? data.session.user : null;
+    if (!accountUser) { showAccountLock('Sign in to continue.'); return false; }
+    userId = accountUser ? accountUser.id : null;
+    accountIsAnonymous = isAnonymousUser(accountUser);
+    await bindLocalDataToUser();
+    await loadGroups();
+    if (!userId || userId !== accountUser.id) return false;
+  }
+  const upgrade = accountUpgradeFor(accountUser);
+  if (upgrade) return showAnonymousUpgradeScreen(upgrade.stage);
+  if (accountIsAnonymous) return showAnonymousUpgradeScreen();
   $('#lock').classList.add('hidden');
   $('#app').classList.remove('hidden');
-  if (sb) {
-    const { data } = await sb.auth.getUser();
-    userId = data && data.user ? data.user.id : null;
-    await loadGroups();
-  }
   loadLocalTrips();
   pendingPhotos = await idbAll();
+  for (const item of pendingPhotos) {
+    if (!item.owner_id) { item.owner_id = userId; await idbPut(item); }
+  }
   // Asked for before the first paint so the Reminders button in Me shows the
   // right label straight away rather than correcting itself a moment later.
   await notificationPermission();
@@ -3442,7 +4060,7 @@ async function enterApp() {
    * gems are locked until it says otherwise, which is the safe default. It
    * repaints when it lands.
    */
-  Billing.init().then(ok => { if (ok) renderAll(); });
+  Billing.init(userId).then(ok => { if (ok) renderAll(); });
   renderAll();
   openDeepLink();
   await pullProgress();
@@ -3483,11 +4101,10 @@ function openDeepLink(search = location.search) {
   if (join) {
     (async () => {
       const clean = join.trim().toUpperCase();
-      const { data } = await sb.from('groups').select('name')
-        .eq('join_code', clean).maybeSingle();
-      if (!data) return toast('That invite link is not valid any more');
-      if (confirm(`Join "${data.name}"?\n\nYou will share ticks, photos and `
-                + 'trips with everybody already in it.')) await joinGroup(clean);
+      if (!/^[A-Z0-9]{6,12}$/.test(clean)) return toast('That invite link is not valid');
+      if (confirm('Join the Wayfinder group from this invite?\n\nYour personal list stays yours. You will choose whether to share past completions.')) {
+        await joinGroup(clean);
+      }
     })();
     return;
   }
@@ -3523,6 +4140,26 @@ async function boot() {
     sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
       auth: { persistSession: true, autoRefreshToken: true, storageKey: 'oaa.auth' },
     });
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        void handleSignedOut();
+        return;
+      } else if (userId && session && session.user && session.user.id !== userId) {
+        authGeneration++;
+        userId = session.user.id;
+        location.reload();
+        return;
+      }
+      if (event === 'PASSWORD_RECOVERY') passwordRecoveryMode = true;
+      else if (event !== 'SIGNED_IN' && event !== 'USER_UPDATED') return;
+      const upgrade = session && session.user ? accountUpgradeFor(session.user) : null;
+      if (event !== 'PASSWORD_RECOVERY' && (!upgrade || accountUpgradeBusy)) return;
+      // Run outside the auth callback: Supabase warns against awaiting another
+      // auth method from inside it, and enterApp() asks auth.getSession().
+      setTimeout(() => {
+        if (upgrade || $('#app').classList.contains('hidden')) enterApp(); else renderMe();
+      }, 0);
+    });
   }
 
   try { await loadAdventures(); }
@@ -3531,44 +4168,38 @@ async function boot() {
   loadLocalProgress();
   buildFilterOptions();
   wireUI();
+  wireAccountLock();
 
-  if (!sb) return enterApp();                  // no backend configured — local only
+  if (!sb) {
+    $('#lock').classList.remove('hidden');
+    setAuthMessage('Account service is not configured. Wayfinder cannot create a recoverable account.');
+    return;
+  }
 
   const { data: { session } } = await sb.auth.getSession();
   if (session) return enterApp();
 
-  // Anonymous first: if the project allows anonymous sign-ins, nobody has to
-  // type anything. The passphrase form is only shown when that is unavailable,
-  // which keeps existing shared-passphrase installs working.
-  if (cfg.allowAnonymous !== false) {
+  // Anonymous sign-in remains available only as an explicitly enabled
+  // compatibility path. New installs require a recoverable email/password
+  // account; an existing persisted anonymous session is upgraded in place
+  // from the Me tab so its user id and rows stay intact.
+  if (cfg.allowAnonymous === true) {
     const { error } = await sb.auth.signInAnonymously();
     if (!error) return enterApp();
 
-    /* Being told no and not being able to ask are different things.
-     *
-     * A first launch on a plane, in a tunnel, or while Supabase is having a
-     * bad morning used to land on the passphrase form - a screen a new person
-     * cannot possibly get past, in front of an app that works perfectly well
-     * offline. The passphrase form exists only for the old shared-account
-     * installs, so it is shown when the server actually refuses, and a
-     * network failure lets them in and syncs later instead.
-     */
+    // An existing deployment may temporarily retain this compatibility mode,
+    // but it must still show the recoverable-account screen if the server
+    // cannot create the anonymous session. It never opens a fresh local-only
+    // identity that cannot be recovered on another device.
     const offline = !navigator.onLine || !error.status
       || error.name === 'AuthRetryableFetchError';
     if (offline) {
-      console.info('no connection at launch; carrying on locally:', error.message);
-      return enterApp();
+      console.info('no connection at launch; account sign-in required:', error.message);
     }
-    console.info('anonymous sign-in unavailable, falling back to passphrase:', error.message);
+    else console.info('anonymous sign-in unavailable; showing account sign-in:', error.message);
   }
 
-  $('#lock').classList.remove('hidden');
-  $('#lockForm').onsubmit = async e => {
-    e.preventDefault();
-    if (await trySignIn($('#passphrase').value)) enterApp();
-  };
-  // Nobody gets trapped behind a password they were never given.
-  $('#lockSkip').onclick = () => { sb = null; enterApp(); };
+  showAccountLock();
 }
 
 addEventListener('DOMContentLoaded', boot);

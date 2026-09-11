@@ -20,6 +20,9 @@
 
 // Continent land, as unions of [south, north, west, east] boxes in degrees.
 const CONTINENT_BOXES = {
+  'Antarctica': [
+    [-90, -60, -180, 180], // Antarctic mainland and surrounding islands
+  ],
   'North America': [
     [55, 71, -168, -141],   // Alaska
     [49, 70, -141, -95],    // western Canada
@@ -63,6 +66,7 @@ const CONTINENT_BOXES = {
                             // Europe is tried first, so a wider box here claimed it
     [50, 59, -11, 2],       // Britain & Ireland
     [63, 67, -25, -13],     // Iceland
+    [61.3, 62.5, -7.8, -6.0], // Faroe Islands
     // Mediterranean islands sit below the 36-degree line the mainland
     // boxes start at, so they need their own. Kept tight so they cannot
     // reach across to the North African coast.
@@ -106,6 +110,7 @@ const CONTINENT_BOXES = {
     [-0.7, 2.0, 6.0, 7.8],      // Sao Tome and Principe, west of Gabon
     [-12.6, -11.0, 43.0, 44.6], // Comoros
     [-20.9, -19.9, 57.2, 57.9], // Mauritius
+    [-21.5, -20.8, 55.1, 55.9], // Reunion
     [-5.0, -4.0, 55.0, 56.0],   // Seychelles
     [-1.8, 11.5, 41.0, 51.5],   // Somalia, the eastern Horn beyond the Sudan box.
                                 // Ends at 11.5N, below Yemen's box at 12N
@@ -161,7 +166,7 @@ const ISLAND_GROUP = new Set([
 const ISLAND_GROUP_MIN = 3;
 
 const CONTINENT_ORDER = ['Oceania', 'Europe', 'North America', 'Asia',
-                         'Middle East', 'South America', 'Africa'];
+                         'Middle East', 'South America', 'Africa', 'Antarctica'];
 
 // One muted colour per continent. Deliberately desaturated - the map is a
 // navigation control sitting under a list, not the loudest thing on screen.
@@ -173,6 +178,7 @@ const CONTINENT_COLOUR = {
   'Middle East':   '#c19a3e',   // sand gold
   'South America': '#5f9aa0',   // teal
   'Africa':        '#a2603f',   // terracotta
+  'Antarctica':    '#7994a3',   // polar blue-grey
 };
 
 // Paid packs are per continent. Slug must match the `pack` field in the data.
@@ -222,7 +228,7 @@ const MAP_PAD = 0.06;             // fraction of the span left as margin
 // The last grid drawn, kept so a tap can be resolved without rasterising again.
 let lastMap = null;
 
-const WORLD_WINDOW = [-58, 78, -180, 180];   // poles cropped, no padding
+const WORLD_WINDOW = [-90, 78, -180, 180];   // Arctic cap cropped; Antarctica retained
 
 function mapWindow(view) {
   let box = null;
@@ -240,7 +246,8 @@ function mapWindow(view) {
   // A window whose east edge is past 180 wraps the dateline on purpose -
   // Oceania does. Anything else gets clamped to the map.
   const wraps = box[3] > 180;
-  return [Math.max(s, -85), Math.min(n, 85),
+  const polarSouth = box[0] < -85;
+  return [polarSouth ? -90 : Math.max(s, -85), Math.min(n, 85),
           Math.max(w, -180), wraps ? Math.min(e, 360) : Math.min(e, 180)];
 }
 

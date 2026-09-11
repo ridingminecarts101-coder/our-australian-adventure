@@ -19,6 +19,9 @@ inside its own continent box on the map. They are not adventure coordinates.
 """
 
 COUNTRIES = {
+    # ── Antarctica ────────────────────────────────────────────────────
+    'AQ': ('Antarctica', 'Antarctica', -82.0, 0.0),
+
     # ── Oceania ───────────────────────────────────────────────────────
     'AU': ('Australia', 'Oceania', -25.0, 134.0),
     'NZ': ('New Zealand', 'Oceania', -41.0, 174.0),
@@ -108,6 +111,7 @@ COUNTRIES = {
     'ES': ('Spain', 'Europe', 40.2, -3.6),
     'PT': ('Portugal', 'Europe', 39.6, -8.0),
     'IT': ('Italy', 'Europe', 42.8, 12.6),
+    'VA': ('Vatican City', 'Europe', 41.9029, 12.4534),
     'DE': ('Germany', 'Europe', 51.2, 10.4),
     'AT': ('Austria', 'Europe', 47.6, 14.1),
     'CH': ('Switzerland', 'Europe', 46.8, 8.2),
@@ -264,8 +268,9 @@ COUNTRIES = {
 }
 
 # Countries where the advice is not "when to go" but "do not". Level is one of
-# 'avoid' (reconsider or do not travel) or 'care' (parts of the country, or a
-# situation that changes). The note says why, plainly, without editorialising.
+# 'avoid' (countrywide do-not-travel) or 'care' (reconsider travel overall,
+# parts of the country, or a situation that changes). The note says why,
+# plainly, without editorialising.
 #
 # This is a starting point, not a substitute for government advice - which is
 # exactly what the app tells the reader, with a link to check it themselves.
@@ -280,27 +285,35 @@ ADVISORIES = {
     'AF': ('avoid', 'Armed conflict, terrorism and detention risk. Do not travel.'),
     'IR': ('avoid', 'Serious risk of arbitrary arrest and detention of foreign '
                     'and dual nationals. Do not travel.'),
-    'IQ': ('avoid', 'Armed conflict and kidnapping across much of the country.'),
+    'IQ': ('avoid', 'Armed conflict and kidnapping. Do not travel.'),
     'LY': ('avoid', 'Armed conflict, kidnapping and no functioning consular help.'),
     'SO': ('avoid', 'Armed conflict, terrorism and kidnapping. Do not travel.'),
     'SS': ('avoid', 'Armed conflict and violent crime. Do not travel.'),
     'SD': ('avoid', 'Civil war. Do not travel.'),
-    'ML': ('avoid', 'Armed conflict and kidnapping outside the capital.'),
-    'BF': ('avoid', 'Armed groups and kidnapping across most of the country.'),
+    'ML': ('avoid', 'Armed conflict, terrorism and kidnapping. Do not travel.'),
+    'BF': ('avoid', 'Terrorism, kidnapping and violent crime. Do not travel.'),
     'NE': ('avoid', 'Armed groups and kidnapping. Do not travel.'),
     'HT': ('avoid', 'Armed gangs control much of the capital. Do not travel.'),
     'KP': ('avoid', 'Independent travel is not possible and detention risk is real.'),
     'VE': ('avoid', 'Violent crime, and wrongful detention of foreign nationals.'),
     'MM': ('avoid', 'Civil war, conscription and arbitrary detention.'),
-    'IL': ('care', 'Ongoing conflict. Areas near Gaza and the northern border '
-                   'change at short notice.'),
-    'PS': ('care', 'Ongoing conflict. Access is restricted and changes daily.'),
-    'LB': ('care', 'Conflict on the southern border and periodic instability.'),
+    # Current 2026-09-11: https://www.smartraveller.gov.au/destinations/middle-east/israel
+    'IL': ('care', 'Reconsider travel overall. Do not travel near the Gaza, '
+                   'Lebanon or Syria borders; attacks and closures can change suddenly.'),
+    # Current 2026-09-11: https://www.smartraveller.gov.au/destinations/middle-east/palestine
+    'PS': ('avoid', 'Do not travel to Gaza or the West Bank outside Jerusalem '
+                    'due to armed conflict; reconsider travel to Jerusalem.'),
+    # Current 2026-09-11: https://www.smartraveller.gov.au/destinations/middle-east/lebanon
+    'LB': ('avoid', 'Do not travel due to armed conflict, civil unrest, terrorism '
+                    'and transport routes that can close without warning.'),
     'PK': ('care', 'Parts of the country, especially the border regions, are unsafe.'),
     'NG': ('care', 'Kidnapping in the north and parts of the south.'),
     'ET': ('care', 'Regional conflicts. Check which regions are open before booking.'),
-    'CD': ('care', 'Armed groups in the east. The west is calmer.'),
-    'CF': ('avoid', 'Armed conflict outside the capital.'),
+    # Current 2026-09-11: https://www.smartraveller.gov.au/destinations/africa/democratic-republic-congo
+    'CD': ('avoid', 'Conflict, violent protests, terrorism and kidnapping. Do not travel.'),
+    # Current 2026-09-11: https://www.smartraveller.gov.au/destinations/africa/chad
+    'TD': ('avoid', 'Dangerous security conditions, terrorism, kidnapping and violent crime. Do not travel.'),
+    'CF': ('avoid', 'Armed conflict, terrorism, kidnapping and violent crime. Do not travel.'),
     'EG': ('care', 'The Sinai peninsula away from the resorts is not safe.'),
     'CO': ('care', 'Some border and rural areas remain unsafe.'),
     'MX': ('care', 'Cartel violence is concentrated in specific states, not the '

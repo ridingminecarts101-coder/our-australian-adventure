@@ -2,7 +2,7 @@
   "name": "wayfinder",
   "version": "1.0.0",
   "private": true,
-  "description": "Wayfinder - 2,300+ real places worth going, ticked off together.",
+  "description": "Wayfinder - real places worth going, ticked off together.",
   "scripts": {
     "build:data": "python tools/build_data.py",
     "build:icons": "python tools/build_icons.py",
@@ -21,7 +21,8 @@
     "play:status": "python tools/play.py status"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.5.1"
+    "@capacitor/cli": "^8.5.1",
+    "@electric-sql/pglite": "^0.5.8"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.1",

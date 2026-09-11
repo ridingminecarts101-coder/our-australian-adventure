@@ -72,14 +72,14 @@ unlock.
 Play Console → **Grow → Store presence → Main store listing**. Draft text,
 already inside the character limits:
 
-**Short description** (80 max, 73 used):
+**Short description** (80 max, 79 used):
 
-> 4,200+ real places worth going, in 206 countries. Tick them off together.
+> 5,100+ adventures across 228 countries and territories. Tick them off together.
 
 **Full description** (4,000 max):
 
-> Wayfinder is a list of places that are actually worth the trip — 4,200+ of
-> them, across 206 countries, each one written up by hand with what it is, how
+> Wayfinder is a list of places that are actually worth the trip — 5,100+ of
+> them, across 228 countries and territories, each one written up by hand with what it is, how
 > hard it is, what it costs and when to go.
 >
 > It is not a map you fill in yourself. It arrives full.
@@ -158,7 +158,7 @@ declaring them falsely gets the app pulled later.
 |---|---|
 | Photos | collected, **not** shared, optional, for app functionality |
 | App activity (which places you ticked) | collected, not shared, required, app functionality |
-| User IDs (anonymous account id) | collected, not shared, required, app functionality |
+| User IDs (account user id) | collected, not shared, required, app functionality |
 | Approximate location | collected, **not stored**, optional, app functionality |
 | Data encrypted in transit | Yes |
 | Users can request deletion | Yes — Me → Delete my account and all my data |
@@ -233,7 +233,7 @@ step is wrong if one is.
 ## 7. Build
 
 ```bash
-python tools/release.py build --version 1.0.0
+python tools/release.py build --version 1.0.0 --store-release
 ```
 
 Bumps the Play build number, stages the web files, syncs Capacitor, and

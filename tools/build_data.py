@@ -33,7 +33,7 @@ FIELDS = ['continent', 'country', 'admin1', 'region', 'title', 'place',
 # Optional, defaulted at build time so existing entries need no edits.
 # Tags drive cross-cutting collections: every Disney resort, every theme park,
 # every Big Thing - things that span countries and don't fit a category.
-OPTIONAL = {'tags': []}
+OPTIONAL = {'tags': [], 'bundle_only': False}
 KNOWN_TAGS = {'theme-park', 'disney', 'big-thing', 'world-heritage'}
 
 CATEGORIES = {
@@ -41,8 +41,10 @@ CATEGORIES = {
     'Food & Drink', 'Road Trip', 'Adrenaline', 'Island', 'Outback', 'Snow',
     'City', 'Family', 'Scenic', 'Stargazing',
 }
-CONTINENTS = {'Oceania', 'Europe', 'North America',
-              'South America', 'Asia', 'Middle East', 'Africa'}
+CONTINENTS = {'Oceania', 'Europe', 'North America', 'South America', 'Asia',
+              'Middle East', 'Africa', 'Antarctica'}
+PACKS = {'oceania', 'europe', 'north-america', 'south-america', 'asia',
+         'middle-east', 'africa', 'all'}
 DOG = {'yes', 'no', 'check'}
 MONTHS_RE = '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)'
 
@@ -83,19 +85,19 @@ def stamp_listing(records):
     if not os.path.exists(path):
         return
     total = len(records)
-    countries = len({r['country'] for r in records})
+    destinations = len({r['country'] for r in records})
     places = f'{total // 100 * 100:,}+'
     text = io.open(path, encoding='utf-8').read()
 
-    short = f'{places} real places worth going, in {countries} countries. Tick them off together.'
+    short = f'{places} adventures across {destinations} countries and territories. Tick them off together.'
     new = re.sub(r'(\*\*Short description\*\* \(80 max, )\d+( used\):\s*\n\s*> )[^\n]*',
                  lambda m: f'{m.group(1)}{len(short)}{m.group(2)}{short}', text)
-    new = re.sub(r'worth the trip — [\d,]+\+? of\n> them, across \d+ countries',
-                 f'worth the trip — {places} of\n> them, across {countries} countries', new)
+    new = re.sub(r'worth the trip — [\d,]+\+? of\n> them, across \d+ countries(?: and territories)?',
+                 f'worth the trip — {places} of\n> them, across {destinations} countries and territories', new)
 
     if new != text:
         io.open(path, 'w', encoding='utf-8', newline=chr(10)).write(new)
-        print(f'  updated the store listing counts in PLAY.md ({places}, {countries} countries)')
+        print(f'  updated the store listing counts in PLAY.md ({places}, {destinations} countries and territories)')
 
 
 IDS = os.path.join('data', 'ids.json')
@@ -191,6 +193,8 @@ def load():
                     problems.append(f'{where}: cost must be 0-4')
                 if not isinstance(rec.get('hidden_gem'), bool):
                     problems.append(f'{where}: hidden_gem must be true/false')
+                if not isinstance(rec.get('bundle_only'), bool):
+                    problems.append(f'{where}: bundle_only must be true/false')
                 for coord in ('lat', 'lon'):
                     v = rec.get(coord)
                     if v is not None and not isinstance(v, (int, float)):
@@ -201,6 +205,15 @@ def load():
                     problems.append(f'{where}: hidden_gem entries need a pack')
                 if rec.get('pack') and not rec.get('hidden_gem'):
                     problems.append(f'{where}: only hidden_gem entries belong to a pack')
+                if rec.get('pack') and rec.get('pack') not in PACKS:
+                    problems.append(f'{where}: unknown pack {rec.get("pack")!r}')
+                if rec.get('country') == 'AQ':
+                    if not rec.get('bundle_only'):
+                        problems.append(f'{where}: every Antarctica entry must be bundle_only')
+                    if rec.get('hidden_gem') and rec.get('pack') != 'all':
+                        problems.append(f'{where}: Antarctica gems belong to the all bundle')
+                elif rec.get('bundle_only'):
+                    problems.append(f'{where}: bundle_only is reserved for Antarctica')
 
                 records.append(rec)
 

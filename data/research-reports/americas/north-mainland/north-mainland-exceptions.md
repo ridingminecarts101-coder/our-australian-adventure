@@ -1,0 +1,11 @@
+# North America mainland exception report
+
+- No country-level quota exception is claimed: the arithmetic result reaches 20.00% in US, Canada and Mexico.
+- `dog_friendly` is deliberately `check`; the primary pages do not consistently establish pet rules for every route, building, cave, ferry or protected cultural site.
+- Seasons are conservative editorial windows. Travellers must confirm current closures, wildfire/weather conditions, reservations, permits, ferry/air service and guided-tour availability.
+- Great Kobuk Sand Dunes is a serious fly-in, trail-free backcountry undertaking. It is included for quality, not remoteness alone; the NPS page documents the distinctive Arctic dune landscape and logistical limits.
+- Culturally sensitive places (including Pipestone, Sand Creek, Kejimkujik petroglyphs and Indigenous archaeological landscapes in Mexico) need respectful local/site-authority interpretation; descriptions avoid presenting them as spectacle.
+- Some official URLs are landing pages rather than immutable operating notices. The supported claim is limited to the stable identity and core experience; mutable prices/hours are intentionally omitted.
+- Cost audit correction: Mushpot Cave is `cost: 1`, not free, because Lava Beds currently charges US$15 per person or US$25 per private vehicle; Petrified Forest Loop is `cost: 1` because Florissant currently charges US$10 per adult. Official fee pages read on 2026-09-11: `https://www.nps.gov/labe/planyourvisit/fees.htm?fullweb=1` and `https://www.nps.gov/flfo/planyourvisit/fees.htm`. Remaining `cost: 0` US rows were reviewed as free site/trail access; rows with required paid transport, admission or guided access retain cost 1–4. Cost remains Wayfinder’s ordinal editorial band, not a quoted price promise.
+- Automated reachability returned HTTP 403 for the Government of Yukon Tombstone page, but the page was independently opened through browser research and its current trail/interpretive-centre content was read. The other 72 provenance URLs returned non-error responses in the batch reachability audit.
+- No borderline famous-site relabelling is counted. Mexico’s rows are specific regional protected or archaeological sites outside the dominant first-visit circuit.

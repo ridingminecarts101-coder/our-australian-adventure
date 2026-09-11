@@ -1,0 +1,5 @@
+# Vatican primary corrections — 11 September 2026
+
+The isolated VA draft was accepted only after correcting two concrete cost errors. Via Triumphalis is no longer described as free: that phrase belongs to the website-wide Museums last-Sunday navigation. Site-specific official pages establish the guided visit, distinct necropolis, entrance and booking route. The current booking portal returned HTTP502; cost2 is an editorial paid-tour estimate and exact fee/dates remain a release recheck. Vatican Post now requires postcard/postage spend (cost1), takes an editorial15–30minutes and does not call postage optional.
+
+Primary independently read all three retained official source pages and the official entrance/tour announcement. Historical worker reports are retained for traceability and this note supersedes their old cost assumptions. The content lead separately relocated six older Vatican experiences from IT to VA while preserving numeric IDs; the three genuinely distinct additions bring VA to9rows/2gems.

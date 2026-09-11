@@ -13,16 +13,12 @@ window.OAA_CONFIG = {
   // Supabase → Project Settings → API Keys → anon / publishable key
   supabaseAnonKey: 'sb_publishable_9wV1tV299jWR-jV3bW121A_UOa7M_R_',
 
-  // The single shared account both phones sign in as. The passphrase typed on
-  // the lock screen is this account's password.
-  sharedEmail: 'rileylawler664@gmail.com',
-
   /* RevenueCat public SDK keys, one per store.
    *
    * These are publishable keys and are meant to ship in the app; the secret
-   * key never leaves the dashboard. Both empty means no store is reachable,
-   * and store.js stays in its clearly-labelled simulator - which is what you
-   * want in a browser and during review of the free half of the app.
+   * key never leaves the dashboard. Both empty means no store is reachable.
+   * Public web and native builds cannot simulate an unlock; developer preview
+   * is available only on localhost.
    *
    * Fill these in from RevenueCat -> Project Settings -> API keys. The
    * Android one starts goog_, the Apple one appl_.
@@ -62,8 +58,7 @@ window.OAA_CONFIG = {
    */
   shareBase: 'https://ridingminecarts101-coder.github.io/our-australian-adventure/',
 
-  // Anonymous sign-in means nobody has to type a passphrase. Enable it in
-  // Supabase under Authentication -> Sign In / Providers -> Anonymous.
-  // If it is off, the app falls back to the shared passphrase automatically.
-  allowAnonymous: true,
+  // New installs use a recoverable email/password account. Existing anonymous
+  // sessions can add email/password in place without changing their user id.
+  allowAnonymous: false,
 };

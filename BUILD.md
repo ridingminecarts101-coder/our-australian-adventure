@@ -53,12 +53,13 @@ here.
 
 ## What the iOS build needs
 
-A Mac with Xcode 16 or newer. Nothing else — Capacitor 8 uses Swift Package
+A Mac with Xcode 26 or newer. Nothing else — Capacitor 8 uses Swift Package
 Manager, so there is no CocoaPods install and no `pod install` step, which is
 also why `npx cap add ios` succeeded on Windows.
 
 The whole `ios/` project is in git and already carries the permission strings,
-the URL scheme, the encryption declaration and the app icon. On the Mac:
+the URL scheme, the encryption declaration, the app privacy manifest and the
+app icon. On the Mac:
 
 ```bash
 npm install
@@ -106,7 +107,7 @@ file is the definition of what is in the app; anything not on it is not.
 ## Checks
 
 ```bash
-npm run check     # geography, dead code, content quality, SQL
+npm run check     # data, code, SQL, mocked billing and native parity
 ```
 
 and in a browser with the app open:

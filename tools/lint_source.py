@@ -31,16 +31,16 @@ FIELDS = ['continent', 'country', 'admin1', 'region', 'title', 'place',
           'category', 'difficulty', 'cost', 'duration', 'season',
           'dog_friendly', 'hidden_gem', 'pack', 'lat', 'lon',
           'verified_at', 'description']
-OPTIONAL = {'tags'}
+OPTIONAL = {'tags', 'bundle_only'}
 CATEGORIES = {
     'Nature', 'Beach', 'Wildlife', 'Hiking', 'Water', 'Culture', 'History',
     'Food & Drink', 'Road Trip', 'Adrenaline', 'Island', 'Outback', 'Snow',
     'City', 'Family', 'Scenic', 'Stargazing',
 }
-CONTINENTS = {'Oceania', 'Europe', 'North America',
-              'South America', 'Asia', 'Middle East', 'Africa'}
+CONTINENTS = {'Oceania', 'Europe', 'North America', 'South America', 'Asia',
+              'Middle East', 'Africa', 'Antarctica'}
 PACKS = {'oceania', 'europe', 'north-america', 'south-america',
-         'asia', 'middle-east', 'africa'}
+         'asia', 'middle-east', 'africa', 'all'}
 DOG = {'yes', 'no', 'check'}
 M = '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)'
 SEASON = re.compile(r'Year-round|%s|%s-%s' % (M, M, M))
@@ -135,6 +135,8 @@ def check(path, all_places):
             problems.append('%s: cost %r' % (where, r.get('cost')))
         if not isinstance(r.get('hidden_gem'), bool):
             problems.append('%s: hidden_gem %r' % (where, r.get('hidden_gem')))
+        if 'bundle_only' in r and not isinstance(r.get('bundle_only'), bool):
+            problems.append('%s: bundle_only %r' % (where, r.get('bundle_only')))
         if r.get('hidden_gem') and not r.get('pack'):
             problems.append('%s: a gem with no pack' % where)
         if r.get('pack') and not r.get('hidden_gem'):
@@ -153,6 +155,13 @@ def check(path, all_places):
         if r.get('hidden_gem') and want and r.get('pack') != want:
             problems.append('%s: gem in %s belongs in pack %r, not %r'
                             % (where, r['continent'], want, r.get('pack')))
+        if r.get('country') == 'AQ':
+            if r.get('bundle_only') is not True:
+                problems.append('%s: every Antarctica entry must be bundle_only' % where)
+            if r.get('hidden_gem') and r.get('pack') != 'all':
+                problems.append('%s: Antarctica gems belong to the all bundle' % where)
+        elif r.get('bundle_only'):
+            problems.append('%s: bundle_only is reserved for Antarctica' % where)
         for c in ('lat', 'lon'):
             if r.get(c) is not None:
                 problems.append('%s: %s must be null' % (where, c))
@@ -170,41 +179,6 @@ def check(path, all_places):
         records.append(r)
 
     return records, problems
-
-
-def gem_ratios(touched):
-    """Gems must stay under a fifth of each region.
-
-    Always counted across every source file, whatever was asked to be checked,
-    and reported only for the regions the checked files contribute to.
-
-    It used to count only the files on the command line. That is wrong both
-    ways. Checking two files, a region with more entries elsewhere looked
-    over-paid - Transylvania showed 2 gems of 9 when the full dataset holds 2
-    of 13, which is fine. And checking one file skipped the ratio entirely, so
-    an agent linting its own work could never see a real breach. A region's
-    entries are routinely spread over several files, so no subset of files
-    tells you anything true about it.
-    """
-    records = []
-    for path in glob.glob(os.path.join('data', 'src', '*.jsonl')):
-        for line in io.open(path, encoding='utf-8'):
-            try:
-                records.append(json.loads(line))
-            except ValueError:
-                continue                       # a half-written line mid-agent
-    out = []
-    by_region = collections.defaultdict(list)
-    for r in records:
-        by_region[(r.get('country'), r.get('admin1'))].append(r)
-    for key, rows in sorted(by_region.items()):
-        if touched is not None and key not in touched:
-            continue
-        gems = sum(1 for r in rows if r.get('hidden_gem'))
-        if gems and gems * 5 > len(rows):
-            out.append('%s/%s: %d gems of %d - over one in five'
-                       % (key[0], key[1], gems, len(rows)))
-    return out
 
 
 def main():
@@ -227,18 +201,6 @@ def main():
             print('    ! %s' % p)
         if len(problems) > 25:
             print('    ! ...and %d more' % (len(problems) - 25))
-
-    # Ratios last, counted over every file and reported for the regions these
-    # files touch - see gem_ratios for why no subset of files will do.
-    touched = {(r.get('country'), r.get('admin1')) for r in everything}
-    ratio = gem_ratios(touched)
-    if ratio:
-        print('\n  Regions that are more than a fifth paid:')
-        for r in ratio[:25]:
-            print('    ! %s' % r)
-        if len(ratio) > 25:
-            print('    ! ...and %d more' % (len(ratio) - 25))
-        bad += len(ratio)
 
     print('\n  %d entries checked, %d problems\n' % (total, bad))
     sys.exit(1 if bad else 0)

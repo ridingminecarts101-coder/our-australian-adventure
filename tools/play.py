@@ -41,6 +41,7 @@ key to your store account, so treat it like the keystore.
 import argparse
 import json
 import os
+import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -74,6 +75,17 @@ def die(msg, hint=None):
     if hint:
         print('  ' + hint)
     sys.exit(1)
+
+
+def store_release_guard():
+    """Refuse a real upload when the built Android billing contract is unsafe."""
+    result = subprocess.run([
+        sys.executable, os.path.join(ROOT, 'tools', 'check_billing.py'),
+        '--store-release', '--platform', 'android',
+    ], cwd=ROOT)
+    if result.returncode:
+        die('Store-release billing checks failed.',
+            'Configure the Android RevenueCat public SDK key, then rebuild with --store-release.')
 
 
 def service():
@@ -209,6 +221,8 @@ def cmd_upload(args):
     if not os.path.exists(AAB):
         die('No bundle at %s' % AAB, 'python tools/release.py build')
 
+    if args.yes:
+        store_release_guard()
     svc = service()
     size = os.path.getsize(AAB) / 1048576
 

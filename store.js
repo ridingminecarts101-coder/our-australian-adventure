@@ -16,7 +16,7 @@
  *     that becomes a complaint, tier it - nothing here assumes the prices are
  *     equal.
  *
- * Packs are a flat $1.99 for simplicity. The bundle at $9.99 is the headline:
+ * Packs are a flat AUD $2.99. The bundle at AUD $14.99 is the headline:
  * priced against the seven continents the app will eventually hold rather than
  * the five it holds today, so it stays the better buy as content is added.
  *
@@ -35,22 +35,22 @@ const STORE_PREFIX = 'app.wayfinder.mobile.gems.';
  * Connect and Google Play Console; nothing here charges anyone by itself.
  */
 const PACKS = [
-  { slug: 'all',           continent: null,            name: 'Every hidden gem',
-    price: '$9.99', blurb: 'Every pack, including continents added later.' },
+  { slug: 'all',           continent: null,            name: 'All continents',
+    price: 'AUD $14.99', blurb: 'Every hidden gem, the Antarctica collection and future additions.' },
   { slug: 'oceania',       continent: 'Oceania',       name: 'Oceania gems',
-    price: '$1.99' },
+    price: 'AUD $2.99' },
   { slug: 'europe',        continent: 'Europe',        name: 'Europe gems',
-    price: '$1.99' },
+    price: 'AUD $2.99' },
   { slug: 'north-america', continent: 'North America', name: 'North America gems',
-    price: '$1.99' },
+    price: 'AUD $2.99' },
   { slug: 'asia',          continent: 'Asia',          name: 'Asia gems',
-    price: '$1.99' },
+    price: 'AUD $2.99' },
   { slug: 'middle-east',   continent: 'Middle East',   name: 'Middle East gems',
-    price: '$1.99' },
+    price: 'AUD $2.99' },
   { slug: 'south-america', continent: 'South America', name: 'South America gems',
-    price: '$1.99' },
+    price: 'AUD $2.99' },
   { slug: 'africa',        continent: 'Africa',        name: 'Africa gems',
-    price: '$1.99' },
+    price: 'AUD $2.99' },
 ];
 
 const productId = slug => STORE_PREFIX + slug.replace(/-/g, '_');
@@ -60,17 +60,27 @@ const productId = slug => STORE_PREFIX + slug.replace(/-/g, '_');
 // Kept on the device. The store is the authority, not us: a restore re-reads
 // the receipt and overwrites whatever is here, so a wiped phone or a new one
 // gets everything back without us storing purchases on our own server.
-const LS_ENTITLEMENTS = 'oaa.packs.v1';
+const LS_ENTITLEMENTS = 'oaa.packs.v2';
 let owned = new Set();
+let entitlementOwner = null;
 
-function loadEntitlements() {
-  try { owned = new Set(JSON.parse(localStorage.getItem(LS_ENTITLEMENTS) || '[]')); }
+function entitlementKey(ownerId = entitlementOwner) {
+  return ownerId ? `${LS_ENTITLEMENTS}.${ownerId}` : null;
+}
+
+function loadEntitlements(ownerId) {
+  entitlementOwner = ownerId || null;
+  const key = entitlementKey();
+  if (!key) { owned = new Set(); return owned; }
+  try { owned = new Set(JSON.parse(localStorage.getItem(key) || '[]')); }
   catch { owned = new Set(); }
   return owned;
 }
 
 function saveEntitlements() {
-  try { localStorage.setItem(LS_ENTITLEMENTS, JSON.stringify([...owned])); }
+  const key = entitlementKey();
+  if (!key) return;
+  try { localStorage.setItem(key, JSON.stringify([...owned])); }
   catch { /* private mode; the store can still restore */ }
 }
 
@@ -80,21 +90,38 @@ function ownsPack(slug) {
   return (previewAvailable() && previewOn()) || owned.has('all') || owned.has(slug);
 }
 
-// An adventure is locked when it is a hidden gem in a pack you have not bought.
+// Antarctica classics belong only to the all-continents bundle. They are kept
+// distinct from hidden gems so catalogue and achievement counts stay honest.
+// For older cached data, a missing bundle_only field means false.
 function isLocked(a) {
-  return !!(a && a.hidden_gem && a.pack && !ownsPack(a.pack));
+  if (!a) return false;
+  if (a.bundle_only) return !ownsPack('all');
+  return !!(a.hidden_gem && a.pack && !ownsPack(a.pack));
 }
 
-function packFor(continent) { return PACKS.find(p => p.continent === continent) || null; }
+function packFor(continent) {
+  return continent === 'Antarctica'
+    ? packBySlug('all')
+    : PACKS.find(p => p.continent === continent) || null;
+}
 function packBySlug(slug) { return PACKS.find(p => p.slug === slug) || null; }
 
 // How many gems each pack holds, counted from the data rather than written
 // down, so a pack can never advertise a number it does not contain.
 function packStats(adventures) {
   const n = {};
-  for (const a of adventures) if (a.hidden_gem && a.pack) n[a.pack] = (n[a.pack] || 0) + 1;
-  n.all = Object.values(n).reduce((s, v) => s + v, 0);
+  let total = 0;
+  for (const a of adventures) {
+    if (!a.hidden_gem || !a.pack) continue;
+    total++;
+    if (a.pack !== 'all') n[a.pack] = (n[a.pack] || 0) + 1;
+  }
+  n.all = total;
   return n;
+}
+
+function bundleOnlyStats(adventures) {
+  return adventures.reduce((n, a) => n + (a.bundle_only ? 1 : 0), 0);
 }
 
 // Packs worth showing: everything with something in it, plus the bundle.
@@ -137,7 +164,7 @@ const livePrices = {};
 
 /* What to print on the button.
  *
- * The prices in PACKS are our guess at a US price point. The store knows the
+ * PACKS records the confirmed Australian base prices. The store knows the
  * real one, in the buyer's own currency, including whatever regional
  * adjustment Apple or Google applied — so it wins whenever it has answered.
  * Showing a price the store then does not charge is both an unpleasant
@@ -163,6 +190,8 @@ function onNativePlatform() {
 const Billing = {
   _plugin: null,
   _ready: null,
+  _appUserId: null,
+  _generation: 0,
 
   get native() {
     const cap = window.Capacitor;
@@ -170,7 +199,7 @@ const Billing = {
               && cap.Plugins && cap.Plugins.Purchases && this._key());
   },
 
-  get mode() { return this.native ? 'store' : 'simulated'; },
+  get mode() { return this.native ? 'store' : previewAvailable() ? 'simulated' : 'unavailable'; },
 
   _key() {
     const cfg = (window.OAA_CONFIG && OAA_CONFIG.revenueCat) || {};
@@ -186,18 +215,33 @@ const Billing = {
    * here is not fatal: the app carries on with whatever is cached locally,
    * rather than locking content somebody has already paid for.
    */
-  init() {
+  init(appUserId = null) {
+    const requestedId = appUserId || this._appUserId;
+    const previousReady = this._ready;
+    if (requestedId !== this._appUserId) {
+      this._generation++;
+      this._ready = null;
+      this._appUserId = requestedId;
+      loadEntitlements(requestedId);
+    }
     if (this._ready) return this._ready;
     if (!this.native) { this._ready = Promise.resolve(false); return this._ready; }
+    if (!this._appUserId) { this._ready = Promise.resolve(false); return this._ready; }
 
     const P = window.Capacitor.Plugins.Purchases;
+    const runId = this._appUserId, runGeneration = this._generation;
+    const alreadyConfigured = this._plugin === P;
     this._plugin = P;
     this._ready = (async () => {
       try {
-        await P.configure({ apiKey: this._key() });
-        await this.refresh();
-        await this.products();
-        return true;
+        if (previousReady) await previousReady;
+        if (alreadyConfigured && P.logIn) await P.logIn({ appUserID: runId });
+        else await P.configure({ apiKey: this._key(), appUserID: runId });
+        if (runGeneration !== this._generation || runId !== this._appUserId) return false;
+        await this.refresh(runGeneration, runId);
+        if (runGeneration !== this._generation || runId !== this._appUserId) return false;
+        await this.products(runGeneration, runId);
+        return runGeneration === this._generation && runId === this._appUserId;
       } catch (e) {
         console.warn('billing init', e);
         return false;
@@ -212,10 +256,11 @@ const Billing = {
    * actually takes the content away again, instead of leaving it unlocked
    * forever on the strength of one old localStorage write.
    */
-  async refresh() {
+  async refresh(expectedGeneration = this._generation, expectedId = this._appUserId) {
     if (!this.native) return [...owned];
     try {
       const { customerInfo } = await this._plugin.getCustomerInfo();
+      if (expectedGeneration !== this._generation || expectedId !== this._appUserId) return [];
       const slugs = slugsFromCustomerInfo(customerInfo);
       owned = new Set(slugs);
       saveEntitlements();
@@ -227,7 +272,7 @@ const Billing = {
    * products exist — a slug missing from the answer is one that has not been
    * created in App Store Connect or Play yet.
    */
-  async products() {
+  async products(expectedGeneration = this._generation, expectedId = this._appUserId) {
     if (!this.native) return null;                 // simulated: use our own prices
     try {
       const wanted = PACKS.filter(p => !p.unreleased);
@@ -235,6 +280,7 @@ const Billing = {
         productIdentifiers: wanted.map(p => productId(p.slug)),
         productCategory: 'NON_SUBSCRIPTION',
       });
+      if (expectedGeneration !== this._generation || expectedId !== this._appUserId) return null;
       for (const pack of wanted) {
         const found = (products || []).find(x => x.identifier === productId(pack.slug));
         if (found && found.priceString) livePrices[pack.slug] = found.priceString;
@@ -261,6 +307,9 @@ const Billing = {
     if (onNativePlatform()) {
       if (!this._key()) return { ok: false, reason: 'the shop is not available in this build' };
     } else {
+      if (!previewAvailable()) {
+        return { ok: false, reason: 'purchases are available in the mobile app' };
+      }
       const yes = confirm(
         `Simulated purchase — no money moves.\n\n${pack.name} · ${pack.price}\n\n`
         + 'On a phone this opens the real store. Unlock it here for testing?');
@@ -270,15 +319,22 @@ const Billing = {
     }
 
     await this.init();
+    const runId = this._appUserId, runGeneration = this._generation;
     try {
       const { products } = await this._plugin.getProducts({
         productIdentifiers: [productId(slug)],
         productCategory: 'NON_SUBSCRIPTION',
       });
+      if (runGeneration !== this._generation || runId !== this._appUserId) {
+        return { ok: false, reason: 'account changed' };
+      }
       const product = (products || [])[0];
       if (!product) return { ok: false, reason: 'the store does not have that one yet' };
 
       const { customerInfo } = await this._plugin.purchaseStoreProduct({ product });
+      if (runGeneration !== this._generation || runId !== this._appUserId) {
+        return { ok: false, reason: 'account changed' };
+      }
       owned = new Set(slugsFromCustomerInfo(customerInfo));
       owned.add(slug);          // belt and braces, in case entitlements lag a moment
       saveEntitlements();
@@ -303,8 +359,12 @@ const Billing = {
       return { ok: true, restored: [...owned], simulated: true };
     }
     await this.init();
+    const runId = this._appUserId, runGeneration = this._generation;
     try {
       const { customerInfo } = await this._plugin.restorePurchases();
+      if (runGeneration !== this._generation || runId !== this._appUserId) {
+        return { ok: false, reason: 'account changed' };
+      }
       const slugs = slugsFromCustomerInfo(customerInfo);
       owned = new Set(slugs);
       saveEntitlements();
@@ -313,6 +373,21 @@ const Billing = {
       console.warn('restore', e);
       return { ok: false, reason: (e && e.message) || 'could not reach the store' };
     }
+  },
+
+  async signOut() {
+    const P = this._plugin;
+    const previousReady = this._ready;
+    this._generation++;
+    this._plugin = null;
+    this._ready = null;
+    this._appUserId = null;
+    entitlementOwner = null;
+    owned = new Set();
+    try {
+      if (previousReady) await previousReady;
+      if (P && P.logOut) await P.logOut();
+    } catch (e) { console.warn('billing logout', e); }
   },
 };
 
@@ -356,7 +431,8 @@ function previewAvailable() {
    * content for nothing. Tying it to the platform instead makes that mistake
    * cost a broken shop rather than the whole shop.
    */
-  return !onNativePlatform();
+  if (onNativePlatform()) return false;
+  return /^(localhost|127(?:\.\d+){3}|\[::1\])$/i.test(location.hostname);
 }
 
 /* Held in a variable, not read from storage each time.
@@ -368,6 +444,7 @@ function previewAvailable() {
  */
 let previewFlag = false;
 try { previewFlag = localStorage.getItem(LS_PREVIEW) === '1'; } catch { /* private mode */ }
+if (!previewAvailable()) previewFlag = false;
 
 function previewOn() { return previewFlag; }
 
@@ -378,5 +455,3 @@ function setPreview(on) {
     else localStorage.removeItem(LS_PREVIEW);
   } catch { /* private mode */ }
 }
-
-loadEntitlements();

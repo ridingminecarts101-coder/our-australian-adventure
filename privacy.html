@@ -33,7 +33,7 @@
 <body>
 <main>
   <h1>Privacy</h1>
-  <p class="sub">Wayfinder · last updated 4 September 2026</p>
+  <p class="sub">Wayfinder · last updated 11 September 2026</p>
 
   <p>Wayfinder is a travel checklist. It keeps the places you want to go, the ones
      you have been to, and the photos you attach to them. This page says exactly
@@ -50,29 +50,41 @@
         <td>Your device, and our database</td></tr>
     <tr><td>A display name, if you set one</td><td>So a shared list can say who ticked what</td>
         <td>Our database</td></tr>
-    <tr><td>An anonymous account identifier</td><td>To keep your list yours</td>
+    <tr><td>Your email address, account identifier and authentication information</td>
+        <td>To sign in, verify your email, recover your account and sync between devices</td>
+        <td>Supabase authentication; a sign-in session is also kept on your device</td></tr>
+    <tr><td>Group membership and your completion-sharing choice</td>
+        <td>To show the completion ticks you choose to share with your group</td>
         <td>Our database</td></tr>
+    <tr><td>Purchase records and unlocked packs in the mobile apps</td>
+        <td>To recognise purchases and restore access for your account</td>
+        <td>Apple or Google, RevenueCat, and a cache on your device</td></tr>
   </table>
 
-  <h2>What is not</h2>
+  <h2>Accounts and advertising</h2>
   <ul>
-    <li>No name, email address or phone number is required to use the app.</li>
-    <li>No advertising, no ad identifiers, no tracking across other apps or sites.</li>
-    <li>No analytics service. Nobody is watching what you tap.</li>
-    <li>Your data is not sold, rented or shared with anyone.</li>
+    <li>An email and password account is required. Your display name does not need to be your legal name.</li>
+    <li>Wayfinder does not run advertising or add advertising trackers.</li>
+    <li>We do not sell or rent your personal data. Service providers process information needed to operate the app, as described below.</li>
+    <li>Your email and password are not shown to group members or Community readers.</li>
   </ul>
 
   <h2>Location</h2>
-  <p>The <em>Near me</em> button asks for your location only at the moment you press
-     it. The coordinates are used once, to work out which region you are in, and are
-     not stored or sent anywhere except to a geocoding service that turns them into a
-     place name. The app works entirely without ever granting it.</p>
+  <p>The <em>Near me</em> button asks for your location when you press it. With your
+     permission, your current coordinates are sent to BigDataCloud to find your
+     region. That provider also receives your IP address and explains that its free
+     service uses these observations to improve IP geolocation. Wayfinder does not
+     save these coordinates in your account or track your route. You can browse all
+     destinations without granting location access.
+     <a href="https://www.bigdatacloud.com/docs/article/why-is-reverse-geocoding-api-free">How BigDataCloud uses this request</a>.</p>
 
   <h2>Photos</h2>
   <p>Photos are read only when you choose them. They are resized on your device before
      upload, and stored in a private bucket that is not publicly listable — the app
-     fetches them through short-lived signed links. They are visible to you and, if
-     you are in a shared group, to the other people in that group. Nobody else.</p>
+     fetches them through short-lived signed links. Group membership alone does not
+     share newly added photos. Photos previously shared with a group may remain
+     visible to its members until you leave that group. Stopping completion sharing
+     affects ticks; it does not withdraw previously shared photos or trip plans.</p>
 
   <h2>Traveller recommendations</h2>
   <p>Anything you post to the Community list is <strong>public</strong> to everyone
@@ -82,27 +94,63 @@
      private to you. You can delete your own posts at any time, and deleting your
      account removes them all.</p>
 
-  <h2>Sharing a list</h2>
-  <p>A group is how two or more phones keep one list. Joining needs a code that
-     somebody in the group reads out to you. While you are in a group, the others can
-     see the ticks, photos, trips and display name in it. Leaving a group stops that,
-     and removes only you.</p>
+  <h2>Personal progress and groups</h2>
+  <p>Your progress belongs to your account. A group is optional, and joining uses an
+     invitation code. When joining, you choose whether to share your completed
+     adventures. If enabled, the group can see your past and future completion ticks,
+     completion dates and display name. This choice does not share your private
+     notes, ratings, shortlist, new photos or trip plans.</p>
+  <p>You can change completion sharing under <em>Me → Sharing</em>, or switch between
+     <em>Personal</em> and <em>Group</em> views. Leaving removes your membership and
+     shared entries from that group while keeping your own records. It does not
+     copy other members' achievements into your account. Older shared lists retain
+     their existing sharing choices when upgraded. Someone who has already viewed
+     shared information may have kept a separate copy.</p>
+
+  <h2>Purchases</h2>
+  <p>Hidden-gem packs are one-time purchases for an individual Wayfinder account.
+     Joining a group does not give other members your purchases. Apple or Google
+     handles payment details; Wayfinder does not receive your card number.
+     RevenueCat processes your Wayfinder account identifier, purchase and receipt
+     information, unlocked packs and technical information needed to operate billing.
+     <a href="https://www.revenuecat.com/privacy-policy">RevenueCat privacy policy</a>.</p>
 
   <h2>Notifications</h2>
   <p>Optional, off unless you turn them on, and generated on your own device. They
      fire at most once a week and only for shortlisted adventures that are in season.
      No notification content leaves your phone.</p>
 
-  <h2>Deleting everything</h2>
+  <h2 id="delete-account">Deleting your account</h2>
   <p>Me → <strong>Delete my account and all my data</strong>. It removes your account,
-     every tick, every trip and every photo file, immediately and permanently. There is
-     no soft delete and no recovery, so be sure. You do not need to email anyone or
-     wait for a reply.</p>
+     personal progress, uploaded photos, trips, group memberships and Community
+     contributions. It requires a connection and confirmation. It cannot be undone;
+     uninstalling the app alone does not delete your account.</p>
+  <p>If you cannot use the app, you can
+     <a href="support.html#delete-account">request account and data deletion through Support</a>.
+     We verify that the request comes from the account owner before acting. Deleting
+     Wayfinder data does not itself issue a store refund or erase Apple's or Google's
+     transaction records. Purchase-provider records require a separate provider
+     deletion step; contact Support for help with that request. We cannot remove
+     copies another person has independently saved.</p>
 
   <h2>Who runs it</h2>
-  <p>Wayfinder is an independent app. The database and file storage are hosted by
-     Supabase, and the app itself is served by GitHub Pages; both process data on our
-     behalf as infrastructure providers.</p>
+  <p>Wayfinder is developed by Riley Lawler in Australia.
+     Contact <a href="mailto:rambodog555@gmail.com">rambodog555@gmail.com</a>
+     about privacy, access, corrections or deletion.</p>
+  <p>Supabase hosts account authentication, the database and photo storage. GitHub
+     Pages serves the website. Authentication emails are delivered through the
+     configured email service. RevenueCat and the app stores support native purchases;
+     BigDataCloud handles optional location lookups. These services receive the
+     information needed for their role, including normal network request information,
+     and may process it outside Australia.</p>
+
+  <h2>Retention and device copies</h2>
+  <p>Your saved travel records remain until you remove them or delete your account.
+     Local caches let a previously signed-in device work offline. Signing out clears
+     that device's account cache; other offline devices may still hold earlier copies
+     until they reconnect or their app data is cleared. Service-provider backup and
+     operational records may persist beyond removal from the active app. Contact us
+     for the applicable retention details or a privacy request.</p>
 
   <h2>Children</h2>
   <p>Wayfinder is not directed at children under 13 and does not knowingly collect
@@ -116,8 +164,8 @@
      before you travel.</p>
 
   <h2>Changes</h2>
-  <p>If this policy changes materially, the date at the top changes with it, and the
-     app will say so on next launch.</p>
+  <p>We update the date on this page when the policy changes. Review this page for
+     the current description of how Wayfinder handles your information.</p>
 
   <footer>
     Questions: <a href="mailto:rambodog555@gmail.com">rambodog555@gmail.com</a> ·

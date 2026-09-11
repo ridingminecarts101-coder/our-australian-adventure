@@ -149,17 +149,22 @@ packs = re.findall(r"\{ slug: '([^']+)',[^}]*?name: '([^']+)',\s*\n\s*price: '([
 # trusted from a flag. A pack with nothing in it must not be created on either
 # store: an empty product is a refund request and it fails review.
 gems = {}
+total_gems = 0
 try:
     _d = json.load(io.open('data/adventures.json', encoding='utf-8'))
     for _a in (_d['adventures'] if isinstance(_d, dict) else _d):
         if _a.get('hidden_gem') and _a.get('pack'):
-            gems[_a['pack']] = gems.get(_a['pack'], 0) + 1
+            total_gems += 1
+            # 'all' is the bundle entitlement, never a standalone Antarctica
+            # product. Keep its direct rows out of regional product counts.
+            if _a['pack'] != 'all':
+                gems[_a['pack']] = gems.get(_a['pack'], 0) + 1
 except Exception as e:
     notes.append('could not count gems: %s' % e)
-gems['all'] = sum(gems.values())
+gems['all'] = total_gems
 
 print('\n  In-app purchases - one list, both stores. Set these price points in')
-print('  BOTH App Store Connect and Play Console, in USD:\n')
+print('  BOTH App Store Connect and Play Console, at the confirmed AUD base price:\n')
 print('  %-46s %-8s %-6s %s' % ('PRODUCT ID', 'PRICE', 'GEMS', 'STATUS'))
 print('  ' + '-' * 72)
 for slug, name, price, unreleased in packs:

@@ -24,6 +24,8 @@ import os
 import re
 import sys
 
+from countries import COUNTRIES
+
 DATA = os.path.join('data', 'adventures.json')
 VERBOSE = '--verbose' in sys.argv or '-v' in sys.argv
 
@@ -349,6 +351,50 @@ def check_field_health(rows):
         report('problem', 'gems with no pack', f'{len(orphan)}', orphan[:6])
 
 
+def check_gem_coverage(rows):
+    """Paid discoveries must form at least 20% of each country and pack.
+
+    This intentionally reports the current backlog. Editors must not satisfy it
+    by reclassifying famous sights or adding filler; any evidence-based quality
+    exception belongs in the research record and remains visible here.
+    """
+    by_country = collections.defaultdict(list)
+    by_continent = collections.defaultdict(list)
+    for adventure in rows:
+        by_country[adventure['country']].append(adventure)
+        by_continent[adventure['continent']].append(adventure)
+
+    missing = sorted(set(COUNTRIES) - set(by_country))
+    if missing:
+        report('problem', 'missing country coverage',
+               f'{len(missing)} registry countries or territories have no adventures',
+               missing[:12])
+
+    low_countries = []
+    for country, items in sorted(by_country.items()):
+        gems = sum(a['hidden_gem'] for a in items)
+        if gems * 5 < len(items):
+            needed = max(0, -((gems * 5 - len(items)) // 4))
+            low_countries.append(
+                f'{country}: {gems}/{len(items)}; at least {needed} new gem-only rows needed')
+    if low_countries:
+        report('problem', 'country gem coverage',
+               f'{len(low_countries)} countries are below 20% genuine hidden gems',
+               low_countries[:12])
+
+    low_continents = []
+    for continent, items in sorted(by_continent.items()):
+        gems = sum(a['hidden_gem'] for a in items)
+        if gems * 5 < len(items):
+            needed = max(0, -((gems * 5 - len(items)) // 4))
+            low_continents.append(
+                f'{continent}: {gems}/{len(items)}; at least {needed} new gem-only rows needed')
+    if low_continents:
+        report('problem', 'continent-pack gem coverage',
+               f'{len(low_continents)} continent packs are below 20% genuine hidden gems',
+               low_continents)
+
+
 def main():
     rows = load()
     print(f'{len(rows)} adventures · {len({a["country"] for a in rows})} countries · '
@@ -356,7 +402,8 @@ def main():
 
     for fn in (check_titles, check_descriptions, check_region_parity,
                check_category_spread, check_accessibility, check_seasons,
-               check_dogs, check_duplicates, check_claims, check_field_health):
+               check_dogs, check_duplicates, check_claims, check_field_health,
+               check_gem_coverage):
         fn(rows)
 
     problems = [f for f in findings if f[0] == 'problem']

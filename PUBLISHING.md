@@ -33,7 +33,7 @@ npm run stage        # www/ — exactly the files that ship
 npm run android:aab  # signed bundle for Google Play
 npm run android:apk  # signed APK you can sideload onto a phone today
 npm run build:icons  # regenerate every icon and splash from icons/icon-512.png
-npm run check        # the five static checks
+npm run check        # the full static and mocked check suite
 ```
 
 Output lands in `android/app/build/outputs/`. The APK is the useful one before
@@ -149,8 +149,9 @@ deleted. It touches nothing of yours. Last run: **15 passed, 0 failed.**
 
 ## What is sold, and what is never behind the paywall
 
-Hidden gems are the paid content: 255 of 2,356 entries. Everything else is free
-forever.
+Hidden gems are the paid content. Their current counts are derived from the
+generated catalogue rather than copied into this guide. Everything else is
+free forever.
 
 **Locked gems do not count towards anything.** A region with 71 adventures of
 which 30 are unbought gems asks for 41, not 71. Progress, stamps, achievements
@@ -177,17 +178,23 @@ telling somebody who paid that they did not.
 - `restorePurchases` replaces local state rather than merging, so a refund or a
   revoked family share actually takes the content away again.
 
-Set the two keys in `config.js` → `revenueCat`. Both empty means the app stays
-in its clearly-labelled simulator, which is correct in a browser.
+Set the two public SDK keys in `config.js` → `revenueCat`. A native build with
+an empty key keeps paid content locked and says the shop is unavailable.
 
 **Two separate guards keep the paid content paid.** Both are keyed off the
 platform rather than off whether a store key is configured, because shipping
 with a blank key is a plausible mistake and it must not be an expensive one:
 
 - Preview mode — the button that unlocks every gem for reviewing — exists only
-  in a browser.
+  in a browser served from localhost. It is absent from the public website.
 - The purchase simulator, which grants a pack after a `confirm()`, also exists
-  only in a browser. On a phone with no key the shop says it is unavailable.
+  only on localhost. On a phone with no key the shop says it is unavailable.
+
+RevenueCat is configured with the signed-in Supabase user's stable user id.
+Purchases therefore belong to that personal account and can follow it across
+devices and between Android and iOS after both store products are connected to
+the same RevenueCat project. Store sandbox tests must verify that dashboard
+configuration; source code alone cannot prove it.
 
 Get the key wrong and you have a shop that does not work. Without these you
 would have had an app that gives every hidden gem away to anyone who taps Buy.
@@ -224,13 +231,13 @@ That is the honest answer; claiming otherwise is how apps get pulled later.
 | Question | Answer |
 |---|---|
 | Data used to track you | **None** |
-| Data linked to you | User ID (anonymous), plus photos, and a display name if set |
+| Data linked to you | Account user ID and email address, plus photos and a display name if set |
 | Data not linked to you | None |
-| Contact info | Not collected |
+| Contact info | Email address, used for account sign-in and recovery |
 | Location | Requested only on pressing *Near me*, used once, not stored |
-| Identifiers | An anonymous account id. No advertising identifier |
+| Identifiers | Account user id. No advertising identifier |
 | Analytics / diagnostics | None collected |
-| Third-party SDKs | RevenueCat, for purchases only. It sees a purchase and an anonymous id, not your data |
+| Third-party SDKs | RevenueCat, for purchases only. It sees purchase data and the account user id |
 
 **Age rating.** 4+ before the community tab is considered; expect 12+ with it.
 Several entries mention beer, wine and distilleries as part of describing a
@@ -246,6 +253,9 @@ reviewer at it; it is a hard requirement and it is genuinely implemented.
   `NSPhotoLibraryAddUsageDescription`, `NSLocationWhenInUseUsageDescription`
 
 Each feature is optional in use: the app works fully without any of them.
+`ios/App/App/PrivacyInfo.xcprivacy` also declares the Preferences plugin's
+UserDefaults access with Apple's `CA92.1` required-reason code and declares no
+tracking. Check the complete archive's privacy report in Xcode before upload.
 
 **Export compliance.** `ITSAppUsesNonExemptEncryption` is already `false` in
 Info.plist, so App Store Connect stops asking on every upload. HTTPS only, no
@@ -315,23 +325,23 @@ In order. Nothing here can be done from code.
 8. **Screenshots** on a real device or simulator — 6.7" and 6.5" iPhone are
    required. The world map, a continent zoom, an adventure with a photo, the
    passport and a trip make a good five.
-9. **Create the in-app purchases.** Five products, all **non-consumable**, ids
-   exactly as below. Prices are the current ones; see `REVENUE.md` before you
-   commit to them.
+9. **Create the in-app purchases.** Eight products, all **non-consumable**, ids
+   exactly as below. The confirmed Australian base price points are shown.
 
    | Product id | Shown as | Price |
    |---|---|---|
-   | `app.wayfinder.mobile.gems.all` | Every hidden gem (255) | $9.99 |
-   | `app.wayfinder.mobile.gems.oceania` | Oceania gems (125) | $1.99 |
-   | `app.wayfinder.mobile.gems.north_america` | North America gems (74) | $1.99 |
-   | `app.wayfinder.mobile.gems.europe` | Europe gems (44) | $1.99 |
-   | `app.wayfinder.mobile.gems.asia` | Asia gems (12) | $1.99 |
+   | `app.wayfinder.mobile.gems.all` | Every hidden gem | AUD $14.99 |
+   | `app.wayfinder.mobile.gems.oceania` | Oceania gems | AUD $2.99 |
+   | `app.wayfinder.mobile.gems.north_america` | North America gems | AUD $2.99 |
+   | `app.wayfinder.mobile.gems.europe` | Europe gems | AUD $2.99 |
+   | `app.wayfinder.mobile.gems.asia` | Asia gems | AUD $2.99 |
+   | `app.wayfinder.mobile.gems.middle_east` | Middle East gems | AUD $2.99 |
+   | `app.wayfinder.mobile.gems.south_america` | South America gems | AUD $2.99 |
+   | `app.wayfinder.mobile.gems.africa` | Africa gems | AUD $2.99 |
 
-   Turn **Family Sharing on** for all five — this is a household app and it
-   costs nothing. Do **not** create Middle East, South America or Africa: they
-   have no gems, and an empty pack fails review. The app hides them by itself,
-   counting from the data rather than a written-down number, so a pack can
-   never advertise a figure it does not contain.
+   Decide Family Sharing in the store dashboards as a separate commercial
+   choice. The app counts gems from current data and does not offer an empty
+   continent pack.
 
 10. **Apply to Viator and GetYourGuide** — free, takes days to weeks, and needs
     only the live web app you already have. See `REVENUE.md`; the code is
@@ -349,6 +359,12 @@ In order. Nothing here can be done from code.
   and restore all work and are tested against the simulator, but the first real
   purchase will happen in Apple's sandbox and Play's internal test track. Budget
   an afternoon for it.
+- **Store-release builds are gated.** Run `python tools/release.py build
+  --store-release`; it stops before changing version numbers unless the Android
+  RevenueCat public SDK key is present and the billing/auth/privacy checks pass.
+  A real `play.py upload --yes` repeats that check. Before an iOS archive, run
+  `python tools/check_billing.py --store-release --platform ios`. Ordinary local
+  builds still work with blank keys for development.
 - **No Android device or emulator has run it here.** The emulator is installed
   but this machine has no hypervisor — Windows Hypervisor Platform is off and
   the Android emulator driver is not installed, and turning either on needs
