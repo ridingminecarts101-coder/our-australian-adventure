@@ -72,14 +72,14 @@ unlock.
 Play Console → **Grow → Store presence → Main store listing**. Draft text,
 already inside the character limits:
 
-**Short description** (80 max, 79 used):
+**Short description** (80 max, 73 used):
 
-> 2,356 real places worth going, in 123 countries. Tick them off together.
+> 4,200+ real places worth going, in 206 countries. Tick them off together.
 
 **Full description** (4,000 max):
 
-> Wayfinder is a list of places that are actually worth the trip — 2,356 of
-> them, across 123 countries, each one written up by hand with what it is, how
+> Wayfinder is a list of places that are actually worth the trip — 4,200+ of
+> them, across 206 countries, each one written up by hand with what it is, how
 > hard it is, what it costs and when to go.
 >
 > It is not a map you fill in yourself. It arrives full.
