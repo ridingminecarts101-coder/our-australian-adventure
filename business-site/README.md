@@ -24,3 +24,5 @@ python -m http.server 8080
 Then open `http://localhost:8080/`. Do not preview by opening the HTML files directly because root-relative links require a web server.
 
 There is no build step, client-side JavaScript, analytics, form handler or environment-specific configuration.
+
+The `Cache-Control: no-transform` header preserves the public support mailto links on the custom domain. Cloudflare's automatic email obfuscation otherwise requires an injected decoder script that this site's `script-src 'none'` policy intentionally excludes. Keep the header when changing cache settings. Domain-wide Cloudflare security settings do not need to be disabled.
