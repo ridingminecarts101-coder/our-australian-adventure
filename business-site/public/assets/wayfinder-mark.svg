@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Wayfinder compass</title>
+  <desc id="desc">A compass above a curved horizon</desc>
+  <circle cx="80" cy="80" r="72" fill="#fffaf0" stroke="#284c40" stroke-width="4"/>
+  <circle cx="80" cy="70" r="35" fill="#dce6dc" stroke="#284c40" stroke-width="4"/>
+  <path d="M94 48 84 76 57 91l11-28z" fill="#d66d49" stroke="#284c40" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="80" cy="70" r="4" fill="#284c40"/>
+  <path d="M31 117c14-13 30-19 49-19s35 6 49 19" fill="none" stroke="#d2a23e" stroke-width="7" stroke-linecap="round"/>
+  <path d="M42 129h76" stroke="#284c40" stroke-width="4" stroke-linecap="round"/>
+</svg>
