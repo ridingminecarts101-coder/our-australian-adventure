@@ -45,11 +45,26 @@ def main():
         problems.append('sign-out does not clear the RevenueCat customer')
     if '`${LS_ENTITLEMENTS}.${ownerId}`' not in store or '_generation' not in store:
         problems.append('billing cache and asynchronous results are not account-scoped')
+    if 'allPurchasedProductIdentifiers' in store:
+        problems.append('historical/inactive product identifiers can influence billing access')
+    if ('info.entitlements && info.entitlements.active' not in store
+            or '_acceptCustomerInfo' not in store):
+        problems.append('billing access is not derived from active RevenueCat entitlements')
+    if ('addCustomerInfoUpdateListener' not in store
+            or 'removeCustomerInfoUpdateListener' not in store):
+        problems.append('RevenueCat CustomerInfo listener lifecycle is missing')
+    if ('async foreground()' not in store
+            or 'invalidateCustomerInfoCache' not in store):
+        problems.append('foreground billing refresh is missing')
+    if 'async deleteLocalOwner(ownerId)' not in store:
+        problems.append('successful account deletion cannot clear only that owner billing cache')
     if ('if (onNativePlatform()) return false;' not in store
             or 'location.hostname' not in store):
         problems.append('developer preview is not restricted to local browser development')
-    if 'if (onNativePlatform())' not in store or "if (!this._key()) return { ok: false" not in store:
-        problems.append('a native build with a missing SDK key does not fail closed')
+    if (store.count('if (onNativePlatform()') < 3
+            or "if (!this._key()) return { ok: false" not in store
+            or 'if (onNativePlatform() && !this.native)' not in store):
+        problems.append('native buy/restore with a missing SDK key does not fail closed')
 
     try:
         with open(privacy_path, 'rb') as handle:

@@ -22,6 +22,12 @@ window.OAA_CONFIG = {
    *
    * Fill these in from RevenueCat -> Project Settings -> API keys. The
    * Android one starts goog_, the Apple one appl_.
+   *
+   * Before either key is added to a release build, RevenueCat must contain an
+   * entitlement for each exact pack slug in store.js, with its Apple and
+   * Google products attached. Only entitlements currently active for that
+   * customer unlock content. Historical product ids are deliberately not
+   * accepted because they can represent refunded or otherwise inactive buys.
    */
   revenueCat: {
     android: '',

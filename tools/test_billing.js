@@ -5,6 +5,102 @@ const fs = require('fs');
 const vm = require('vm');
 
 const source = fs.readFileSync('store.js', 'utf8');
+const appSource = fs.readFileSync('app.js', 'utf8');
+
+function arrowCallbackAfter(marker) {
+  const markerAt = appSource.indexOf(marker);
+  assert(markerAt >= 0, `missing app integration marker: ${marker}`);
+  const start = appSource.indexOf('() => {', markerAt);
+  assert(start >= 0, `missing callback after: ${marker}`);
+  const brace = appSource.indexOf('{', start);
+  let depth = 0;
+  for (let i = brace; i < appSource.length; i++) {
+    if (appSource[i] === '{') depth++;
+    if (appSource[i] === '}' && --depth === 0) return appSource.slice(start, i + 1);
+  }
+  throw new Error(`unterminated callback after: ${marker}`);
+}
+
+async function settle() {
+  await new Promise(resolve => setImmediate(resolve));
+}
+
+async function testAppLifecycleHooks(accountA, accountB) {
+  const calls = { foreground: 0, renders: 0, warnings: 0 };
+  let foregroundResult = Promise.resolve([]);
+  const context = {
+    Billing: {
+      onChange: null,
+      _appUserId: accountA,
+      foreground() { calls.foreground++; return foregroundResult; },
+    },
+    userId: accountA,
+    authGeneration: 7,
+    passwordRecoveryMode: false,
+    accountDeletionInProgress: false,
+    document: { hidden: false },
+    renderAll() { calls.renders++; },
+    flushOutbox() {}, pullProgress() {},
+    pullPhotos() { return new Promise(() => {}); },
+    flushPhotoQueue() {}, flushTrips() {},
+    sb: null, realtimeOk: true, resubscribeRealtime() {},
+    console: { warn() { calls.warnings++; } },
+  };
+  vm.createContext(context);
+
+  const onChange = arrowCallbackAfter('Billing.onChange =');
+  vm.runInContext(`Billing.onChange = ${onChange}`, context);
+  context.Billing.onChange();
+  assert.equal(calls.renders, 1, 'active-account CustomerInfo changes must repaint access');
+  for (const blockedState of [
+    { userId: null },
+    { userId: accountB },
+    { userId: accountA, passwordRecoveryMode: true },
+    { userId: accountA, passwordRecoveryMode: false, accountDeletionInProgress: true },
+  ]) {
+    Object.assign(context, { userId: accountA, passwordRecoveryMode: false,
+      accountDeletionInProgress: false }, blockedState);
+    context.Billing.onChange();
+  }
+  assert.equal(calls.renders, 1,
+    'owner mismatch, signed-out, recovery and deletion states must suppress entitlement repaint');
+
+  Object.assign(context, { userId: accountA, authGeneration: 7,
+    passwordRecoveryMode: false, accountDeletionInProgress: false });
+  const visible = arrowCallbackAfter("addEventListener('visibilitychange', () => {\n    if (document.hidden) return;\n    const billingOwner");
+  const visibleHandler = vm.runInContext(`(${visible})`, context);
+  foregroundResult = Promise.resolve([]);
+  visibleHandler();
+  await settle();
+  assert.equal(calls.foreground, 1);
+  assert.equal(calls.renders, 2, 'a current foreground refresh repaints access');
+
+  let releaseOld;
+  foregroundResult = new Promise(resolve => { releaseOld = resolve; });
+  visibleHandler();
+  context.userId = accountB;
+  context.authGeneration++;
+  releaseOld([]);
+  await settle();
+  assert.equal(calls.renders, 2, 'an Account A foreground result must not repaint Account B');
+
+  context.userId = accountB;
+  context.passwordRecoveryMode = true;
+  foregroundResult = Promise.resolve([]);
+  visibleHandler();
+  await settle();
+  context.passwordRecoveryMode = false;
+  context.accountDeletionInProgress = true;
+  visibleHandler();
+  await settle();
+  assert.equal(calls.renders, 2, 'recovery and deletion suppress foreground billing repaint');
+
+  context.accountDeletionInProgress = false;
+  foregroundResult = Promise.reject(new Error('offline'));
+  visibleHandler();
+  await settle();
+  assert.equal(calls.warnings, 1, 'foreground failure is observed without repainting');
+}
 
 function harness({ native = false, platform = 'web', key = '', confirmResult = true,
                    hostname = 'localhost' } = {}) {
@@ -14,9 +110,13 @@ function harness({ native = false, platform = 'web', key = '', confirmResult = t
     entitlements: { active: {} },
     allPurchasedProductIdentifiers: [],
   };
+  const state = {
+    customerInfo, listeners: new Map(), listenerHistory: [], nextListener: 0,
+    invalidateGate: null,
+  };
   const purchases = {
     async configure(options) { calls.push(['configure', options]); },
-    async getCustomerInfo() { calls.push(['getCustomerInfo']); return { customerInfo }; },
+    async getCustomerInfo() { calls.push(['getCustomerInfo']); return { customerInfo: state.customerInfo }; },
     async getProducts(options) {
       calls.push(['getProducts', options]);
       return {
@@ -25,10 +125,24 @@ function harness({ native = false, platform = 'web', key = '', confirmResult = t
     },
     async purchaseStoreProduct({ product }) {
       calls.push(['purchase', product.identifier]);
-      customerInfo.allPurchasedProductIdentifiers.push(product.identifier);
-      return { customerInfo };
+      const slug = product.identifier.slice('app.wayfinder.mobile.gems.'.length).replace(/_/g, '-');
+      state.customerInfo.entitlements.active[slug] = { identifier: slug, isActive: true };
+      return { customerInfo: state.customerInfo };
     },
-    async restorePurchases() { calls.push(['restore']); return { customerInfo }; },
+    async restorePurchases() { calls.push(['restore']); return { customerInfo: state.customerInfo }; },
+    async invalidateCustomerInfoCache() {
+      calls.push(['invalidateCustomerInfoCache']);
+      if (state.invalidateGate) await state.invalidateGate;
+    },
+    async addCustomerInfoUpdateListener(listener) {
+      const id = `listener-${++state.nextListener}`;
+      state.listeners.set(id, listener); state.listenerHistory.push(listener);
+      calls.push(['addListener', id]); return id;
+    },
+    async removeCustomerInfoUpdateListener({ listenerToRemove }) {
+      calls.push(['removeListener', listenerToRemove]);
+      return { wasRemoved: state.listeners.delete(listenerToRemove) };
+    },
     async logOut() { calls.push(['logOut']); },
   };
   const context = {
@@ -50,13 +164,14 @@ function harness({ native = false, platform = 'web', key = '', confirmResult = t
   };
   vm.createContext(context);
   vm.runInContext(source, context, { filename: 'store.js' });
-  return { context, calls, values };
+  return { context, calls, values, state };
 }
 
 async function main() {
   const browser = harness();
   const accountA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   const accountB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  await testAppLifecycleHooks(accountA, accountB);
   browser.values.set(`oaa.packs.v2.${accountA}`, JSON.stringify(['all']));
   await vm.runInContext(`Billing.init('${accountA}')`, browser.context);
   assert.equal(vm.runInContext("ownsPack('all')", browser.context), true);
@@ -82,6 +197,10 @@ async function main() {
   assert.equal(unavailable.ok, false);
   assert.match(unavailable.reason, /not available/);
   assert.equal(noKey.calls.some(([name]) => name === 'confirm'), false);
+  const unavailableRestore = await vm.runInContext('Billing.restore()', noKey.context);
+  assert.equal(unavailableRestore.ok, false);
+  assert.match(unavailableRestore.reason, /not available/);
+  assert.equal(noKey.calls.some(([name]) => name === 'restore'), false);
 
   const native = harness({ native: true, platform: 'android', key: 'goog_PUBLIC_TEST_KEY' });
   assert.equal(await vm.runInContext('Billing.init()', native.context), false);
@@ -104,6 +223,71 @@ async function main() {
   await vm.runInContext('Billing.signOut()', native.context);
   assert.equal(native.calls.some(([name]) => name === 'logOut'), true);
   assert.equal(vm.runInContext('owned.size', native.context), 0);
+  assert.equal(native.state.listeners.size, 0, 'sign-out must remove the CustomerInfo listener');
+
+  const inactive = harness({ native: true, platform: 'android', key: 'goog_PUBLIC_TEST_KEY' });
+  inactive.state.customerInfo = {
+    entitlements: { active: {} },
+    allPurchasedProductIdentifiers: ['app.wayfinder.mobile.gems.oceania'],
+  };
+  await vm.runInContext(`Billing.init('${accountA}')`, inactive.context);
+  assert.equal(vm.runInContext("ownsPack('oceania')", inactive.context), false,
+    'historical or refunded product identifiers must not unlock access');
+
+  const listener = harness({ native: true, platform: 'android', key: 'goog_PUBLIC_TEST_KEY' });
+  listener.state.customerInfo = { entitlements: { active: {
+    europe: { identifier: 'europe', isActive: true },
+  } }, allPurchasedProductIdentifiers: [] };
+  await vm.runInContext(`Billing.init('${accountA}')`, listener.context);
+  assert.equal(vm.runInContext("ownsPack('europe')", listener.context), true);
+  const listenerA = listener.state.listenerHistory[0];
+  listenerA({ entitlements: { active: {} },
+    allPurchasedProductIdentifiers: ['app.wayfinder.mobile.gems.europe'] });
+  assert.equal(vm.runInContext("ownsPack('europe')", listener.context), false,
+    'a current listener removes access after refund or inactivation');
+
+  listener.state.customerInfo = { entitlements: { active: {} }, allPurchasedProductIdentifiers: [] };
+  await vm.runInContext(`Billing.init('${accountB}')`, listener.context);
+  assert.equal(listener.state.listeners.size, 1,
+    'account switch must leave only the current CustomerInfo listener installed');
+  listenerA({ entitlements: { active: { all: { identifier: 'all', isActive: true } } } });
+  assert.equal(vm.runInContext("ownsPack('all')", listener.context), false,
+    'a stale account A listener must not unlock account B');
+  assert(listener.calls.some(([name]) => name === 'removeListener'));
+
+  listener.state.customerInfo = { entitlements: { active: {
+    asia: { identifier: 'asia', isActive: true },
+  } }, allPurchasedProductIdentifiers: [] };
+  await vm.runInContext('Billing.foreground()', listener.context);
+  assert.equal(vm.runInContext("ownsPack('asia')", listener.context), true);
+  assert(listener.calls.some(([name]) => name === 'invalidateCustomerInfoCache'));
+
+  const staleForeground = harness({ native: true, platform: 'android', key: 'goog_PUBLIC_TEST_KEY' });
+  staleForeground.state.customerInfo = { entitlements: { active: {
+    europe: { identifier: 'europe', isActive: true },
+  } }, allPurchasedProductIdentifiers: [] };
+  await vm.runInContext(`Billing.init('${accountA}')`, staleForeground.context);
+  let releaseForeground;
+  staleForeground.state.invalidateGate = new Promise(resolve => { releaseForeground = resolve; });
+  const oldForeground = vm.runInContext('Billing.foreground()', staleForeground.context);
+  await new Promise(resolve => setImmediate(resolve));
+  staleForeground.state.customerInfo = { entitlements: { active: {} }, allPurchasedProductIdentifiers: [] };
+  await vm.runInContext(`Billing.init('${accountB}')`, staleForeground.context);
+  releaseForeground();
+  assert.deepEqual([...(await oldForeground)], [], 'an Account A foreground refresh must stop after switching to B');
+  assert.equal(vm.runInContext("ownsPack('europe')", staleForeground.context), false);
+
+  const ownerKey = `oaa.packs.v2.${accountB}`;
+  const otherOwnerKey = `oaa.packs.v2.${accountA}`;
+  listener.values.set(otherOwnerKey, '["oceania"]');
+  assert(listener.values.has(ownerKey));
+  await vm.runInContext(`Billing.deleteLocalOwner('${accountB}')`, listener.context);
+  assert.equal(listener.values.has(ownerKey), false);
+  assert.equal(listener.values.get(otherOwnerKey), '["oceania"]',
+    'account deletion must not remove another owner cache');
+  assert.equal(vm.runInContext('owned.size', listener.context), 0);
+  assert.equal(vm.runInContext('Billing._appUserId', listener.context), null);
+  assert.equal(listener.state.listeners.size, 0);
 
   // A purchase response that arrives after sign-out must not grant anything.
   const late = harness({ native: true, platform: 'android', key: 'goog_PUBLIC_TEST_KEY' });

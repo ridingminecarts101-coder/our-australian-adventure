@@ -47,11 +47,16 @@
     return path;
   }
 
+  function isNativePlatform() {
+    const capacitor = global.Capacitor;
+    return !!(capacitor && capacitor.isNativePlatform
+      && capacitor.isNativePlatform());
+  }
+
   function filesystem() {
     const capacitor = global.Capacitor;
-    const native = capacitor && capacitor.isNativePlatform
-      && capacitor.isNativePlatform();
-    return native && capacitor.Plugins ? capacitor.Plugins.Filesystem : null;
+    return isNativePlatform() && capacitor.Plugins
+      ? capacitor.Plugins.Filesystem : null;
   }
 
   function requiredFilesystem() {
@@ -125,6 +130,18 @@
     return { path, bytes: blob.size };
   }
 
+  async function prepare(owner) {
+    // Called after the signed-in owner is known and before any private photo
+    // UI is mounted. Wayfinder keeps its private UI locked if iOS cannot verify
+    // that persistent directories are excluded; Android enforces this in its
+    // manifest/rules and needs no runtime backup plugin.
+    ownerUuid(owner);
+    requiredFilesystem();
+    const backupGuard = iosBackupGuard();
+    if (backupGuard) await backupGuard.prepare();
+    return true;
+  }
+
   async function read(owner, path) {
     const safe = scopedPath(owner, path);
     const result = await requiredFilesystem().readFile({
@@ -164,6 +181,6 @@
   }
 
   global.WayfinderPhotoFiles = Object.freeze({
-    isNative: () => !!filesystem(), save, read, remove, list,
+    isNative: isNativePlatform, prepare, save, read, remove, list,
   });
 })(window);

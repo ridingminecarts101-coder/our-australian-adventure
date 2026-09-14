@@ -7,7 +7,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidEnterBackground(_ scene: UIScene) {
         // Scene lifecycle replaces AppDelegate background callbacks on modern
         // iOS, so reapply the device-only storage flag here as well.
-        try? WayfinderBackupExclusion.applyToPersistentDirectories()
+        do {
+            try WayfinderBackupExclusion.applyToPersistentDirectories()
+        } catch {
+            NSLog("Wayfinder backup exclusion failed on scene backgrounding: %@", error.localizedDescription)
+        }
     }
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {

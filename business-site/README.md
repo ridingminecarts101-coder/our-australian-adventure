@@ -37,4 +37,10 @@ Add `--live` to compare every public route and asset with the authored source ac
 
 The `Cache-Control: no-transform` header preserves the public support mailto links on the custom domain. Cloudflare's automatic email obfuscation otherwise requires an injected decoder script that this site's `script-src 'none'` policy intentionally excludes. Keep the header when changing cache settings. Domain-wide Cloudflare security settings do not need to be disabled.
 
+The `_headers` file commits only `https://rlapplications.com` to HSTS for one
+year. It deliberately omits `includeSubDomains` and `preload`; do not add either
+until every current and future subdomain is HTTPS-only and separately reviewed.
+Every indexable page declares its preferred apex URL so the `www` and Pages
+aliases do not compete with the canonical site in search results.
+
 The current public contact is `rambodog555@gmail.com`. Do not replace it with `help@rlapplications.com` until that mailbox is confirmed working. When it is ready, find every authored occurrence with `rg -n "rambodog555@gmail.com" business-site/public`, replace both visible addresses and `mailto:` targets, then repeat the local link and deployed email-link checks.

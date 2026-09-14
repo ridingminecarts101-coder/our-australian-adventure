@@ -10,7 +10,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     /// the phone where they were added. Exclude both standard persistent app
     /// directories; progress is canonical on the signed-in account.
     private func excludeLocalDataFromBackup() {
-        try? WayfinderBackupExclusion.applyToPersistentDirectories()
+        do {
+            try WayfinderBackupExclusion.applyToPersistentDirectories()
+        } catch {
+            // The WebView startup check repeats this operation and keeps the
+            // private app UI locked if exclusion still cannot be verified.
+            NSLog("Wayfinder backup exclusion failed during app lifecycle: %@", error.localizedDescription)
+        }
     }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {

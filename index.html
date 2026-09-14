@@ -2,6 +2,7 @@
 <html lang="en-AU">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://ajyuozqoukigeeyhvuqc.supabase.co; connect-src 'self' https://ajyuozqoukigeeyhvuqc.supabase.co wss://ajyuozqoukigeeyhvuqc.supabase.co https://api.bigdatacloud.net; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'">
 <!-- No maximum-scale: locking zoom breaks pinch-to-enlarge for anyone who needs it.
      iOS only auto-zooms on focus when an input is under 16px, and ours are 17px. -->
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -99,13 +100,13 @@
     <div id="listView" class="hidden">
     <div id="crumbList" class="crumb"></div>
     <div class="filters">
-      <input id="search" type="search" placeholder="Search a place, region or activity…" autocomplete="off">
+      <input id="search" type="search" aria-label="Search adventures" placeholder="Search a place, region or activity…" autocomplete="off">
       <div class="chiprow" id="quickChips">
-        <button class="chip" data-quick="all">All</button>
-        <button class="chip" data-quick="todo">To do</button>
-        <button class="chip" data-quick="done">Done</button>
-        <button class="chip" data-quick="short">⭐ Shortlist</button>
-        <button class="chip" data-quick="gem">💎 Hidden gems</button>
+        <button class="chip" data-quick="all" aria-pressed="true">All</button>
+        <button class="chip" data-quick="todo" aria-pressed="false">To do</button>
+        <button class="chip" data-quick="done" aria-pressed="false">Done</button>
+        <button class="chip" data-quick="short" aria-pressed="false">⭐ Shortlist</button>
+        <button class="chip" data-quick="gem" aria-pressed="false">💎 Hidden gems</button>
       </div>
       <details class="morefilters">
         <summary>More filters</summary>
@@ -142,10 +143,10 @@
   <section id="tab-memories" class="panel hidden">
     <h2>Your memories</h2>
     <div class="chiprow" id="groupChips">
-      <button class="chip on" data-group="adventure">Adventure</button>
-      <button class="chip" data-group="month">Month</button>
-      <button class="chip" data-group="year">Year</button>
-      <button class="chip" data-group="category">Category</button>
+      <button class="chip on" data-group="adventure" aria-pressed="true">Adventure</button>
+      <button class="chip" data-group="month" aria-pressed="false">Month</button>
+      <button class="chip" data-group="year" aria-pressed="false">Year</button>
+      <button class="chip" data-group="category" aria-pressed="false">Category</button>
     </div>
     <div id="photoStatus" class="photostatus"></div>
     <div id="memList" class="list"></div>
@@ -159,11 +160,12 @@
        separate list, ranked by whoever votes on them.</p>
 
     <div class="chiprow" id="recSort">
-      <button class="chip on" data-recsort="top">Top rated</button>
-      <button class="chip" data-recsort="stars">Best stars</button>
-      <button class="chip" data-recsort="new">Newest</button>
-      <button class="chip" data-recsort="mine">Mine</button>
+      <button class="chip on" data-recsort="top" aria-pressed="true">Top rated</button>
+      <button class="chip" data-recsort="stars" aria-pressed="false">Best stars</button>
+      <button class="chip" data-recsort="new" aria-pressed="false">Newest</button>
+      <button class="chip" data-recsort="mine" aria-pressed="false">Mine</button>
     </div>
+    <button class="btn-ghost" id="blockedPeopleBtn" aria-pressed="false">Blocked people</button>
     <div id="recStatus" class="photostatus"></div>
     <div id="recList" class="list"></div>
     <button id="newRecBtn" class="btn-primary">＋ Recommend a place</button>
@@ -226,16 +228,16 @@
   </section>
 
   <nav class="tabbar">
-    <button class="tab active" data-tab="tab-list"><span>🧭</span>Adventures</button>
-    <button class="tab" data-tab="tab-passport"><span>🛂</span>Passport</button>
-    <button class="tab" data-tab="tab-memories"><span>📸</span>Memories</button>
-    <button class="tab" data-tab="tab-community"><span>🗺️</span>Community</button>
-    <button class="tab" data-tab="tab-me"><span>❤️</span>Me</button>
+    <button class="tab active" data-tab="tab-list" aria-current="page"><span>🧭</span>Adventures</button>
+    <button class="tab" data-tab="tab-passport" aria-current="false"><span>🛂</span>Passport</button>
+    <button class="tab" data-tab="tab-memories" aria-current="false"><span>📸</span>Memories</button>
+    <button class="tab" data-tab="tab-community" aria-current="false"><span>🗺️</span>Community</button>
+    <button class="tab" data-tab="tab-me" aria-current="false"><span>❤️</span>Me</button>
   </nav>
 </div>
 
 <!-- ───────────────────────── Detail sheet ───────────────────────── -->
-<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Adventure detail">
+<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Adventure detail" tabindex="-1">
   <div class="sheet-backdrop" data-close></div>
   <div class="sheet-card">
     <button class="sheet-close" data-close aria-label="Close">✕</button>
@@ -244,7 +246,7 @@
 </div>
 
 <!-- ───────────────────────── Trip sheet ─────────────────────── -->
-<div id="tripSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Trip">
+<div id="tripSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Trip" tabindex="-1">
   <div class="sheet-backdrop" data-tripclose></div>
   <div class="sheet-card">
     <button class="sheet-close" data-tripclose aria-label="Close">✕</button>
@@ -253,7 +255,7 @@
 </div>
 
 <!-- ───────────────────── Recommendation sheet ───────────────── -->
-<div id="recSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Recommend a place">
+<div id="recSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Recommend a place" tabindex="-1">
   <div class="sheet-backdrop" data-recclose></div>
   <div class="sheet-card">
     <button class="sheet-close" data-recclose aria-label="Close">✕</button>
@@ -262,7 +264,7 @@
 </div>
 
 <!-- ───────────────────────── Photo lightbox ─────────────────── -->
-<div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Photo">
+<div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Photo" tabindex="-1">
   <button class="lb-close" data-lbclose aria-label="Close">✕</button>
   <button class="lb-nav prev" data-lbstep="-1" aria-label="Previous photo">‹</button>
   <button class="lb-nav next" data-lbstep="1" aria-label="Next photo">›</button>

@@ -227,10 +227,11 @@ async function testPasswordRecovery() {
   assert.equal(run4('receivePasswordRecovery(null)'), false);
   assert.match(h4.elements.get('#lockMsg').textContent, /invalid or expired/);
 
-  const h5 = harness(), run5 = h5.run, photoGate = deferred();
+  const h5 = harness(), run5 = h5.run, prepareGate = deferred(), photoGate = deferred();
   h5.context.mockAuth = {getSession: async () => ({data:{session:{user:{id:owner}}},error:null})};
-  h5.context.photoGate = photoGate;
+  h5.context.prepareGate = prepareGate; h5.context.photoGate = photoGate;
   run5(`sb={auth:mockAuth}; bindLocalDataToUser=async()=>{}; loadGroups=async()=>{};
+    nativePhotoFiles=()=>({prepare:()=>prepareGate.promise});
     idbAll=()=>photoGate.promise; loadLocalTrips=()=>{}; notificationPermission=async()=>{};
     Billing.init=async()=>false; openDeepLink=()=>{}; pullProgress=async()=>{}; pullPhotos=async()=>{};
     pullTrips=async()=>{}; subscribeRealtime=()=>{}; startSyncTicker=()=>{}; wirePullToRefresh=()=>{};
@@ -242,6 +243,9 @@ async function testPasswordRecovery() {
   await new Promise(resolve => setTimeout(resolve, 0));
   assert(h5.elements.get('#app').classList.contains('hidden'));
   assert.equal(h5.elements.get('#passportGrid').innerHTML, 'previous owner DOM');
+  prepareGate.resolve(true);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert(h5.elements.get('#app').classList.contains('hidden'));
   photoGate.resolve([]);
   assert.equal(await opening, true);
   assert(!h5.elements.get('#app').classList.contains('hidden'));
@@ -260,6 +264,21 @@ async function testPasswordRecovery() {
   stalePhotoGate.resolve([]);
   assert.equal(await staleOpening, false);
   assert(h5stale.elements.get('#app').classList.contains('hidden'));
+
+  const h5auth = harness(), run5auth = h5auth.run, authGate = deferred();
+  h5auth.context.authGate = authGate;
+  h5auth.context.mockAuth = {getSession: () => authGate.promise};
+  run5auth(`sb={auth:mockAuth,removeAllChannels:async()=>{}};
+    bindLocalDataToUser=async()=>{}; loadGroups=async()=>{}; idbAll=async()=>[];
+    loadLocalTrips=()=>{}; notificationPermission=async()=>{};
+    flushOutbox.requested=false; flushPhotoQueue.requested=false; flushTrips.requested=false;`);
+  const staleSessionOpening = run5auth('enterApp()');
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await run5auth("handleSignedOut('Signed out by another tab.')");
+  authGate.resolve({data:{session:{user:{id:owner,email:'owner@example.test'}}},error:null});
+  assert.equal(await staleSessionOpening, false);
+  assert.equal(run5auth('userId'), null);
+  assert(h5auth.elements.get('#app').classList.contains('hidden'));
 
   const h6 = harness(), run6 = h6.run;
   const callbacks = {}, statuses = {};
@@ -310,6 +329,76 @@ async function testPasswordRecovery() {
   recommendationGate.resolve({data:[{id:'late-a',created_by:owner}],error:null});
   await oldRecommendations;
   assert.equal(run7('recs.length + myVotes.size + (recBusy?1:0)'), 0);
+
+  const h8 = harness(), run8 = h8.run, signOutGate = deferred();
+  let billingSignOuts = 0, signIns = 0, signUps = 0;
+  h8.context.signOutGate = signOutGate;
+  h8.context.mockAuth = {
+    signInWithPassword: async () => { signIns++; return {error:null}; },
+    signUp: async () => { signUps++; return {data:{session:null},error:null}; },
+    resetPasswordForEmail: async () => ({error:null}),
+  };
+  h8.context.billingSignOut = async () => { billingSignOuts++; };
+  run8(`sb={auth:mockAuth,removeAllChannels:()=>signOutGate.promise};
+    userId='${owner}'; accountUser={id:userId}; accountIsAnonymous=false;
+    idbClear=async()=>{}; Billing.signOut=billingSignOut;
+    localStorage.removeItem(LS.owner);`);
+  const signingOut = run8('handleSignedOut()');
+  const joiningSignOut = run8('handleSignedOut()');
+  assert.equal(run8('signOutHandling'), true);
+  assert.equal(await run8("trySignIn('test@example.test','password')"), false);
+  await run8("createAccount('test@example.test','password')");
+  assert.equal(await run8("sendPasswordReset('test@example.test')"), false);
+  assert.equal(run8(`receivePasswordRecovery({user:{id:'${other}'}})`), false);
+  assert.equal(signIns + signUps, 0, 'auth actions cannot start during sign-out cleanup');
+  signOutGate.resolve();
+  await Promise.all([signingOut, joiningSignOut]);
+  assert.equal(billingSignOuts, 1, 'concurrent sign-out events share one cleanup operation');
+  assert.equal(run8('signOutHandling'), false);
+  assert.equal(run8('signOutWork'), null);
+
+  const h9 = harness(), run9 = h9.run;
+  let sessionReads = 0;
+  h9.context.OAA_CONFIG.supabaseUrl = 'https://example.test';
+  h9.context.OAA_CONFIG.supabaseAnonKey = 'test-key';
+  h9.context.mockAuth = {
+    onAuthStateChange() {},
+    getSession: async () => { sessionReads++; return {data:{session:{user:{id:owner}}},error:null}; },
+  };
+  h9.context.supabase = {createClient: () => ({auth:h9.context.mockAuth})};
+  run9(`loadAdventures=async()=>{}; loadLocalProgress=()=>{}; buildFilterOptions=()=>{}; wireUI=()=>{};
+    writeLS(LS.accountDeletion,{owner_id:'${owner}',stage:'confirmed'});
+    Billing.deleteLocalOwner=async()=>{}; idbDeleteLocalOwner=async()=>{throw new Error('device busy');};`);
+  assert.equal(await run9('boot()'), false);
+  assert.equal(sessionReads, 0, 'startup cannot reopen a deleted session while confirmed cleanup is incomplete');
+  assert.equal(run9("readLS(LS.accountDeletion).stage"), 'confirmed');
+
+  const h10 = harness(), run10 = h10.run;
+  let directAuthEvent, reloaded = false;
+  h10.context.OAA_CONFIG.supabaseUrl = 'https://example.test';
+  h10.context.OAA_CONFIG.supabaseAnonKey = 'test-key';
+  h10.context.location.reload = () => { reloaded = true; };
+  h10.context.mockAuth = {
+    onAuthStateChange: callback => { directAuthEvent = callback; },
+    getSession: async () => ({data:{session:null},error:null}),
+  };
+  h10.context.supabase = {createClient: () => ({auth:h10.context.mockAuth})};
+  run10('loadAdventures=async()=>{}; loadLocalProgress=()=>{}; buildFilterOptions=()=>{}; wireUI=()=>{};');
+  await run10('boot()');
+  run10(`userId='${owner}'; accountUser={id:userId}; authGeneration=12;
+    progress=new Map([[7,{memory:'owner A'}]]); personalProgress=new Map(progress);
+    photos=[{id:'photo-a'}]; pendingPhotos=[{id:'queued-a'}]; trips=[{id:'trip-a'}];
+    recs=[{id:'rec-a'}]; blockedPeople=[{user_id:'blocked-a'}]; blockedPeopleOwner=userId;
+    $('#app').classList.remove('hidden'); $('#lightbox').classList.remove('hidden');
+    $('#lbImg').src='blob:owner-a';`);
+  directAuthEvent('SIGNED_IN', {user:{id:other}});
+  assert.equal(reloaded, true);
+  assert(h10.elements.get('#app').classList.contains('hidden'));
+  assert(h10.elements.get('#lightbox').classList.contains('hidden'));
+  assert.equal(h10.elements.get('#lbImg').src, '');
+  assert.equal(run10('progress.size + personalProgress.size + photos.length + pendingPhotos.length + trips.length + recs.length + blockedPeople.length'), 0,
+    'a direct owner transition clears private memory before navigation');
+  assert.equal(run10('authGeneration'), 13);
   console.log('password recovery: automatic screen, failures, stale account guard and owner-state preservation passed');
 }
 
@@ -370,6 +459,19 @@ async function main() {
   h.context.mockAuth.resetPasswordForEmail=async()=>{throw new Error('offline');};
   await run("sendPasswordReset('test@example.test')");
   assert.match(el('#lockMsg').textContent,/try again/);
+  const resetGate = deferred(); let resetCalls = 0;
+  h.context.resetGate = resetGate;
+  h.context.mockAuth.resetPasswordForEmail=()=>{ resetCalls++; return resetGate.promise; };
+  const firstReset = run("sendPasswordReset('test@example.test')");
+  assert.equal(await run("sendPasswordReset('test@example.test')"), false);
+  assert.equal(resetCalls, 1);
+  assert.equal(el('#forgotPasswordBtn').disabled, true);
+  resetGate.resolve({error:null});
+  assert.equal(await firstReset, true);
+  assert.equal(el('#forgotPasswordBtn').disabled, false);
+  h.context.mockAuth.resetPasswordForEmail=async()=>{ resetCalls++; return {error:null}; };
+  assert.equal(await run("sendPasswordReset('test@example.test')"), true);
+  assert.equal(resetCalls, 2);
   run('sb=null');
   await run("sendPasswordReset('test@example.test')");
   assert.match(el('#lockMsg').textContent,/reach the server/);

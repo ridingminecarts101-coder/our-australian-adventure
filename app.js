@@ -24,6 +24,7 @@ const LS = {
   view:     'oaa.view.v1',
   owner:    'oaa.local-owner.v1',
   accountUpgrade: 'oaa.account-upgrade.v1',
+  accountDeletion: 'oaa.account-deletion.v1',
 };
 
 const STATE_NAMES = {
@@ -62,15 +63,20 @@ let passwordRecoveryAttempt = 0;
 let accountUiReady = false;
 let accountBootReady = false;
 let pendingPasswordRecovery = null;
+let recoveryRequestBusy = false;
+let recoveryRequestAttempt = 0;
 let accountUpgradeBusy = false;
 let authGeneration = 0;
 let signOutHandling = false;
+let signOutWork = null;
 let accountDeletionInProgress = false;
 
 const filters = { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 4, dog: 'All' };
 
 // Where we are in world -> continent -> country -> region -> adventures.
 let nav = { level: 'world', continent: null, country: null, admin1: null };
+let browserNavigationWired = false;
+let pendingTripDeepLink = null;
 
 const DOG_LABEL = {
   yes:   'Dogs welcome',
@@ -152,7 +158,12 @@ function countable(a)  { return !isLocked(a); }
 function countableTotal() { return ADV.reduce((n, a) => n + (countable(a) ? 1 : 0), 0); }
 function countOf(pred) { return ADV.filter(a => countable(a) && pred(a)).length; }
 function doneOf(pred)  { return ADV.filter(a => countable(a) && pred(a) && isDone(a.id)).length; }
-function doneCount() { let n = 0; for (const r of progress.values()) if (r.completed) n++; return n; }
+function catalogueHas(pred) { return ADV.some(pred); }
+function doneCount() {
+  let n = 0;
+  for (const a of ADV) if (countable(a) && isDone(a.id)) n++;
+  return n;
+}
 
 // ── Sync status line ─────────────────────────────────────────────────
 function setSync(text, warn) {
@@ -220,25 +231,7 @@ async function bindLocalDataToUser() {
     // Keep queued photos for their account across a direct A -> B session
     // replacement. Old queue rows predate owner_id, so attach them to the
     // previous account when that stored Supabase owner is valid.
-    const validPrevious = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(previous)
-      ? previous : null;
-    if (validPrevious) {
-      const db = await idb();
-      await new Promise((resolve, reject) => {
-        const tx = db.transaction('queue', 'readwrite');
-        const request = tx.objectStore('queue').openCursor();
-        request.onsuccess = () => {
-          const cursor = request.result;
-          if (!cursor) return;
-          if (!cursor.value.owner_id) cursor.update({ ...cursor.value, owner_id: validPrevious });
-          cursor.continue();
-        };
-        request.onerror = () => tx.abort();
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error || request.error);
-        tx.onabort = () => reject(tx.error || request.error || new Error('Could not scope queued photos.'));
-      });
-    }
+    if (validAccountOwner(previous)) await idbAttributeLegacyQueueOwner(previous);
   } else {
     const outbox = readLS(LS.outbox, []).map(x => ({ ...x, owner_id: x.owner_id || userId,
       queue_rev: x.queue_rev || nextQueueRevision() }));
@@ -248,6 +241,30 @@ async function bindLocalDataToUser() {
   }
   localStorage.setItem(LS.owner, userId);
   loadLocalProgress(); loadLocalTrips();
+}
+
+function validAccountOwner(ownerId) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ownerId || '');
+}
+
+async function idbAttributeLegacyQueueOwner(ownerId) {
+  if (!validAccountOwner(ownerId)) return false;
+  const db = await idb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('queue', 'readwrite');
+    const request = tx.objectStore('queue').openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      if (!cursor.value.owner_id) cursor.update({ ...cursor.value, owner_id: ownerId });
+      cursor.continue();
+    };
+    request.onerror = () => tx.abort();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || request.error);
+    tx.onabort = () => reject(tx.error || request.error || new Error('Could not scope queued photos.'));
+  });
+  return true;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -752,6 +769,7 @@ async function idbAll() {
     const mine = [], remaining = [];
     for (const item of queued) {
       if (item.owner_id && item.owner_id !== userId) continue;
+      if (!item.owner_id && localStorage.getItem(LS.owner) !== userId) continue;
       const owned = { ...item, owner_id: item.owner_id || userId };
       try {
         await saveLocalPhoto(owned);
@@ -1088,7 +1106,9 @@ async function addPhotos(adventureId, files) {
   }
   if (stillCurrent()) await flushPhotoQueue();
   if (stillCurrent() && accepted && !pendingPhotos.length) {
-    toast('Saved inside Wayfinder on this phone. Clearing app data or uninstalling removes it.');
+    toast(nativePhotoFiles()
+      ? 'Saved inside Wayfinder on this phone. Clearing app data or uninstalling removes it.'
+      : 'Saved in this browser’s site storage on this device. Browser storage is best effort; clearing site data removes it.');
   }
 }
 
@@ -1663,6 +1683,7 @@ let activeGroupId = null;      // the group new rows are written into
 let members = new Map();       // user_id -> display name, for everyone in the group
 let pushedName = null;         // the display name last written to the server
 let groupSchemaReady = true;
+let groupLifecycleBusy = null;
 let progressView = localStorage.getItem(LS.view) === 'group' ? 'group' : 'personal';
 
 /* Names used to be frozen into completed_by at the moment of ticking, so
@@ -1798,10 +1819,25 @@ async function pushMyName() {
 
 function rpcRow(data) { return Array.isArray(data) ? data[0] : data; }
 
+function claimGroupLifecycle() {
+  if (groupLifecycleBusy && groupLifecycleBusy.owner === userId
+      && groupLifecycleBusy.generation === authGeneration) return null;
+  const token = { owner: userId, generation: authGeneration };
+  groupLifecycleBusy = token;
+  return token;
+}
+
+function releaseGroupLifecycle(token) {
+  if (groupLifecycleBusy === token) groupLifecycleBusy = null;
+}
+
 async function setCompletionSharing(groupId, enabled) {
+  if (!sb || !userId || !groupId) return false;
+  const owner = userId, generation = authGeneration;
   const { error } = await sb.rpc('set_group_completion_sharing', {
     p_group_id: groupId, p_enabled: !!enabled,
   });
+  if (owner !== userId || generation !== authGeneration) return null;
   if (error) { console.warn('completion sharing', error.message); return false; }
   const group = myGroups.find(g => g.id === groupId);
   if (group) group.share_completions = !!enabled;
@@ -1809,6 +1845,7 @@ async function setCompletionSharing(groupId, enabled) {
 }
 
 async function setProgressView(view) {
+  const owner = userId, generation = authGeneration, groupId = activeGroupId;
   const next = view === 'group' && activeGroupId ? 'group' : 'personal';
   if (!online && next !== progressView) {
     if (next !== 'personal' || !personalCacheReady) return toast('Reconnect to change progress view');
@@ -1822,14 +1859,22 @@ async function setProgressView(view) {
   progressView = next;
   localStorage.setItem(LS.view, progressView);
   await pullProgress();
+  if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
   renderAll();
 }
 
 async function createGroup(name) {
   if (!sb || !userId) return toast('Not connected');
+  const lifecycle = claimGroupLifecycle();
+  if (!lifecycle) return toast('A group change is already in progress');
+  try {
+  const owner = userId, generation = authGeneration;
+  const current = () => owner === userId && generation === authGeneration;
   if (!await requireName('You are about to share a list.')) return;
+  if (!current()) return;
   const sharePast = confirm('Share your past and future completion ticks with this group?\n\nNotes, ratings and shortlist stay private. Choose Cancel to join privately and share later. Your personal list stays yours either way.');
   const result = await sb.rpc('create_group', { p_name: name, p_display_name: who });
+  if (!current()) return;
   const data = rpcRow(result.data);
   if (result.error || !data) {
     toast('Groups need the current database update'); console.warn(result.error); return;
@@ -1837,31 +1882,59 @@ async function createGroup(name) {
   activeGroupId = data.group_id;
   localStorage.setItem(LS.group, activeGroupId);
   await loadGroups();
-  if (sharePast) await setCompletionSharing(activeGroupId, true);
+  if (!current()) return;
+  const sharingChanged = await setCompletionSharing(data.group_id, sharePast);
+  if (!current() || sharingChanged === null) return;
+  if (!sharingChanged) return toast('Group created, but could not apply your sharing choice. Check sharing in Me.');
+  if (activeGroupId !== data.group_id) return;
   await setProgressView('group');
+  if (!current() || activeGroupId !== data.group_id) return;
   renderMe();
   toast(`Share the code ${data.join_code}`);
+  } finally {
+    releaseGroupLifecycle(lifecycle);
+  }
 }
 
 async function joinGroup(code) {
   if (!sb || !userId) return toast('Not connected');
+  const lifecycle = claimGroupLifecycle();
+  if (!lifecycle) return toast('A group change is already in progress');
+  try {
+  const owner = userId, generation = authGeneration;
+  const current = () => owner === userId && generation === authGeneration;
   if (!await requireName('You are about to join a shared list.')) return;
+  if (!current()) return;
   const clean = code.trim().toUpperCase();
   if (!/^[A-Z0-9]{6,12}$/.test(clean)) return toast('That join code is not valid');
   const sharePast = confirm('Share your past and future completion ticks with this group?\n\nNotes, ratings and shortlist stay private. Choose Cancel to join privately and share later.');
   const result = await sb.rpc('join_group_by_code', {
     p_join_code: clean, p_display_name: who,
   });
+  if (!current()) return;
   const data = rpcRow(result.data);
   if (result.error || !data) { toast('No group with that code'); console.warn(result.error); return; }
   activeGroupId = data.group_id;
   localStorage.setItem(LS.group, activeGroupId);
   await loadGroups();
-  if (sharePast) await setCompletionSharing(activeGroupId, true);
+  if (!current()) return;
+  // A repeated invite must honour "join privately" even if this membership
+  // previously shared completions. Target this invite, not a later selection.
+  const sharingChanged = await setCompletionSharing(data.group_id, sharePast);
+  if (!current() || sharingChanged === null) return;
+  if (!sharingChanged) return toast('Joined, but could not apply your sharing choice. Check sharing in Me.');
+  if (activeGroupId !== data.group_id) return;
   await setProgressView('group');
-  await pullPhotos(); await pullTrips();
+  if (!current() || activeGroupId !== data.group_id) return;
+  await pullPhotos();
+  if (!current()) return;
+  await pullTrips();
+  if (!current()) return;
   renderAll();
   toast(`Joined ${data.group_name}`);
+  } finally {
+    releaseGroupLifecycle(lifecycle);
+  }
 }
 
 /* Leaving removes only the consent projections and membership. The canonical
@@ -1870,18 +1943,26 @@ async function joinGroup(code) {
  */
 async function leaveGroup(id) {
   if (!sb || !userId) return;
+  const owner = userId, generation = authGeneration;
+  const current = () => owner === userId && generation === authGeneration;
   const g = myGroups.find(x => x.id === id);
   if (!confirm(`Leave ${g ? g.name : 'this group'}?\n\nEverything you ticked comes with you `
              + 'and stops showing on their list. Theirs stops showing on yours.')) return;
 
   toast('Leaving…');
   const { error } = await sb.rpc('leave_group', { p_group_id: id });
+  if (!current()) return;
   if (error) { toast('Could not leave — try again'); console.warn(error); return; }
 
   if (activeGroupId === id) { activeGroupId = null; localStorage.removeItem(LS.group); }
   await loadGroups();
+  if (!current()) return;
   await setProgressView('personal');
-  await pullPhotos(); await pullTrips();
+  if (!current()) return;
+  await pullPhotos();
+  if (!current()) return;
+  await pullTrips();
+  if (!current()) return;
   renderAll();
   toast('Left the group. Your personal data is still yours.');
 }
@@ -2051,6 +2132,34 @@ async function removeOwnedStorage(ownerId) {
   return paths.length;
 }
 
+async function retryConfirmedLocalAccountCleanup() {
+  const pending = readLS(LS.accountDeletion, null);
+  if (!pending || pending.stage !== 'confirmed' || !validAccountOwner(pending.owner_id)) return true;
+  try {
+    await Billing.deleteLocalOwner(pending.owner_id);
+    clearAccountUpgrade(pending.owner_id);
+    localStorage.removeItem(`oaa.block-labels.${pending.owner_id}`);
+    await idbDeleteLocalOwner(pending.owner_id);
+    await idbDeleteQueueOwner(pending.owner_id);
+    if (sb && sb.auth && typeof sb.auth.getSession === 'function') {
+      const { data, error } = await sb.auth.getSession();
+      if (error) throw error;
+      const sessionOwner = data && data.session && data.session.user
+        ? data.session.user.id : null;
+      if (sessionOwner === pending.owner_id) {
+        const result = await sb.auth.signOut({ scope: 'local' });
+        if (result && result.error) throw result.error;
+        await handleSignedOut('Account deleted.');
+      }
+    }
+    localStorage.removeItem(LS.accountDeletion);
+    return true;
+  } catch (error) {
+    console.warn('pending local account cleanup', error);
+    return false;
+  }
+}
+
 async function deleteAccount() {
   if (!sb || !userId || accountDeletionInProgress) return;
   if (!online) return toast('Reconnect before deleting your account');
@@ -2059,45 +2168,114 @@ async function deleteAccount() {
   if (typed !== 'DELETE') { toast('Cancelled'); return; }
 
   const deletingOwner = userId;
+  let identityDeleted = false;
   accountDeletionInProgress = true;
   authGeneration++; // invalidate every read/write already in flight
   toast('Deleting…');
   try {
+    writeLS(LS.accountDeletion, { owner_id: deletingOwner, stage: 'starting' });
     // Let an upload already inside the Storage request observe the generation
     // change, then enumerate. That ordering catches an object created at the
     // same moment deletion began.
     while (uploading || flushPhotoQueue.busy) await new Promise(resolve => setTimeout(resolve, 25));
+    await Promise.allSettled([...communityWrites.values()]);
     if (userId !== deletingOwner) throw new Error('account changed during deletion');
     await removeOwnedStorage(deletingOwner);
-    if (userId !== deletingOwner) throw new Error('account changed during deletion');
-    await idbDeleteLocalOwner(deletingOwner);
-    if (userId !== deletingOwner) throw new Error('account changed during deletion');
-    await idbDeleteQueueOwner(deletingOwner);
     if (userId !== deletingOwner) throw new Error('account changed during deletion');
 
     const { error } = await sb.rpc('delete_my_account');
     if (error) throw error;
+    identityDeleted = true;
+    writeLS(LS.accountDeletion, { owner_id: deletingOwner, stage: 'confirmed' });
+    clearAccountUpgrade(deletingOwner);
+    localStorage.removeItem(`oaa.block-labels.${deletingOwner}`);
+    await Billing.deleteLocalOwner(deletingOwner);
+
+    let localCleanupComplete = false;
+    try {
+      await idbDeleteLocalOwner(deletingOwner);
+      await idbDeleteQueueOwner(deletingOwner);
+      localStorage.removeItem(LS.accountDeletion);
+      localCleanupComplete = true;
+    } catch (error) {
+      console.warn('local account cleanup', error);
+    }
 
     try { await sb.auth.signOut(); } catch { /* identity has already been deleted */ }
     await handleSignedOut('Account deleted.');
+    if (!localCleanupComplete) {
+      toast('Account deleted. Some device-only photo cleanup will retry next time Wayfinder opens.');
+    }
   } catch (err) {
     accountDeletionInProgress = false;
     console.warn(err);
-    toast('Deletion stopped before the account was removed. Try again or ask for help.');
+    if (!identityDeleted) {
+      writeLS(LS.accountDeletion, { owner_id: deletingOwner, stage: 'server-failed' });
+      toast('Account deletion did not complete. Device-only photos were kept. Historical cloud photos may already have been removed; retry or ask for help.');
+    } else {
+      toast('Account deleted. Some device-only cleanup could not finish and will retry next time Wayfinder opens.');
+    }
   }
 }
 
 // ══════════════════════════════════════════════════════════════════════
 //  Navigation: world -> continent -> country -> region -> adventures
 // ══════════════════════════════════════════════════════════════════════
-function goTo(level, opts = {}) {
-  nav = { level, continent: null, country: null, admin1: null, ...opts };
+function safeNavigationState(value) {
+  if (!value || typeof value !== 'object') return null;
+  const level = value.level;
+  if (level === 'world') return { level, continent: null, country: null, admin1: null };
+  if (!['continent', 'islands', 'country', 'adventures'].includes(level)) return null;
+  const continent = typeof value.continent === 'string' ? value.continent : null;
+  if (!continent || !CONTINENT_ORDER.includes(continent)) return null;
+  if (level === 'continent' || level === 'islands') {
+    return { level, continent, country: null, admin1: null };
+  }
+  const country = typeof value.country === 'string' ? value.country : null;
+  if (!country || !ADV.some(a => a.continent === continent && a.country === country)) return null;
+  if (level === 'country') return { level, continent, country, admin1: null };
+  const admin1 = typeof value.admin1 === 'string' && value.admin1 ? value.admin1 : null;
+  if (admin1 && !ADV.some(a => a.continent === continent && a.country === country && a.admin1 === admin1)) {
+    return null;
+  }
+  return { level, continent, country, admin1 };
+}
+
+function browserNavigationEnabled() {
+  const native = window.Capacitor && window.Capacitor.isNativePlatform
+    && window.Capacitor.isNativePlatform();
+  return !native && history && typeof history.pushState === 'function';
+}
+
+function goTo(level, opts = {}, historyMode = 'push') {
+  const next = safeNavigationState({ level, ...opts });
+  if (!next) return false;
+  nav = next;
   // Region filters belong to the place you drilled into, not to the place itself.
   filters.st = 'All';
+  if (browserNavigationEnabled() && historyMode !== 'none') {
+    const state = { wayfinderNav: nav };
+    if (historyMode === 'replace') history.replaceState(state, '');
+    else history.pushState(state, '');
+  }
   window.scrollTo(0, 0);
   buildFilterOptions();
   renderPlaces();
   renderList();
+  return true;
+}
+
+function wireBrowserNavigation() {
+  if (!browserNavigationEnabled() || browserNavigationWired) return;
+  browserNavigationWired = true;
+  const restored = safeNavigationState(history.state && history.state.wayfinderNav);
+  if (restored) nav = restored;
+  history.replaceState({ wayfinderNav: nav }, '');
+  addEventListener('popstate', event => {
+    const target = safeNavigationState(event.state && event.state.wayfinderNav)
+      || { level: 'world', continent: null, country: null, admin1: null };
+    goTo(target.level, target, 'none');
+  });
 }
 
 /* The travel advisory panel shown at the top of a country.
@@ -2161,10 +2339,13 @@ function lockNote(a) {
 
 function placeRow({ label, sub, count, total = count, done, flag, swatch, advisory, onClick }) {
   const pct = count ? Math.round((done / count) * 100) : 0;
+  const interactive = !!onClick;
   const mark = advisory === 'avoid' ? '<span class="advisory avoid">Do not travel</span>'
              : advisory === 'care' ? '<span class="advisory care">Check advice</span>'
              : '';
-  return `<button class="placerow${advisory ? ' has-advisory' : ''}" data-go='${esc(JSON.stringify(onClick))}'>
+  return `<button class="placerow${advisory ? ' has-advisory' : ''}" type="button"${interactive
+    ? ` data-go='${esc(JSON.stringify(onClick))}'`
+    : ' disabled aria-disabled="true"'}>
     <div class="placerow-main">
       <div class="placerow-top">
         <span class="placerow-label">${swatch ? `<i class="swatch" style="background:${esc(swatch)}"></i>` : ''}${flag ? flag + ' ' : ''}${esc(label)}</span>
@@ -2174,7 +2355,7 @@ function placeRow({ label, sub, count, total = count, done, flag, swatch, adviso
       ${sub ? `<div class="placerow-sub">${esc(sub)}</div>` : ''}
       ${count ? `<div class="minibar"><i style="width:${pct}%"></i></div>` : ''}
     </div>
-    ${total ? '<span class="placerow-chev">›</span>' : ''}
+    ${interactive ? '<span class="placerow-chev">›</span>' : ''}
   </button>`;
 }
 
@@ -2360,17 +2541,25 @@ function renderPlaces() {
 // ══════════════════════════════════════════════════════════════════════
 //  Filtering + rendering
 // ══════════════════════════════════════════════════════════════════════
+function inNavigationScope(a) {
+  return (!nav.continent || a.continent === nav.continent)
+    && (!nav.country || a.country === nav.country)
+    && (!nav.admin1 || a.admin1 === nav.admin1);
+}
+
+function foldSearch(value) {
+  return String(value || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
 function filtered() {
-  const q = filters.q.trim().toLowerCase();
+  const q = foldSearch(filters.q.trim());
   return ADV.filter(a => {
     const r = row(a.id);
     if (filters.quick === 'todo'  && r.completed) return false;
     if (filters.quick === 'done'  && !r.completed) return false;
     if (filters.quick === 'short' && !r.shortlisted) return false;
     if (filters.quick === 'gem'   && !a.hidden_gem) return false;
-    if (nav.continent && a.continent !== nav.continent) return false;
-    if (nav.country   && a.country   !== nav.country) return false;
-    if (nav.admin1    && a.admin1    !== nav.admin1) return false;
+    if (!inNavigationScope(a)) return false;
     if (filters.st  !== 'All' && a.admin1 !== filters.st) return false;
     if (filters.cat !== 'All' && a.category !== filters.cat) return false;
     if (filters.dog !== 'All' && a.dog_friendly !== filters.dog) return false;
@@ -2384,8 +2573,9 @@ function filtered() {
       const hay = (isLocked(a)
         ? `${a.region} ${regionName(a)} ${countryName(a.country)} ${a.category}`
         : `${a.title} ${a.place} ${a.region} ${regionName(a)} ${countryName(a.country)} ${a.category} ${a.description}`
-      ).toLowerCase();
-      if (!hay.includes(q)) return false;
+      );
+      const searchable = foldSearch(hay);
+      if (!searchable.includes(q)) return false;
     }
     return true;
   });
@@ -2397,7 +2587,8 @@ function cardHTML(a) {
   return `<article class="card ${r.completed ? 'done' : ''}${locked ? ' locked' : ''}">
     <button class="tick ${r.completed ? 'on' : ''}" data-toggle="${a.id}"
             aria-label="${r.completed ? 'Mark not done' : 'Mark done'}"${locked ? ' disabled' : ''}>✓</button>
-    <div class="card-body" data-open="${a.id}">
+    <button type="button" class="card-body card-detail" data-open="${a.id}"
+            aria-label="Open details for ${esc(locked ? lockedTitle(a) : a.title)}">
       <div class="card-title">${esc(locked ? lockedTitle(a) : a.title)}</div>
       <div class="card-meta">${esc(locked ? lockNote(a) : metaLine(a))}</div>
       <div class="badges">
@@ -2409,8 +2600,8 @@ function cardHTML(a) {
         ${a.bundle_only ? `<span class="badge">🔒 Bundle exclusive${isLocked(a) ? ' · locked' : ''}</span>` : ''}
         ${r.shortlisted ? '<span class="badge star">⭐ Shortlist</span>' : ''}
       </div>
-    </div>
-    <div class="card-open" data-open="${a.id}">›</div>
+      <span class="card-open" aria-hidden="true">›</span>
+    </button>
   </article>`;
 }
 
@@ -2421,13 +2612,14 @@ function renderList() {
   // sync arriving. Nothing is lost by waiting: drilling in calls this again.
   if (nav.level !== 'adventures') return;
   const arr = filtered();
+  const scopedTotal = ADV.reduce((n, a) => n + (inNavigationScope(a) ? 1 : 0), 0);
   // This line counts rows on screen, which includes locked gems - they are
   // visible, just blurred. The completion target in the header is a different
   // number on purpose, so say how many of these do not count towards it.
   const locked = arr.reduce((n, a) => n + (isLocked(a) ? 1 : 0), 0);
   $('#resultCount').textContent =
     `${arr.length} adventure${arr.length === 1 ? '' : 's'}` +
-    (arr.length !== ADV.length ? ` of ${ADV.length}` : '') +
+    (arr.length !== scopedTotal ? ` of ${scopedTotal}` : '') +
     (locked ? ` · ${locked} locked` : '');
   $('#list').innerHTML = arr.length
     ? arr.map(cardHTML).join('')
@@ -2451,10 +2643,13 @@ function renderHeader() {
 //  Passport
 // ══════════════════════════════════════════════════════════════════════
 function renderPassport() {
+  const owned = progressView === 'group' ? personalProgress : progress;
+  const personalRow = id => owned.get(id) || { completed: false };
+  const personalDone = a => countable(a) && !!personalRow(a.id).completed;
   const visited = new Set();
   const continents = new Set();
   for (const a of ADV) {
-    if (!isDone(a.id)) continue;
+    if (!personalDone(a)) continue;
     visited.add(a.country);
     continents.add(a.continent);
   }
@@ -2466,7 +2661,7 @@ function renderPassport() {
   $('#passportTotals').innerHTML = `
     <div class="ptotal"><b>${visited.size}</b><span>stamps</span></div>
     <div class="ptotal"><b>${continents.size}</b><span>continents</span></div>
-    <div class="ptotal"><b>${doneCount()}</b><span>adventures</span></div>`;
+    <div class="ptotal"><b>${ADV.filter(personalDone).length}</b><span>adventures</span></div>`;
 
   // A country is stamped once, on the first thing you tick there. The date is
   // derived from the earliest completion rather than stored separately, so
@@ -2479,9 +2674,9 @@ function renderPassport() {
     if (!t) tally.set(a.country, t = { total: 0, done: 0, first: null });
     if (isLocked(a)) continue;               // locked gems count for nothing
     t.total++;
-    if (!isDone(a.id)) continue;
+    if (!personalDone(a)) continue;
     t.done++;
-    const when = row(a.id).completed_at;
+    const when = personalRow(a.id).completed_at;
     if (!when) continue;
     const d = new Date(when);
     if (!isNaN(d) && (!t.first || d < t.first)) t.first = d;
@@ -2537,7 +2732,7 @@ function renderPassport() {
 
   const contRows = CONTINENT_ORDER.filter(c => countOf(a => a.continent === c)).map(c => {
     const inC = a => a.continent === c;
-    const total = countOf(inC), done = doneOf(inC);
+    const total = countOf(inC), done = ADV.filter(a => inC(a) && personalDone(a)).length;
     const pct = total ? Math.round((done / total) * 100) : 0;
     return `<div class="staterow">
       <div class="staterow-top"><span>${esc(c)}</span><span>${done} / ${total}</span></div>
@@ -2552,6 +2747,7 @@ function renderPassport() {
 // ══════════════════════════════════════════════════════════════════════
 let trips = [];
 let openTripId = null;
+let tripMutationRevision = 0;
 
 function loadLocalTrips() { trips = readLS(LS.trips, []); }
 function saveLocalTrips() { writeLS(LS.trips, trips); }
@@ -2572,21 +2768,31 @@ function upsertTrip(trip) {
 }
 
 function removeTrip(id) {
+  if (!userId || accountDeletionInProgress) return;
+  // Keep a durable deletion request before removing the visible row.
+  if (!queueTripSync({ id, deleted: true })) {
+    toast('Could not queue this trip deletion. Free some device storage and try again.');
+    return;
+  }
   trips = trips.filter(t => t.id !== id);
   saveLocalTrips();
-  if (sb && online) sb.from('trips').delete().eq('id', id).then(({ error }) => {
-    if (error) console.warn('trip delete failed', error.message);
-  });
   closeTripSheet();
   renderTrips();
 }
 
 function queueTripSync(trip) {
-  if (accountDeletionInProgress) return;
+  if (accountDeletionInProgress) return false;
   const q = readLS(LS.tripOutbox, []).filter(t => t.id !== trip.id);
   q.push({ ...trip, owner_id: userId, queue_rev: nextQueueRevision() });
-  writeLS(LS.tripOutbox, q);
+  try {
+    localStorage.setItem(LS.tripOutbox, JSON.stringify(q));
+  } catch (error) {
+    console.warn('trip queue could not be saved', error);
+    return false;
+  }
+  tripMutationRevision++;
   flushTrips();
+  return true;
 }
 
 async function flushTrips() {
@@ -2599,7 +2805,9 @@ async function flushTrips() {
   try {
     for (const t of q) {
       if (runGeneration !== authGeneration || runOwner !== userId || t.owner_id !== runOwner) break;
-      const { error } = await sb.from('trips').upsert({
+      const { error } = t.deleted
+        ? await sb.from('trips').delete().eq('id', t.id).eq('user_id', runOwner)
+        : await sb.from('trips').upsert({
         id: t.id, name: t.name, starts_on: t.starts_on || null, ends_on: t.ends_on || null,
         adventure_ids: t.adventure_ids || [], notes: t.notes || null,
         created_by: t.created_by || who,
@@ -2611,11 +2819,17 @@ async function flushTrips() {
       const index = current.findIndex(x => x.id === t.id && x.owner_id === t.owner_id
         && x.queue_rev === t.queue_rev);
       if (index < 0) continue;
-      if (!error) current.splice(index, 1);
+      if (!error) {
+        current.splice(index, 1);
+        tripMutationRevision++; // discard pulls begun before the server acknowledgement
+      }
       else {
         current[index].tries = (current[index].tries || 0) + 1;
         console.warn('trip sync failed', error.message, `(attempt ${current[index].tries})`);
-        if (current[index].tries >= OUTBOX_MAX_TRIES) {
+        if (t.deleted) {
+          // Never discard a rejected tombstone: doing so resurrects the trip.
+          if (current[index].tries === OUTBOX_MAX_TRIES) toast('A trip deletion is still waiting to sync');
+        } else if (current[index].tries >= OUTBOX_MAX_TRIES) {
           console.error('giving up on trip', t.id, error.message);
           current.splice(index, 1);
           toast('A trip could not be saved to the server');
@@ -2633,17 +2847,38 @@ async function flushTrips() {
 }
 
 async function pullTrips() {
-  if (!sb || !online) return;
-  const runOwner = userId, runGeneration = authGeneration;
-  const { data, error } = await sb.from('trips').select('*').order('created_at');
-  if (runGeneration !== authGeneration || runOwner !== userId) return;
-  if (error) { console.warn('trip pull failed', error.message); return; }
-  const pending = new Set(readLS(LS.tripOutbox, [])
-    .filter(t => t.owner_id === runOwner).map(t => t.id));
-  const byId = new Map(trips.map(t => [t.id, t]));
-  for (const t of data || []) if (!pending.has(t.id)) byId.set(t.id, t);
+  if (!sb || !online || !userId) return;
+  const runOwner = userId, runGeneration = authGeneration, revision = tripMutationRevision;
+  const current = () => runGeneration === authGeneration && runOwner === userId
+    && revision === tripMutationRevision;
+  const data = [], pageSize = 500;
+  let lastId = null;
+  for (;;) {
+    let query = sb.from('trips').select('*').eq('user_id', runOwner).order('id').limit(pageSize);
+    if (lastId !== null) query = query.gt('id', lastId);
+    const result = await query;
+    if (!current()) return;
+    if (result.error) { console.warn('trip pull failed', result.error.message); return; }
+    const page = result.data || [];
+    data.push(...page);
+    if (page.length < pageSize) break;
+    const nextLastId = page[page.length - 1] && page[page.length - 1].id;
+    if (!nextLastId || nextLastId === lastId) {
+      console.warn('trip pull stopped at an invalid page boundary');
+      return;
+    }
+    lastId = nextLastId;
+  }
+  const queued = readLS(LS.tripOutbox, []).filter(t => t.owner_id === runOwner);
+  const pending = new Set(queued.map(t => t.id));
+  const deleted = new Set(queued.filter(t => t.deleted).map(t => t.id));
+  // Replace confirmed rows, including deletions from another device, while
+  // preserving this account's pending local edits and hiding pending deletes.
+  const byId = new Map(trips.filter(t => pending.has(t.id) && !deleted.has(t.id)).map(t => [t.id, t]));
+  for (const t of data) if (!pending.has(t.id)) byId.set(t.id, t);
   trips = [...byId.values()];
   saveLocalTrips();
+  resolvePendingTripDeepLink(true);
 }
 
 function tripAdventures(trip) {
@@ -2703,11 +2938,11 @@ function renderTrips() {
 function openTripSheet(id) {
   openTripId = id;
   renderTripSheet(id);
-  $('#tripSheet').classList.remove('hidden');
+  showManagedDialog('#tripSheet');
 }
 function closeTripSheet() {
   openTripId = null;
-  $('#tripSheet').classList.add('hidden');
+  hideManagedDialog('#tripSheet');
 }
 
 function renderTripSheet(id) {
@@ -2925,6 +3160,113 @@ function findPhoto(id) {
 }
 
 // -- Lightbox --------------------------------------------------------
+const DIALOG_CONTROLS = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+let dialogFocusStack = [];
+
+function dialogReturnKey(element) {
+  if (!element) return null;
+  if (element.id) return { attribute: 'id', value: element.id };
+  for (const attribute of ['data-open', 'data-trip', 'data-recedit', 'data-photo']) {
+    if (element.hasAttribute && element.hasAttribute(attribute)) {
+      return { attribute, value: element.getAttribute(attribute) };
+    }
+  }
+  return null;
+}
+
+function returnFocusTarget(entry) {
+  if (entry.opener && (!document.contains || document.contains(entry.opener))) return entry.opener;
+  if (!entry.key) return null;
+  if (entry.key.attribute === 'id') return document.getElementById(entry.key.value);
+  return document.querySelector(`[${entry.key.attribute}="${CSS.escape(entry.key.value)}"]`);
+}
+
+function dialogControls(dialog) {
+  if (!dialog || !dialog.querySelectorAll) return [];
+  return [...dialog.querySelectorAll(DIALOG_CONTROLS)]
+    .filter(control => !control.disabled && control.getAttribute('aria-hidden') !== 'true'
+      && !control.classList.contains('hidden'));
+}
+
+function showManagedDialog(selector) {
+  const dialog = $(selector);
+  if (!dialog) return;
+  const opener = document.activeElement;
+  dialog.classList.remove('hidden');
+  dialogFocusStack = dialogFocusStack.filter(entry => entry.dialog !== dialog);
+  dialogFocusStack.push({ dialog, opener, key: dialogReturnKey(opener) });
+  queueMicrotask(() => {
+    if (dialog.classList.contains('hidden')) return;
+    const target = dialogControls(dialog)[0] || dialog;
+    if (target && typeof target.focus === 'function') target.focus();
+  });
+}
+
+function hideManagedDialog(selector, restore = true) {
+  const dialog = $(selector);
+  if (!dialog) return;
+  dialog.classList.add('hidden');
+  const index = dialogFocusStack.findIndex(entry => entry.dialog === dialog);
+  const entry = index >= 0 ? dialogFocusStack.splice(index, 1)[0] : null;
+  if (!restore || !entry) return;
+  queueMicrotask(() => {
+    const target = returnFocusTarget(entry);
+    if (target && typeof target.focus === 'function') target.focus();
+  });
+}
+
+function discardManagedDialogFocus() {
+  dialogFocusStack = [];
+  const active = document.activeElement;
+  if (active && active.closest && active.closest('.sheet, .lightbox') && typeof active.blur === 'function') {
+    active.blur();
+  }
+}
+
+function activeManagedDialog() {
+  for (let i = dialogFocusStack.length - 1; i >= 0; i--) {
+    if (!dialogFocusStack[i].dialog.classList.contains('hidden')) return dialogFocusStack[i].dialog;
+  }
+  return null;
+}
+
+function handleDialogKeydown(event) {
+  const dialog = activeManagedDialog();
+  if (!dialog) return false;
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    if (dialog.id === 'lightbox') closeLightbox();
+    else if (dialog.id === 'recSheet') closeRecSheet();
+    else if (dialog.id === 'tripSheet') closeTripSheet();
+    else closeSheet();
+    return true;
+  }
+  if (dialog.id === 'lightbox' && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
+    const n = lightbox.list.length;
+    if (n) {
+      event.preventDefault();
+      lightbox.index = event.key === 'ArrowRight'
+        ? (lightbox.index + 1) % n : (lightbox.index - 1 + n) % n;
+      showLightbox();
+    }
+    return true;
+  }
+  if (event.key !== 'Tab') return false;
+  const controls = dialogControls(dialog);
+  event.preventDefault();
+  if (!controls.length) {
+    if (typeof dialog.focus === 'function') dialog.focus();
+    return true;
+  }
+  const current = document.activeElement;
+  const index = controls.indexOf(current);
+  const next = event.shiftKey
+    ? (index <= 0 ? controls.length - 1 : index - 1)
+    : (index < 0 || index === controls.length - 1 ? 0 : index + 1);
+  controls[next].focus();
+  return true;
+}
+
 async function openLightbox(photoId, groupKey) {
   const container = groupKey
     ? document.querySelector(`[data-group-key="${CSS.escape(groupKey)}"]`)
@@ -2932,14 +3274,22 @@ async function openLightbox(photoId, groupKey) {
   const ids = container ? $$('.thumb', container).map(b => b.dataset.photo) : [photoId];
   lightbox.list = ids.map(findPhoto).filter(Boolean);
   lightbox.index = Math.max(0, lightbox.list.findIndex(p => p.id === photoId));
-  $('#lightbox').classList.remove('hidden');
+  showManagedDialog('#lightbox');
   await showLightbox();
 }
 
 async function showLightbox() {
   const p = lightbox.list[lightbox.index];
   if (!p) return closeLightbox();
-  if (!p.pending && !photoSrc(p)) await ensureSignedUrls([p.storage_path]);
+  const lightboxOwner = userId, lightboxGeneration = authGeneration;
+  if (!p.pending && !photoSrc(p)) {
+    if (p.local) await ensureLocalPhotoUrls([p]);
+    else if (p.storage_path) await ensureSignedUrls([p.storage_path]);
+  }
+  // A native file read or cloud signing request can finish after the lightbox
+  // was closed or the account changed. Never remount that stale photo.
+  if (lightboxOwner !== userId || lightboxGeneration !== authGeneration
+      || lightbox.list[lightbox.index] !== p) return;
 
   const a = ADV.find(x => x.id === p.adventure_id);
   const d = p.taken_at ? new Date(p.taken_at) : null;
@@ -2960,14 +3310,17 @@ async function showLightbox() {
     (a ? ` · ${a.place}` : '') +
     (p.uploaded_by ? ` · added by ${p.uploaded_by}` : '') +
     (p.pending ? ' · waiting to save on this device' : '');
-  $('#lbDelete').classList.toggle('hidden', !!p.pending);
-  $('#lbDelete').dataset.photo = p.id;
+  // New local photos can be removed here. Historical cloud originals are
+  // preserved read-only and should not advertise an unavailable action.
+  const canDelete = !!p.local && !p.pending;
+  $('#lbDelete').classList.toggle('hidden', !canDelete);
+  $('#lbDelete').dataset.photo = canDelete ? p.id : '';
   const many = lightbox.list.length > 1;
   $$('.lb-nav').forEach(b => b.classList.toggle('hidden', !many));
 }
 
 function closeLightbox() {
-  $('#lightbox').classList.add('hidden');
+  hideManagedDialog('#lightbox');
   $('#lbImg').src = '';
   lightbox = { list: [], index: 0 };
 }
@@ -3130,6 +3483,13 @@ function renderSheet(id) {
   const r = row(id);
   const ph = photosFor(id);
   const maps = mapsUrl(a);
+  const photoHint = nativePhotoFiles()
+    ? (ph.length
+      ? 'Tap a photo to see it full size. New photos stay inside Wayfinder on this phone.'
+      : 'Photos are resized and saved inside Wayfinder on this phone. They are not copied to your Photos gallery or synced to other devices.')
+    : (ph.length
+      ? 'Tap a photo to see it full size. New photos use this browser’s site storage on this device; browser retention is best effort.'
+      : 'Photos are resized and saved in this browser’s site storage on this device. Browser retention is best effort, and clearing site data removes them. They are not synced to other devices.');
   // null unless an affiliate id is configured and this is the kind of thing
   // anybody books. See partners.js.
   const book = bookingLink(a);
@@ -3215,9 +3575,7 @@ function renderSheet(id) {
         <span>+</span><small>Library</small>
       </button>
     </div>
-    <p class="photohint">${ph.length
-      ? 'Tap a photo to see it full size. New photos stay inside Wayfinder on this device.'
-      : 'Photos are resized and saved inside Wayfinder on this device. They are not copied to your Photos gallery or synced to other devices.'}</p>`;
+    <p class="photohint">${photoHint}</p>`;
 
   hydrateThumbs();
 }
@@ -3225,7 +3583,7 @@ function renderSheet(id) {
 function openSheet(id) {
   openId = id;
   renderSheet(id);
-  $('#sheet').classList.remove('hidden');
+  showManagedDialog('#sheet');
 }
 function closeSheet() {
   const box = $('#memoryBox');                 // don't lose an unsaved memory
@@ -3233,7 +3591,7 @@ function closeSheet() {
     applyPatch(openId, { memory: box.value.trim() || null });
   }
   openId = null;
-  $('#sheet').classList.add('hidden');
+  hideManagedDialog('#sheet');
 }
 
 function toggleDone(id) {
@@ -3314,7 +3672,11 @@ function wireNative() {
 
     // Then back up the map, one level at a time.
     if (nav.level === 'adventures') return goTo('country', { continent: nav.continent, country: nav.country });
+    if (nav.level === 'country' && ISLAND_GROUP.has(nav.country)) {
+      return goTo('islands', { continent: nav.continent });
+    }
     if (nav.level === 'country')    return goTo('continent', { continent: nav.continent });
+    if (nav.level === 'islands')    return goTo('continent', { continent: nav.continent });
     if (nav.level === 'continent')  return goTo('world');
 
     App.exitApp();                               // at the top: leave, as expected
@@ -3338,8 +3700,34 @@ function wireNative() {
   if (StatusBar) StatusBar.setStyle({ style: 'DARK' }).catch(() => {});
 }
 
+function setPressedSelection(controls, selected) {
+  controls.forEach(control => control.setAttribute('aria-pressed', control === selected ? 'true' : 'false'));
+}
+
+function setCurrentTab(tabs, selected) {
+  tabs.forEach(tab => tab.setAttribute('aria-current', tab === selected ? 'page' : 'false'));
+}
+
+function openRandomAdventure() {
+  const remaining = filtered().filter(a => !isDone(a.id));
+  const pool = remaining.filter(a => automaticDiscoveryAllowed(a) && !isLocked(a));
+  if (!pool.length) {
+    if (remaining.some(a => !isLocked(a) && !automaticDiscoveryAllowed(a))) {
+      return toast('No automatic picks are available here. Check current travel advice or adjust your filters.');
+    }
+    return toast(remaining.some(isLocked)
+      ? 'Only locked adventures are left here'
+      : 'Nothing left matching those filters!');
+  }
+  openSheet(pool[Math.floor(Math.random() * pool.length)].id);
+}
+
 function wireUI() {
   wireNative();
+  wireBrowserNavigation();
+  Billing.onChange = () => {
+    if (userId && Billing._appUserId === userId && !passwordRecoveryMode && !accountDeletionInProgress) renderAll();
+  };
 
   // Tabs
   $$('.tab').forEach(b => b.onclick = () => {
@@ -3353,6 +3741,7 @@ function wireUI() {
     }
     $$('.tab').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
+    setCurrentTab($$('.tab'), b);
     $$('.panel').forEach(p => p.classList.add('hidden'));
     $('#' + b.dataset.tab).classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -3360,14 +3749,17 @@ function wireUI() {
     // most sessions never look at it.
     if (b.dataset.tab === 'tab-community') pullRecommendations();
   });
+  setCurrentTab($$('.tab'), $('.tab.active'));
 
   // Quick chips
   $$('#quickChips .chip').forEach(c => c.onclick = () => {
     filters.quick = c.dataset.quick;
     $$('#quickChips .chip').forEach(x => x.classList.toggle('on', x === c));
+    setPressedSelection($$('#quickChips .chip'), c);
     renderList();
   });
   $('#quickChips .chip').classList.add('on');
+  setPressedSelection($$('#quickChips .chip'), $('#quickChips .chip'));
 
   // Filters
   $('#search').oninput = e => { filters.q = e.target.value; renderList(); };
@@ -3381,6 +3773,7 @@ function wireUI() {
     $('#search').value = ''; $('#fState').value = 'All'; $('#fCat').value = 'All';
     $('#fDiff').value = '5'; $('#fCost').value = '4'; $('#fDog').value = 'All';
     $$('#quickChips .chip').forEach((x, i) => x.classList.toggle('on', i === 0));
+    setPressedSelection($$('#quickChips .chip'), $('#quickChips .chip'));
     renderList();
   };
 
@@ -3388,8 +3781,10 @@ function wireUI() {
   $$('#groupChips .chip').forEach(c => c.onclick = () => {
     memoryGrouping = c.dataset.group;
     $$('#groupChips .chip').forEach(x => x.classList.toggle('on', x === c));
+    setPressedSelection($$('#groupChips .chip'), c);
     renderMemories();
   });
+  setPressedSelection($$('#groupChips .chip'), $('#groupChips .chip.on'));
 
   // Place rows and breadcrumbs
   document.body.addEventListener('click', e => {
@@ -3397,8 +3792,8 @@ function wireUI() {
     if (!go) return;
     let target;
     try { target = JSON.parse(go.dataset.go); } catch { return; }
+    if (go.disabled || (go.getAttribute && go.getAttribute('aria-disabled') === 'true')) return;
     if (target) goTo(target.level, target);
-    else toast('Nothing here yet — that continent is on the list');
   });
 
   // The world map
@@ -3406,16 +3801,27 @@ function wireUI() {
   map.addEventListener('click', e => {
     const hit = continentFromPoint(map, e.clientX, e.clientY);
     if (!hit) return;
-    if (countOf(a => a.continent === hit)) goTo('continent', { continent: hit });
+    if (catalogueHas(a => a.continent === hit)) goTo('continent', { continent: hit });
     else toast(`No ${hit} adventures yet`);
   });
   // Traveller recommendations
   $('#newRecBtn').onclick = () => openRecSheet(null);
+  $('#blockedPeopleBtn').onclick = () => {
+    recSort = 'blocked';
+    $$('#recSort .chip').forEach(c => c.classList.remove('on'));
+    setPressedSelection($$('#recSort .chip'), null);
+    $('#blockedPeopleBtn').setAttribute('aria-pressed', 'true');
+    pullRecommendations();
+  };
   $$('#recSort .chip').forEach(c => c.onclick = () => {
     recSort = c.dataset.recsort;
     $$('#recSort .chip').forEach(x => x.classList.toggle('on', x === c));
+    setPressedSelection($$('#recSort .chip'), c);
+    $('#blockedPeopleBtn').setAttribute('aria-pressed', 'false');
     pullRecommendations();
   });
+  setPressedSelection($$('#recSort .chip'), $('#recSort .chip.on'));
+  $('#blockedPeopleBtn').setAttribute('aria-pressed', recSort === 'blocked' ? 'true' : 'false');
   $$('#recSheet [data-recclose]').forEach(b => b.onclick = closeRecSheet);
 
   document.body.addEventListener('click', e => {
@@ -3426,6 +3832,7 @@ function wireUI() {
     if ((el = hit('data-recstar'))) return starRec(el.dataset.recid, +el.dataset.recstar);
     if ((el = hit('data-recreport'))) return reportRec(el.dataset.recreport);
     if ((el = hit('data-recblock'))) return blockAuthor(el.dataset.recblock);
+    if ((el = hit('data-recunblock'))) return unblockAuthor(el.dataset.recunblock);
     if ((el = hit('data-recedit'))) return openRecSheet(el.dataset.recedit);
     if ((el = hit('data-recdelete'))) return deleteRec(el.dataset.recdelete);
     if ((el = hit('data-recsave'))) return saveRec(el.dataset.recsave || null);
@@ -3466,7 +3873,7 @@ function wireUI() {
     const hit = mapHit(placeMap, e.clientX, e.clientY);
     if (!hit || !hit.country || hit.country === nav.country) return;
     if (nav.level === 'country' && hit.country !== nav.country) return;
-    const n = countOf(a => a.country === hit.country);
+    const n = catalogueHas(a => a.country === hit.country);
     if (!n) return toast(`Nothing in ${countryName(hit.country)} yet`);
     goTo('country', { continent: hit.continent, country: hit.country });
   });
@@ -3559,13 +3966,10 @@ function wireUI() {
     if (target != null && files && files.length) await addPhotos(target, files);
   });
 
-  // Keyboard support for the lightbox
+  // Keep keyboard focus inside the visible dialog. Escape closes every sheet;
+  // photo arrows remain available while the lightbox is foremost.
   addEventListener('keydown', e => {
-    if ($('#lightbox').classList.contains('hidden')) return;
-    const n = lightbox.list.length;
-    if (e.key === 'Escape') closeLightbox();
-    if (e.key === 'ArrowRight' && n) { lightbox.index = (lightbox.index + 1) % n; showLightbox(); }
-    if (e.key === 'ArrowLeft'  && n) { lightbox.index = (lightbox.index - 1 + n) % n; showLightbox(); }
+    handleDialogKeydown(e);
   });
 
   // Sheet actions
@@ -3593,18 +3997,9 @@ function wireUI() {
   });
 
   // Random pick
-  $('#randomBtn').onclick = () => {
-    // Never offer something they cannot open. "Pick me an adventure" landing
-    // on a buy button is a poor answer to the question asked.
-    const pool = filtered().filter(a => automaticDiscoveryAllowed(a) &&
-      !isDone(a.id) && !isLocked(a));
-    if (!pool.length) {
-      return toast(filtered().some(a => !isDone(a.id))
-        ? 'Only locked gems left here'
-        : 'Nothing left matching those filters!');
-    }
-    openSheet(pool[Math.floor(Math.random() * pool.length)].id);
-  };
+  // openRandomAdventure builds its pool with automaticDiscoveryAllowed(a), so
+  // countrywide do-not-travel entries remain browseable but are never suggested.
+  $('#randomBtn').onclick = openRandomAdventure;
   $('#progressViewBtn').onclick = () => setProgressView(progressView === 'group' ? 'personal' : 'group');
 
   // Settings
@@ -3628,7 +4023,7 @@ function wireUI() {
       await startAnonymousUpgrade(panel.querySelector('[type="email"]').value.trim());
     }
     if (b.dataset.authact === 'recovery') {
-      await sendPasswordReset(accountUser && accountUser.email, 'app');
+      await sendPasswordReset(accountUser && accountUser.email, 'app', b);
     }
     if (b.dataset.authact === 'new-password') {
       const password = $('#accountPanel').querySelector('[type="password"]').value;
@@ -3670,9 +4065,13 @@ ${url}`);
       await setProgressView(progressView);
     }
     if (b.dataset.groupact === 'sharing') {
+      const owner = userId, generation = authGeneration, groupId = activeGroupId;
       const enabled = b.dataset.enabled === 'true';
-      if (!await setCompletionSharing(activeGroupId, enabled)) return toast('Could not change sharing');
+      const changed = await setCompletionSharing(groupId, enabled);
+      if (changed === null || owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
+      if (!changed) return toast('Could not change sharing');
       await pullProgress();
+      if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
       renderAll();
       toast(enabled ? 'Your progress is shared with this group' : 'Your progress is private again');
     }
@@ -3703,6 +4102,11 @@ ${url}`);
   addEventListener('offline', () => { online = false; refreshSyncBar(); });
   addEventListener('visibilitychange', () => {
     if (document.hidden) return;
+    const billingOwner = userId, billingGeneration = authGeneration;
+    Billing.foreground().then(() => {
+      if (billingOwner && userId === billingOwner && authGeneration === billingGeneration
+          && !passwordRecoveryMode && !accountDeletionInProgress) renderAll();
+    }).catch(error => console.warn('billing foreground refresh', error));
     flushOutbox();
     pullProgress();
     pullPhotos().then(renderAll);
@@ -3733,6 +4137,61 @@ let recs = [];                 // what is on screen
 let myVotes = new Map();       // rec id -> { vote, stars }
 let recSort = 'top';
 let recBusy = false;
+let recError = '';
+let communityReadRevision = 0;
+let blockedPeople = [], blockedPeopleOwner = null;
+const communityWrites = new Map();
+
+async function communityWrite(key, request) {
+  if (!sb || !userId || accountDeletionInProgress) return null;
+  const owner = userId, generation = authGeneration;
+  const token = `${owner}:${generation}:${key}`;
+  if (communityWrites.has(token)) { toast('Still saving that change'); return null; }
+  const pending = Promise.resolve().then(() => {
+    if (owner !== userId || generation !== authGeneration || accountDeletionInProgress) return null;
+    return request();
+  });
+  communityWrites.set(token, pending);
+  let result;
+  try { result = await pending; }
+  catch (error) { result = { error }; }
+  finally { communityWrites.delete(token); }
+  if (owner !== userId || generation !== authGeneration || accountDeletionInProgress) return null;
+  return result;
+}
+
+async function pullBlockedPeople() {
+  const owner = userId, generation = authGeneration;
+  const revision = ++communityReadRevision;
+  const current = () => owner === userId && generation === authGeneration && recSort === 'blocked'
+    && revision === communityReadRevision;
+  if (!sb || !owner || !online) {
+    recBusy = false; recError = 'Reconnect to load blocked people.';
+    renderRecStatus(); renderBlockedPeople(); return;
+  }
+  recBusy = true; recError = ''; renderRecStatus();
+  try {
+    const { data, error } = await sb.from('blocked_authors').select('blocked_id, blocked_at')
+      .eq('user_id', owner).order('blocked_at');
+    if (!current()) return;
+    if (error) throw error;
+    blockedPeople = data || []; blockedPeopleOwner = owner;
+  } catch (error) {
+    if (current()) recError = 'Could not load blocked people. Tap Blocked people to retry.';
+  } finally {
+    if (current()) { recBusy = false; renderRecStatus(); renderBlockedPeople(); }
+  }
+}
+
+function renderBlockedPeople() {
+  const people = blockedPeopleOwner === userId ? blockedPeople : [];
+  const names = readLS(`oaa.block-labels.${userId}`, {});
+  $('#recList').innerHTML = people.length ? people.map(person => `<article class="reccard"><div class="recmain">
+        <div class="rectitle">${esc(names[person.blocked_id] || 'Blocked traveller')}</div>
+        <p class="muted">Blocked ${esc(new Date(person.blocked_at).toLocaleDateString())}</p>
+        <button class="btn-ghost" data-recunblock="${esc(person.blocked_id)}">Unblock</button>
+      </div></article>`).join('') : '<div class="empty">You have not blocked anyone.</div>';
+}
 
 const REC_CATEGORIES = ['Nature', 'Beach', 'Wildlife', 'Hiking', 'Water', 'Culture',
   'History', 'Food & Drink', 'Road Trip', 'Adrenaline', 'Island', 'Snow', 'City',
@@ -3744,30 +4203,35 @@ function recStars(r) {
 }
 
 async function pullRecommendations() {
-  if (!sb || !online) { renderRecs(); return; }
+  if (recSort === 'blocked') return pullBlockedPeople();
   const owner = userId, generation = authGeneration, sort = recSort;
-  recBusy = true; renderRecStatus();
-  let q = sb.from('recommendations').select('*');
-  if (sort === 'mine' && owner) q = q.eq('created_by', owner);
-  const { data, error } = await q.limit(300);
-  if (owner !== userId || generation !== authGeneration || sort !== recSort) return;
-  recBusy = false;
-  if (error) {
-    // The tables may not exist yet, which is a valid state rather than a fault.
-    if (!/does not exist|schema cache/i.test(error.message)) console.warn('recs', error.message);
-    recs = [];
-    renderRecs();
-    return;
+  const revision = ++communityReadRevision;
+  if (!sb || !online) {
+    recBusy = false; recError = 'Reconnect to refresh recommendations.'; renderRecs(); return;
   }
-  recs = data || [];
-
-  if (owner && recs.length) {
-    const { data: votes } = await sb.from('recommendation_votes')
-      .select('rec_id, vote, stars').eq('user_id', owner);
-    if (owner !== userId || generation !== authGeneration || sort !== recSort) return;
-    myVotes = new Map((votes || []).map(v => [v.rec_id, v]));
+  const current = () => owner === userId && generation === authGeneration && sort === recSort
+    && revision === communityReadRevision;
+  recBusy = true; recError = ''; renderRecStatus();
+  try {
+    let q = sb.from('recommendations').select('*');
+    if (sort === 'mine' && owner) q = q.eq('created_by', owner);
+    const { data, error } = await q.limit(300);
+    if (!current()) return;
+    if (error) throw error;
+    let nextVotes = new Map();
+    if (owner && (data || []).length) {
+      const result = await sb.from('recommendation_votes')
+        .select('rec_id, vote, stars').eq('user_id', owner);
+      if (!current()) return;
+      if (result.error) throw result.error;
+      nextVotes = new Map((result.data || []).map(v => [v.rec_id, v]));
+    }
+    recs = data || []; myVotes = nextVotes;
+  } catch (error) {
+    if (current()) recError = 'Could not refresh recommendations. Tap a sort option to retry.';
+  } finally {
+    if (current()) { recBusy = false; renderRecs(); }
   }
-  renderRecs();
 }
 
 function sortedRecs() {
@@ -3788,7 +4252,7 @@ function renderRecStatus() {
   const el = $('#recStatus');
   if (!el) return;
   if (!sb) { el.textContent = 'Not connected, so recommendations are unavailable.'; return; }
-  el.textContent = recBusy ? 'Loading…' : '';
+  el.textContent = recBusy ? 'Loading…' : recError;
 }
 
 function starRow(r) {
@@ -3840,6 +4304,7 @@ function renderRecs() {
   const el = $('#recList');
   if (!el) return;
   renderRecStatus();
+  if (recSort === 'blocked') { renderBlockedPeople(); return; }
   const list = sortedRecs();
   el.innerHTML = list.length
     ? list.map(recCard).join('')
@@ -3849,12 +4314,15 @@ function renderRecs() {
 }
 
 async function voteRec(id, vote) {
+  if (accountDeletionInProgress) return;
   if (!sb || !userId) return toast('Not connected');
   const mine = myVotes.get(id) || {};
   const next = mine.vote === vote ? 0 : vote;      // pressing again withdraws it
   const row = { rec_id: id, user_id: userId, vote: next, stars: mine.stars ?? null };
-  const { error } = await sb.from('recommendation_votes')
-    .upsert(row, { onConflict: 'rec_id,user_id' });
+  const result = await communityWrite(`feedback:${id}`, () => sb.from('recommendation_votes')
+    .upsert(row, { onConflict: 'rec_id,user_id' }));
+  if (!result) return;
+  const { error } = result;
   if (error) { console.warn(error); return toast('Could not vote'); }
   myVotes.set(id, { vote: next, stars: mine.stars ?? null });
   const r = recs.find(x => x.id === id);
@@ -3871,12 +4339,16 @@ async function voteRec(id, vote) {
 }
 
 async function starRec(id, stars) {
+  if (accountDeletionInProgress) return;
   if (!sb || !userId) return toast('Not connected');
   const mine = myVotes.get(id) || {};
   const next = mine.stars === stars ? null : stars;
-  const { error } = await sb.from('recommendation_votes')
-    .upsert({ rec_id: id, user_id: userId, vote: mine.vote ?? 0, stars: next },
-            { onConflict: 'rec_id,user_id' });
+  const owner = userId;
+  const result = await communityWrite(`feedback:${id}`, () => sb.from('recommendation_votes')
+    .upsert({ rec_id: id, user_id: owner, vote: mine.vote ?? 0, stars: next },
+            { onConflict: 'rec_id,user_id' }));
+  if (!result) return;
+  const { error } = result;
   if (error) { console.warn(error); return toast('Could not rate'); }
   myVotes.set(id, { vote: mine.vote ?? 0, stars: next });
   renderRecs();
@@ -3884,33 +4356,65 @@ async function starRec(id, stars) {
 }
 
 async function reportRec(id) {
+  if (accountDeletionInProgress) return;
   if (!sb || !userId) return toast('Not connected');
   const reason = prompt('What is wrong with this post?\n\n'
     + 'Three reports hide it for everyone while it is looked at.');
   if (reason === null) return;
-  const { error } = await sb.from('recommendation_reports')
-    .upsert({ rec_id: id, user_id: userId, reason: reason.slice(0, 300) },
-            { onConflict: 'rec_id,user_id' });
+  const owner = userId;
+  const result = await communityWrite(`report:${id}`, () => sb.from('recommendation_reports')
+    .upsert({ rec_id: id, user_id: owner, reason: reason.slice(0, 300) },
+            { onConflict: 'rec_id,user_id' }));
+  if (!result) return;
+  const { error } = result;
   if (error) { console.warn(error); return toast('Could not report'); }
   toast('Reported. Thank you.');
   pullRecommendations();
 }
 
 async function blockAuthor(authorId) {
+  if (accountDeletionInProgress) return;
   if (!sb || !userId || !authorId) return;
   if (authorId === userId) return toast('That is you');
   if (!confirm('Block this person? Everything they have posted disappears from '
              + 'your list, now and in future.')) return;
-  const { error } = await sb.from('blocked_authors')
-    .upsert({ user_id: userId, blocked_id: authorId }, { onConflict: 'user_id,blocked_id' });
+  const owner = userId;
+  const label = (recs.find(r => r.created_by === authorId) || {}).author_name;
+  const result = await communityWrite(`block:${authorId}`, () => sb.from('blocked_authors')
+    .upsert({ user_id: owner, blocked_id: authorId }, { onConflict: 'user_id,blocked_id' }));
+  if (!result) return;
+  const { error } = result;
   if (error) { console.warn(error); return toast('Could not block'); }
+  if (label) {
+    const names = readLS(`oaa.block-labels.${owner}`, {});
+    names[authorId] = label;
+    writeLS(`oaa.block-labels.${owner}`, names);
+  }
   toast('Blocked');
   pullRecommendations();
 }
 
+async function unblockAuthor(authorId) {
+  if (!sb || !userId || !authorId || accountDeletionInProgress) return;
+  const owner = userId;
+  const result = await communityWrite(`block:${authorId}`, () => sb.from('blocked_authors')
+    .delete().eq('user_id', owner).eq('blocked_id', authorId));
+  if (!result) return;
+  if (result.error) return toast('Could not unblock. Try again.');
+  const names = readLS(`oaa.block-labels.${owner}`, {});
+  delete names[authorId]; writeLS(`oaa.block-labels.${owner}`, names);
+  toast('Unblocked. Their recommendations can appear again.');
+  pullRecommendations();
+}
+
 async function deleteRec(id) {
+  if (!sb || !userId || accountDeletionInProgress) return;
   if (!confirm('Delete your recommendation? This cannot be undone.')) return;
-  const { error } = await sb.from('recommendations').delete().eq('id', id);
+  const owner = userId;
+  const result = await communityWrite(`post:${id}`, () => sb.from('recommendations').delete()
+    .eq('id', id).eq('created_by', owner));
+  if (!result) return;
+  const { error } = result;
   if (error) { console.warn(error); return toast('Could not delete'); }
   toast('Deleted');
   pullRecommendations();
@@ -3918,6 +4422,7 @@ async function deleteRec(id) {
 
 // ── Writing one ───────────────────────────────────────────────────────
 function openRecSheet(id) {
+  if (!userId || accountDeletionInProgress) return;
   const r = id ? recs.find(x => x.id === id) : null;
   const countries = Object.keys(COUNTRY_NAME)
     .sort((a, b) => COUNTRY_NAME[a].localeCompare(COUNTRY_NAME[b]));
@@ -3945,12 +4450,13 @@ function openRecSheet(id) {
        Posts can be reported and removed.</p>
     <button class="btn-primary" data-recsave="${r ? esc(r.id) : ''}">${
       r ? 'Save changes' : 'Post it'}</button>`;
-  $('#recSheet').classList.remove('hidden');
+  showManagedDialog('#recSheet');
 }
 
-function closeRecSheet() { $('#recSheet').classList.add('hidden'); }
+function closeRecSheet() { hideManagedDialog('#recSheet'); }
 
 async function saveRec(id) {
+  if (accountDeletionInProgress) return;
   if (!sb || !userId) return toast('Not connected');
   const title = $('#recTitle').value.trim();
   const place = $('#recPlace').value.trim();
@@ -3965,14 +4471,18 @@ async function saveRec(id) {
     description: $('#recDesc').value.trim() || null,
     author_name: who || 'Someone',
   };
-  const res = id
-    ? await sb.from('recommendations').update(row).eq('id', id)
-    : await sb.from('recommendations').insert({ ...row, created_by: userId });
+  const owner = userId;
+  const res = await communityWrite(`post:${id || 'new'}`, () => id
+    ? sb.from('recommendations').update(row).eq('id', id).eq('created_by', owner)
+    : sb.from('recommendations').insert({ ...row, created_by: owner }));
+  if (!res) return;
   if (res.error) { console.warn(res.error); return toast('Could not post it'); }
   closeRecSheet();
   toast(id ? 'Updated' : 'Posted');
   recSort = 'new';
   $$('#recSort .chip').forEach(c => c.classList.toggle('on', c.dataset.recsort === 'new'));
+  setPressedSelection($$('#recSort .chip'), $('#recSort .chip[data-recsort="new"]'));
+  $('#blockedPeopleBtn').setAttribute('aria-pressed', 'false');
   pullRecommendations();
 }
 
@@ -4058,6 +4568,7 @@ function configureAccountLock({ email, password, form = true }) {
 async function trySignIn(email, password) {
   const btn = $('#lockBtn');
   if (!sb) { setAuthMessage('Can’t reach the server. Check your connection.'); return false; }
+  if (signOutHandling) { setAuthMessage('Finishing sign-out. Try again in a moment.'); return false; }
   if (btn.disabled) return false;
   btn.disabled = true; setAuthMessage('Signing in…');
   try {
@@ -4078,7 +4589,8 @@ function wireAccountLock() {
   };
   $('#createAccountBtn').onclick = () => createAccount(
     $('#accountEmail').value, $('#accountPassword').value);
-  $('#forgotPasswordBtn').onclick = () => sendPasswordReset($('#accountEmail').value);
+  $('#forgotPasswordBtn').onclick = () => sendPasswordReset(
+    $('#accountEmail').value, 'lock', $('#forgotPasswordBtn'));
 }
 
 function showAccountLock(message = '') {
@@ -4088,7 +4600,9 @@ function showAccountLock(message = '') {
   $('.lock-sub').textContent = 'Keep your places, purchases and groups when you change devices.';
   $('#lockBtn').textContent = 'Sign in';
   $('#createAccountBtn').classList.remove('hidden');
+  $('#createAccountBtn').disabled = false;
   $('#forgotPasswordBtn').classList.remove('hidden');
+  $('#forgotPasswordBtn').disabled = false;
   configureAccountLock({ email: true, password: true });
   $('#accountPassword').autocomplete = 'current-password';
   wireAccountLock();
@@ -4117,6 +4631,7 @@ function hideAndClearPrivateOverlays() {
   openId = null; openTripId = null;
   photoTargetId = null;
   lightbox = { list: [], index: 0 };
+  discardManagedDialogFocus();
 }
 
 function clearPrivateMemoryForAccountTransition() {
@@ -4125,10 +4640,15 @@ function clearPrivateMemoryForAccountTransition() {
   photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
   activeGroupId = null; who = null; progressView = 'personal'; signedUrls.clear();
   recs = []; myVotes = new Map(); recBusy = false; pushedName = null;
+  blockedPeople = []; blockedPeopleOwner = null; recError = '';
   hideAndClearPrivateOverlays();
 }
 
 function receivePasswordRecovery(session) {
+  if (signOutHandling) {
+    if (accountUiReady) showAccountLock('Finishing sign-out. Open the recovery link again in a moment.');
+    return false;
+  }
   hideAndClearPrivateOverlays();
   const recoveryUser = session && session.user;
   if (!recoveryUser || !recoveryUser.id) {
@@ -4175,31 +4695,47 @@ function receivePasswordRecovery(session) {
 }
 
 async function handleSignedOut(message = 'Signed out. Sign in to continue.') {
-  if (signOutHandling) return;
+  if (signOutWork) return signOutWork;
   signOutHandling = true;
-  authGeneration++;
-  userId = null; accountUser = null; accountIsAnonymous = false;
-  passwordRecoveryMode = false; passwordRecoveryBusy = false; passwordRecoveryOwnerId = null;
-  passwordRecoveryAttempt++;
-  pendingPasswordRecovery = null;
-  progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
-  releaseLocalPhotoUrls();
-  photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
-  activeGroupId = null; signedUrls.clear();
-  recs = []; myVotes = new Map(); recBusy = false; pushedName = null;
-  flushOutbox.requested = false; flushPhotoQueue.requested = false; flushTrips.requested = false;
-  showAccountLock(message); // remove private UI before asynchronous cleanup
-  for (const key of [LS.progress, LS.personalProgress, LS.outbox, LS.trips,
-    LS.tripOutbox, LS.group, LS.who, LS.view, LS.owner]) localStorage.removeItem(key);
-  try { if (sb) await sb.removeAllChannels(); } catch { /* already disconnected */ }
-  try { await idbClear(); } catch { /* nothing queued */ }
-  try { await Billing.signOut(); } catch { /* store SDK unavailable */ }
-  accountDeletionInProgress = false;
-  signOutHandling = false;
+  const outgoingOwner = userId;
+  signOutWork = (async () => {
+    try {
+      authGeneration++;
+      userId = null; accountUser = null; accountIsAnonymous = false;
+      passwordRecoveryMode = false; passwordRecoveryBusy = false; passwordRecoveryOwnerId = null;
+      passwordRecoveryAttempt++;
+      recoveryRequestBusy = false; recoveryRequestAttempt++;
+      pendingPasswordRecovery = null;
+      progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
+      releaseLocalPhotoUrls();
+      photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
+      activeGroupId = null; signedUrls.clear();
+      recs = []; myVotes = new Map(); recBusy = false; pushedName = null;
+      flushOutbox.requested = false; flushPhotoQueue.requested = false; flushTrips.requested = false;
+      showAccountLock(message); // remove private UI before asynchronous cleanup
+      let legacyQueueScoped = true;
+      if (validAccountOwner(outgoingOwner) && localStorage.getItem(LS.owner) === outgoingOwner) {
+        try { await idbAttributeLegacyQueueOwner(outgoingOwner); }
+        catch (error) { legacyQueueScoped = false; console.warn('legacy photo ownership', error); }
+      }
+      for (const key of [LS.progress, LS.personalProgress, LS.outbox, LS.trips,
+        LS.tripOutbox, LS.group, LS.who, LS.view]) localStorage.removeItem(key);
+      if (legacyQueueScoped) localStorage.removeItem(LS.owner);
+      try { if (sb) await sb.removeAllChannels(); } catch { /* already disconnected */ }
+      try { await idbClear(); } catch { /* nothing queued */ }
+      try { await Billing.signOut(); } catch { /* store SDK unavailable */ }
+    } finally {
+      accountDeletionInProgress = false;
+      signOutHandling = false;
+      signOutWork = null;
+    }
+  })();
+  return signOutWork;
 }
 
 async function createAccount(email, password) {
   if (!sb) return setAuthMessage('Can’t reach the server. Check your connection.');
+  if (signOutHandling) return setAuthMessage('Finishing sign-out. Try again in a moment.');
   if (password.length < 6) return setAuthMessage('Use at least 6 characters for your password.');
   const btn = $('#createAccountBtn');
   if (btn.disabled) return;
@@ -4218,19 +4754,37 @@ async function createAccount(email, password) {
   } finally { btn.disabled = false; }
 }
 
-async function sendPasswordReset(email, target = 'lock') {
+async function sendPasswordReset(email, target = 'lock', control = null) {
   const report = (message, ok = false) => target === 'lock' ? setAuthMessage(message, ok) : toast(message);
   if (!sb) return report('Can’t reach the server. Check your connection.');
+  if (signOutHandling) { report('Finishing sign-out. Try again in a moment.'); return false; }
   const clean = String(email || '').trim();
   if (!clean || !clean.includes('@')) {
     if (target === 'lock') setAuthMessage('Enter your email first.'); else toast('Enter your email first');
-    return;
+    return false;
   }
+  if (recoveryRequestBusy) return false;
+  const owner = userId, generation = authGeneration, attempt = ++recoveryRequestAttempt;
+  const button = control || (target === 'lock' ? $('#forgotPasswordBtn') : null);
+  recoveryRequestBusy = true;
+  if (button) button.disabled = true;
   try {
     const { error } = await sb.auth.resetPasswordForEmail(clean, { redirectTo: authRedirectUrl() });
+    if (attempt !== recoveryRequestAttempt || owner !== userId || generation !== authGeneration) return false;
     report(error ? (error.message || 'Could not send the recovery email.')
       : 'Recovery email sent. Check your inbox.', !error);
-  } catch { report('Could not send the recovery email. Check your connection and try again.'); }
+    return !error;
+  } catch {
+    if (attempt === recoveryRequestAttempt && owner === userId && generation === authGeneration) {
+      report('Could not send the recovery email. Check your connection and try again.');
+    }
+    return false;
+  } finally {
+    if (attempt === recoveryRequestAttempt) {
+      recoveryRequestBusy = false;
+      if (button) button.disabled = false;
+    }
+  }
 }
 
 function showPasswordRecoveryScreen(message = '') {
@@ -4262,6 +4816,10 @@ function showPasswordRecoveryScreen(message = '') {
 
 async function finishPasswordRecovery(password, expectedOwner = passwordRecoveryOwnerId,
                                         expectedAttempt = passwordRecoveryAttempt) {
+  if (signOutHandling) {
+    setAuthMessage('Finishing sign-out. Open the recovery link again in a moment.');
+    return false;
+  }
   if (expectedAttempt !== passwordRecoveryAttempt
       || (expectedOwner && passwordRecoveryOwnerId && expectedOwner !== passwordRecoveryOwnerId)) return false;
   if (!sb || !passwordRecoveryMode || !expectedOwner || passwordRecoveryOwnerId !== expectedOwner
@@ -4432,6 +4990,7 @@ function showAnonymousUpgradeScreen(requestedStage = null) {
 
 async function enterApp({ recoveryOwnerId = passwordRecoveryMode ? passwordRecoveryOwnerId : null,
                           recoveryAttempt = recoveryOwnerId ? passwordRecoveryAttempt : null } = {}) {
+  const openingGeneration = authGeneration;
   if (sb) {
     // getSession reads the persisted session locally. getUser validates over
     // the network and would lock a previously signed-in traveller out offline.
@@ -4441,9 +5000,11 @@ async function enterApp({ recoveryOwnerId = passwordRecoveryMode ? passwordRecov
       if (sessionResult.error) throw sessionResult.error;
       data = sessionResult.data;
     } catch {
+      if (openingGeneration !== authGeneration) return false;
       showStartupError();
       return false;
     }
+    if (openingGeneration !== authGeneration) return false;
     if (recoveryAttempt !== null && recoveryAttempt !== passwordRecoveryAttempt) return false;
     accountUser = data && data.session ? data.session.user : null;
     if (!accountUser) {
@@ -4479,6 +5040,16 @@ async function enterApp({ recoveryOwnerId = passwordRecoveryMode ? passwordRecov
   if (accountIsAnonymous) return showAnonymousUpgradeScreen();
   const enteringOwner = userId, enteringGeneration = authGeneration;
   $('#app').classList.add('hidden');
+  try {
+    const photoFiles = nativePhotoFiles();
+    if (photoFiles && typeof photoFiles.prepare === 'function') await photoFiles.prepare(enteringOwner);
+  } catch (error) {
+    if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
+    console.warn('private photo storage preparation', error);
+    showStartupError();
+    return false;
+  }
+  if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
   loadLocalTrips();
   const loadedPendingPhotos = await idbAll();
   if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
@@ -4531,6 +5102,32 @@ async function enterApp({ recoveryOwnerId = passwordRecoveryMode ? passwordRecov
  * does not have still says https://localhost/ and location.search is empty.
  * Web calls this with its own query; native calls it from appUrlOpen.
  */
+function resolvePendingTripDeepLink(listComplete = false) {
+  const pending = pendingTripDeepLink;
+  if (!pending || !userId) return false;
+  if (pending.owner && (pending.owner !== userId || pending.generation !== authGeneration)) {
+    pendingTripDeepLink = null;
+    return false;
+  }
+  if (!pending.owner) {
+    pending.owner = userId;
+    pending.generation = authGeneration;
+  }
+  if (trips.some(t => t.id === pending.id)) {
+    pendingTripDeepLink = null;
+    openTripSheet(pending.id);
+    return true;
+  }
+  if (listComplete) pendingTripDeepLink = null;
+  return false;
+}
+
+function tidyDeepLinkQuery() {
+  if (!location.search) return;
+  const state = browserNavigationEnabled() ? { wayfinderNav: nav } : null;
+  history.replaceState(state, '', location.pathname);
+}
+
 function openDeepLink(search = location.search) {
   const q = new URLSearchParams(search);
   // An invite link. Never joined silently - a link can be forwarded, and
@@ -4565,11 +5162,15 @@ function openDeepLink(search = location.search) {
 
   const a = q.get('a'), t = q.get('trip');
   if (a && ADV.some(x => x.id === +a)) openSheet(+a);
-  else if (t && trips.some(x => x.id === t)) openTripSheet(t);
-  else return;
+  else if (t && validAccountOwner(t)) {
+    if (trips.some(x => x.id === t)) openTripSheet(t);
+    else pendingTripDeepLink = {
+      id: t, owner: userId || null, generation: userId ? authGeneration : null,
+    };
+  } else return;
   // Tidy the address so a refresh does not reopen it. Meaningless on native,
   // where there was never a query in the address to begin with.
-  if (location.search) history.replaceState(null, '', location.pathname);
+  tidyDeepLinkQuery();
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -4596,6 +5197,8 @@ async function boot() {
           return;
         } else if (userId && session && session.user && session.user.id !== userId) {
           authGeneration++;
+          $('#app').classList.add('hidden');
+          clearPrivateMemoryForAccountTransition();
           userId = session.user.id;
           location.reload();
           return;
@@ -4619,6 +5222,10 @@ async function boot() {
     wireUI();
     wireAccountLock();
     accountUiReady = true;
+    if (!await retryConfirmedLocalAccountCleanup()) {
+      showStartupError();
+      return false;
+    }
 
     if (pendingPasswordRecovery) {
       const pending = pendingPasswordRecovery;

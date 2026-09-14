@@ -176,9 +176,10 @@ Billing separately and keeping both correct forever, where the failure mode is
 telling somebody who paid that they did not.
 
 - Free below $2,500/month of tracked revenue.
-- Ownership is read from **entitlements**, falling back to the raw list of
-  purchased product ids — so the app behaves correctly before anybody has
-  configured a single entitlement in the RevenueCat dashboard.
+- Ownership is read only from RevenueCat's **currently active entitlements**.
+  Historical product identifiers can include refunded or inactive purchases
+  and never unlock content. Create an entitlement for every exact pack slug in
+  `store.js`, then attach the matching Apple and Google product to it.
 - Prices shown on the buttons come from the store when it answers, in the
   buyer's own currency. The strings in `store.js` are only a fallback.
 - `restorePurchases` replaces local state rather than merging, so a refund or a
@@ -201,6 +202,16 @@ Purchases therefore belong to that personal account and can follow it across
 devices and between Android and iOS after both store products are connected to
 the same RevenueCat project. Store sandbox tests must verify that dashboard
 configuration; source code alone cannot prove it.
+
+Do not submit a store build until the RevenueCat project has all eight mapped
+entitlements, both public SDK keys, a deliberately selected and sandbox-tested
+restore/transfer policy, and an operator or server process for deleting the
+RevenueCat subscriber when a Wayfinder account is deleted. The current browser
+build has no authoritative purchase backend; its local developer simulation
+does not provide paid access across devices and is not a production purchase
+path. The app refreshes native CustomerInfo on foreground and listens for SDK
+updates, but RevenueCat documents that this listener is not a server-push
+channel, so refund and transfer tests must include a real foreground refresh.
 
 Get the key wrong and you have a shop that does not work. Without these you
 would have had an app that gives every hidden gem away to anyone who taps Buy.

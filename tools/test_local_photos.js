@@ -25,12 +25,15 @@ const nativeSaveFunctions = section('function nativePhotoFiles()', 'let localPer
 const persistenceFunctions = section('let localPersistenceRequested', '// ── EXIF:');
 const localUrlFunction = section('async function ensureLocalPhotoUrls(items)', 'function renderPhotoStatus()');
 const signedUrlFunction = section('async function ensureSignedUrls(paths)', 'function photoSrc(p)');
+const lightboxFunction = section('async function showLightbox()', 'function closeLightbox()');
 const queueDeleteFunction = section('async function idbDeleteQueueOwner(ownerId)', 'async function idbDeleteLocalOwner(ownerId)');
 const idbWriteFunctions = section('async function idbPut(item)', 'async function idbClear()');
+const idbAllFunction = section('async function idbAll()', 'async function idbPut(item)');
 const idbLocalPutFunction = section('async function idbLocalPut(item)', 'async function idbLocalRows()');
-const deleteAccountFunction = section('async function deleteAccount()', '// ══');
+const deleteAccountFunction = section('async function retryConfirmedLocalAccountCleanup()', '// ══');
 const signedOutFunction = section('async function handleSignedOut(', 'async function createAccount(');
 const bindFunction = section('async function bindLocalDataToUser()', '//  Writing — local first');
+const ownerQueueFunctions = section('function validAccountOwner(ownerId)', '//  Writing — local first');
 
 function harness() {
   const calls = { localPut: [], queuePut: [], queueDelete: [], localDelete: [], remote: 0, egress: 0,
@@ -52,6 +55,7 @@ function harness() {
   vm.createContext(context);
   vm.runInContext(`
     var accountDeletionInProgress = false;
+    var communityWrites = new Map();
     var uploading = 0;
     var userId = 'owner-a';
     var authGeneration = 4;
@@ -223,25 +227,101 @@ function harness() {
 
   {
     const order = [];
-    const h = { order, userId: 'owner-a', online: true, accountDeletionInProgress: false, uploading: 0,
+    const owner = '11111111-1111-4111-8111-111111111111';
+    const values = new Map([
+      ['upgrade', JSON.stringify({ owner_id: owner, stage: 'awaiting-email' })],
+      [`oaa.packs.v2.${owner}`, '["all"]'],
+      ['oaa.packs.v2.22222222-2222-4222-8222-222222222222', '["europe"]'],
+    ]);
+    const h = { order, userId: owner, online: true, accountDeletionInProgress: false, uploading: 0,
+      communityWrites: new Map(),
       authGeneration: 2, prompt: () => 'DELETE', toast() {}, console: { warn() {} },
       removeOwnedStorage: async () => order.push('remote-storage'),
       idbDeleteLocalOwner: async () => order.push('local-owner'),
       idbDeleteQueueOwner: async () => order.push('queued-owner'),
       handleSignedOut: async () => order.push('signed-out'),
+      LS: { accountDeletion: 'deletion', accountUpgrade: 'upgrade' },
+      readLS: (key, fallback) => values.has(key) ? JSON.parse(values.get(key)) : fallback,
+      writeLS: (key, value) => values.set(key, JSON.stringify(value)),
+      localStorage: { removeItem: key => values.delete(key) },
+      clearAccountUpgrade: deletingOwner => {
+        const marker = values.has('upgrade') ? JSON.parse(values.get('upgrade')) : null;
+        if (marker && marker.owner_id === deletingOwner) values.delete('upgrade');
+      },
+      Billing: { deleteLocalOwner: async deletingOwner => {
+        order.push('billing-owner'); values.delete(`oaa.packs.v2.${deletingOwner}`);
+      } },
       setTimeout,
       sb: { rpc: async () => { order.push('rpc'); return { error: null }; }, auth: { signOut: async () => {} } } };
     h.flushPhotoQueue = () => {}; h.flushPhotoQueue.busy = false;
     vm.createContext(h);
-    vm.runInContext(deleteAccountFunction, h);
+    vm.runInContext(ownerQueueFunctions + deleteAccountFunction, h);
     await h.deleteAccount();
-    assert.deepEqual(order.slice(0, 4), ['remote-storage', 'local-owner', 'queued-owner', 'rpc']);
+    assert.deepEqual(order.slice(0, 5), ['remote-storage', 'rpc', 'billing-owner', 'local-owner', 'queued-owner']);
+    assert.equal(values.has('upgrade'), false, 'successful deletion clears that owner upgrade marker');
+    assert.equal(values.has(`oaa.packs.v2.${owner}`), false, 'successful deletion clears that owner purchase cache');
+    assert.equal(values.has('oaa.packs.v2.22222222-2222-4222-8222-222222222222'), true,
+      'successful deletion leaves another owner purchase cache alone');
+    assert.equal(values.has('deletion'), false, 'completed local cleanup clears retry evidence');
   }
 
   {
-    const h = { signOutHandling: false, authGeneration: 1, userId: 'owner-a', accountUser: {},
+    const owner = '11111111-1111-4111-8111-111111111111', order = [], values = new Map();
+    const h = { owner, order, userId: owner, online: true, accountDeletionInProgress: false, uploading: 0,
+      communityWrites: new Map(),
+      authGeneration: 1, prompt: () => 'DELETE', toast() {}, console: { warn() {} }, setTimeout,
+      removeOwnedStorage: async () => order.push('remote-storage'),
+      idbDeleteLocalOwner: async () => order.push('local-owner'),
+      idbDeleteQueueOwner: async () => order.push('queued-owner'),
+      handleSignedOut: async () => order.push('signed-out'), clearAccountUpgrade() {},
+      LS: { accountDeletion: 'deletion' },
+      readLS: (key, fallback) => values.has(key) ? JSON.parse(values.get(key)) : fallback,
+      writeLS: (key, value) => values.set(key, JSON.stringify(value)),
+      localStorage: { removeItem: key => values.delete(key) },
+      Billing: { deleteLocalOwner: async () => {} },
+      sb: { rpc: async () => { order.push('rpc-failed'); return {error:new Error('database unavailable')}; },
+        auth: {signOut: async () => order.push('auth-signout')} } };
+    h.flushPhotoQueue = () => {}; h.flushPhotoQueue.busy = false;
+    vm.createContext(h); vm.runInContext(ownerQueueFunctions + deleteAccountFunction, h);
+    await h.deleteAccount();
+    assert.deepEqual(order, ['remote-storage', 'rpc-failed'],
+      'failed identity deletion preserves every device-local and queued photo');
+    assert.equal(JSON.parse(values.get('deletion')).stage, 'server-failed');
+    assert.equal(h.userId, owner);
+  }
+
+  {
+    const owner = '11111111-1111-4111-8111-111111111111', values = new Map(), messages = [];
+    const h = { userId: owner, online: true, accountDeletionInProgress: false, uploading: 0,
+      communityWrites: new Map(),
+      authGeneration: 1, prompt: () => 'DELETE', toast: message => messages.push(message),
+      console: { warn() {} }, setTimeout, removeOwnedStorage: async () => {},
+      idbDeleteLocalOwner: async () => { throw new Error('device busy'); },
+      idbDeleteQueueOwner: async () => { throw new Error('queue must wait'); },
+      handleSignedOut: async () => {}, clearAccountUpgrade() {},
+      LS: { accountDeletion: 'deletion' },
+      readLS: (key, fallback) => values.has(key) ? JSON.parse(values.get(key)) : fallback,
+      writeLS: (key, value) => values.set(key, JSON.stringify(value)),
+      localStorage: { removeItem: key => values.delete(key) },
+      Billing: { deleteLocalOwner: async () => {} },
+      sb: { rpc: async () => ({error:null}), auth: {signOut:async()=>{}} } };
+    h.flushPhotoQueue = () => {}; h.flushPhotoQueue.busy = false;
+    vm.createContext(h); vm.runInContext(ownerQueueFunctions + deleteAccountFunction, h);
+    await h.deleteAccount();
+    assert.equal(JSON.parse(values.get('deletion')).stage, 'confirmed',
+      'post-RPC local failure retains owner-scoped retry evidence');
+    assert(messages.some(message => /will retry/.test(message)));
+    h.idbDeleteLocalOwner = async deletingOwner => assert.equal(deletingOwner, owner);
+    h.idbDeleteQueueOwner = async deletingOwner => assert.equal(deletingOwner, owner);
+    assert.equal(await h.retryConfirmedLocalAccountCleanup(), true);
+    assert.equal(values.has('deletion'), false, 'later startup retry clears completed cleanup evidence');
+  }
+
+  {
+    const h = { signOutHandling: false, signOutWork: null, authGeneration: 1, userId: 'owner-a', accountUser: {},
       passwordRecoveryMode: true, passwordRecoveryBusy: true, passwordRecoveryOwnerId: 'owner-a',
       passwordRecoveryAttempt: 0, pendingPasswordRecovery: { ownerId: 'owner-a', attempt: 0 },
+      recoveryRequestBusy: true, recoveryRequestAttempt: 0,
       accountIsAnonymous: false, progress: new Map(), personalProgress: new Map(), personalCacheReady: true,
       photos: [{}], pendingPhotos: [], trips: [], myGroups: [], members: new Map(), activeGroupId: null,
       signedUrls: new Map(), releaseCalls: 0, releaseLocalPhotoUrls() { h.releaseCalls++; },
@@ -251,7 +331,7 @@ function harness() {
       Billing: { signOut: async () => {} }, accountDeletionInProgress: false };
     h.flushOutbox.requested = h.flushPhotoQueue.requested = h.flushTrips.requested = false;
     vm.createContext(h);
-    vm.runInContext(signedOutFunction, h);
+    vm.runInContext(ownerQueueFunctions + signedOutFunction, h);
     await h.handleSignedOut();
     assert.equal(h.releaseCalls, 1, 'sign-out must revoke private local-photo URLs');
     assert.equal(h.photos.length, 0);
@@ -260,6 +340,95 @@ function harness() {
     assert.equal(h.passwordRecoveryOwnerId, null);
     assert.equal(h.passwordRecoveryAttempt, 1);
     assert.equal(h.pendingPasswordRecovery, null);
+    assert.equal(h.recoveryRequestBusy, false);
+    assert.equal(h.recoveryRequestAttempt, 1);
+  }
+
+  {
+    const ownerA = '11111111-1111-4111-8111-111111111111';
+    const ownerB = '22222222-2222-4222-8222-222222222222';
+    const values = new Map([
+      ['deletion', JSON.stringify({ owner_id: ownerA, stage: 'confirmed' })],
+      ['upgrade', JSON.stringify({ owner_id: ownerA, stage: 'set-password' })],
+      [`oaa.block-labels.${ownerA}`, '["blocked-a"]'],
+      [`oaa.block-labels.${ownerB}`, '["blocked-b"]'],
+      [`oaa.packs.v2.${ownerA}`, '["all"]'],
+      [`oaa.packs.v2.${ownerB}`, '["europe"]'],
+    ]);
+    const calls = [];
+    const h = {
+      LS: { accountDeletion: 'deletion', accountUpgrade: 'upgrade' },
+      readLS: (key, fallback) => values.has(key) ? JSON.parse(values.get(key)) : fallback,
+      localStorage: { removeItem: key => values.delete(key) },
+      validAccountOwner: owner => owner === ownerA || owner === ownerB,
+      clearAccountUpgrade: owner => {
+        const marker = values.has('upgrade') ? JSON.parse(values.get('upgrade')) : null;
+        if (marker && marker.owner_id === owner) values.delete('upgrade');
+      },
+      Billing: { deleteLocalOwner: async owner => {
+        calls.push(['billing', owner]); values.delete(`oaa.packs.v2.${owner}`);
+      } },
+      idbDeleteLocalOwner: async owner => calls.push(['local', owner]),
+      idbDeleteQueueOwner: async owner => calls.push(['queue', owner]),
+      handleSignedOut: async () => calls.push(['locked']),
+      sb: { auth: {
+        getSession: async () => ({ data: { session: { user: { id: ownerB } } }, error: null }),
+        signOut: async () => { calls.push(['signout']); return { error: null }; },
+      } },
+      console: { warn() {} },
+    };
+    vm.createContext(h); vm.runInContext(deleteAccountFunction, h);
+    assert.equal(await h.retryConfirmedLocalAccountCleanup(), true);
+    assert.deepEqual(calls, [['billing', ownerA], ['local', ownerA], ['queue', ownerA]],
+      'confirmed cleanup must not sign out a different persisted account');
+    assert.equal(values.has(`oaa.packs.v2.${ownerA}`), false);
+    assert.equal(values.has(`oaa.packs.v2.${ownerB}`), true, 'another owner purchase cache remains');
+    assert.equal(values.has(`oaa.block-labels.${ownerA}`), false);
+    assert.equal(values.has(`oaa.block-labels.${ownerB}`), true, 'another owner block labels remain');
+    assert.equal(values.has('upgrade'), false);
+    assert.equal(values.has('deletion'), false);
+
+    values.set('deletion', JSON.stringify({ owner_id: ownerA, stage: 'confirmed' }));
+    h.sb.auth.getSession = async () => ({ data: { session: { user: { id: ownerA } } }, error: null });
+    assert.equal(await h.retryConfirmedLocalAccountCleanup(), true);
+    assert(calls.some(call => call[0] === 'signout'), 'the deleted owner persisted session is cleared locally');
+    assert(calls.some(call => call[0] === 'locked'), 'the deleted owner cannot reopen the app after cleanup');
+  }
+
+  {
+    const owner = '11111111-1111-4111-8111-111111111111';
+    const queue = [{id:'legacy-unowned',blob:{}}], values = new Map([['owner', owner]]);
+    const h = { signOutHandling:false, signOutWork:null, authGeneration:1, userId:owner, accountUser:{}, accountIsAnonymous:false,
+      passwordRecoveryMode:false,passwordRecoveryBusy:false,passwordRecoveryOwnerId:null,passwordRecoveryAttempt:0,
+      pendingPasswordRecovery:null,recoveryRequestBusy:false,recoveryRequestAttempt:0,
+      progress:new Map(),personalProgress:new Map(),personalCacheReady:true,
+      photos:[],pendingPhotos:[],trips:[],myGroups:[],members:new Map(),activeGroupId:null,signedUrls:new Map(),
+      recs:[],myVotes:new Map(),recBusy:false,pushedName:null,releaseLocalPhotoUrls(){},
+      flushOutbox(){},flushPhotoQueue(){},flushTrips(){},showAccountLock(){},accountDeletionInProgress:false,
+      LS:{progress:'p',personalProgress:'pp',outbox:'o',trips:'t',tripOutbox:'to',group:'g',who:'w',view:'v',owner:'owner'},
+      localStorage:{getItem:key=>values.get(key)||null,removeItem:key=>values.delete(key)},
+      idb:async()=>({transaction:()=>{const tx={error:null};tx.objectStore=()=>({openCursor:()=>{
+        const req={};let i=0;const advance=()=>queueMicrotask(()=>{if(i>=queue.length){req.result=null;req.onsuccess();
+          queueMicrotask(()=>tx.oncomplete());return;}const at=i++;req.result={value:queue[at],update:value=>{queue[at]=value;},continue:advance};req.onsuccess();});
+        advance();return req;}});return tx;}}),queueMicrotask,idbClear:async()=>{},Billing:{signOut:async()=>{}},sb:null,
+      console:{warn(){}}};
+    h.flushOutbox.requested=h.flushPhotoQueue.requested=h.flushTrips.requested=false;
+    vm.createContext(h);vm.runInContext(ownerQueueFunctions+signedOutFunction,h);
+    await h.handleSignedOut();
+    assert.equal(queue[0].owner_id,owner,'explicit sign-out stamps legacy queue rows to the outgoing owner');
+    assert.equal(values.has('owner'),false,'owner marker is removed only after queue attribution commits');
+  }
+
+  {
+    const rows = [{id:'legacy-unowned',blob:{}}], saved = [];
+    const h = {userId:'22222222-2222-4222-8222-222222222222',LS:{owner:'owner'},
+      localStorage:{getItem:()=>null},saveLocalPhoto:async item=>saved.push(item),idbDelete:async()=>{},
+      idbPut:async()=>{},idbLocalAll:async()=>[],idb:async()=>({transaction:()=>({objectStore:()=>({
+        getAll:()=>{const req={};queueMicrotask(()=>{req.result=rows;req.onsuccess();});return req;},
+      })})}),queueMicrotask};
+    vm.createContext(h);vm.runInContext(idbAllFunction,h);
+    assert.equal(JSON.stringify(await h.idbAll()),'[]');
+    assert.deepEqual(saved,[],'a new account cannot claim an unowned row without the matching legacy owner marker');
   }
 
   {
@@ -300,15 +469,22 @@ function harness() {
   {
     let resolveDownscale;
     const h = harness();
+    const owner = '11111111-1111-4111-8111-111111111111', values = new Map();
     h.downscale = async () => new Promise(resolve => { resolveDownscale = resolve; });
     Object.assign(h, {
+      userId: owner,
       prompt: () => 'DELETE', setTimeout, removeOwnedStorage: async () => {},
       idbDeleteLocalOwner: async () => h.calls.localDelete.push(['owner-a', 'all']),
       idbDeleteQueueOwner: async () => h.calls.localDelete.push(['owner-a', 'queue']),
       handleSignedOut: async () => {},
+      LS: { accountDeletion: 'deletion' },
+      readLS: (key, fallback) => values.has(key) ? JSON.parse(values.get(key)) : fallback,
+      writeLS: (key, value) => values.set(key, JSON.stringify(value)),
+      localStorage: { removeItem: key => values.delete(key) }, clearAccountUpgrade() {},
+      Billing: { deleteLocalOwner: async () => {} },
       sb: { rpc: async () => ({ error: null }), auth: { signOut: async () => {} } },
     });
-    vm.runInContext(deleteAccountFunction, h);
+    vm.runInContext(ownerQueueFunctions + deleteAccountFunction, h);
     const adding = h.addPhotos(7, [{ type: 'image/jpeg', name: 'slow.jpg', lastModified: 0 }]);
     await new Promise(resolve => setImmediate(resolve));
     const deleting = h.deleteAccount();
@@ -331,6 +507,101 @@ function harness() {
     resolveSigned({ data: [{ path: 'owner-a/legacy.jpg', signedUrl: 'private-a' }], error: null });
     await loading;
     assert.equal(h.signedUrls.size, 0, 'a late cloud signing response must not cross an account switch');
+  }
+
+  {
+    const local = { id: 'native-local', local: true, owner_id: 'owner-a',
+      native_path: 'wayfinder/photos/owner-a/native-local.jpg', adventure_id: 7 };
+    const calls = { local: 0, signed: [] };
+    const nodes = {
+      '#lbImg': { src: '' },
+      '#lbTitle': { textContent: '' },
+      '#lbSub': { textContent: '' },
+      '#lbDelete': { dataset: {}, classList: {
+        hidden: null, toggle(_name, value) { this.hidden = value; },
+      } },
+    };
+    const h = {
+      userId: 'owner-a', authGeneration: 3,
+      lightbox: { list: [local], index: 0 },
+      ADV: [{ id: 7, title: 'Local memory', place: 'Fixture place' }],
+      Date,
+      safeTitle: adventure => adventure.title,
+      $: selector => nodes[selector],
+      $$: () => [],
+      closeLightbox() {},
+      photoSrc: photo => photo.src || '',
+      ensureLocalPhotoUrls: async items => {
+        calls.local++;
+        items[0].src = 'blob:native-local';
+      },
+      ensureSignedUrls: async paths => calls.signed.push(paths),
+    };
+    vm.createContext(h);
+    vm.runInContext(lightboxFunction, h);
+    await h.showLightbox();
+    assert.equal(calls.local, 1, 'a reloaded native photo is read from app-private storage');
+    assert.deepEqual(calls.signed, [], 'a native path is never sent to the cloud signer');
+    assert.equal(nodes['#lbImg'].src, 'blob:native-local');
+    assert.equal(nodes['#lbDelete'].classList.hidden, false, 'a local photo remains deletable');
+
+    const cloud = { id: 'historical-cloud', local: false, storage_path: 'legacy/cloud.jpg',
+      adventure_id: 7 };
+    h.lightbox = { list: [cloud], index: 0 };
+    h.ensureSignedUrls = async paths => {
+      calls.signed.push(paths);
+      cloud.src = 'https://signed.example/cloud.jpg';
+    };
+    await h.showLightbox();
+    assert.equal(JSON.stringify(calls.signed), JSON.stringify([['legacy/cloud.jpg']]));
+    assert.equal(nodes['#lbDelete'].classList.hidden, true,
+      'a preserved historical cloud original does not show an unavailable Delete action');
+
+    calls.signed = [];
+    const unavailableCloud = { id: 'unavailable-cloud', local: false, adventure_id: 7 };
+    h.lightbox = { list: [unavailableCloud], index: 0 };
+    await h.showLightbox();
+    assert.deepEqual(calls.signed, [], 'an absent cloud path is never sent to the signer');
+  }
+
+  {
+    let finishRead;
+    const read = new Promise(resolve => { finishRead = resolve; });
+    const local = { id: 'late-local', local: true, owner_id: 'owner-a',
+      native_path: 'wayfinder/photos/owner-a/late-local.jpg', adventure_id: 7 };
+    const nodes = {
+      '#lbImg': { src: 'cleared' },
+      '#lbTitle': { textContent: 'cleared' },
+      '#lbSub': { textContent: 'cleared' },
+      '#lbDelete': { dataset: { photo: '' }, classList: { toggle() {
+        throw new Error('stale delete UI remounted');
+      } } },
+    };
+    const h = {
+      userId: 'owner-a', authGeneration: 4,
+      lightbox: { list: [local], index: 0 },
+      ADV: [{ id: 7, title: 'Private title', place: 'Private place' }],
+      Date,
+      safeTitle: adventure => adventure.title,
+      $: selector => nodes[selector],
+      $$: () => [],
+      closeLightbox() {},
+      photoSrc: () => '',
+      ensureLocalPhotoUrls: async () => read,
+      ensureSignedUrls: async () => {},
+    };
+    vm.createContext(h);
+    vm.runInContext(lightboxFunction, h);
+    const opening = h.showLightbox();
+    h.userId = 'owner-b';
+    h.authGeneration = 5;
+    finishRead();
+    await opening;
+    assert.equal(nodes['#lbImg'].src, 'cleared');
+    assert.equal(nodes['#lbTitle'].textContent, 'cleared');
+    assert.equal(nodes['#lbSub'].textContent, 'cleared');
+    assert.equal(nodes['#lbDelete'].dataset.photo, '',
+      'a late native read cannot remount lightbox UI after an account switch');
   }
 
   {
@@ -421,7 +692,9 @@ function harness() {
 
   assert.match(source, /indexedDB\.open\('oaa-photos', 2\)/);
   assert.match(source, /filter\(row => row\.owner_id === ownerId\)/);
-  console.log('PASS: 19 device-local photo, native transaction, privacy and account-scope checks');
+  assert.match(source, /Browser storage is best effort; clearing site data removes it/);
+  assert.match(source, /browser retention is best effort/i);
+  console.log('PASS: 27 device-local photo, deletion, native transaction, privacy and account-scope checks');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

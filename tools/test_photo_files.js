@@ -93,6 +93,14 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
   assert.equal(web.isNative(), false);
   await assert.rejects(web.save(OWNER, ID, original), /unavailable/);
 
+  const nativeWithoutFilesystem = load(null, true, 'ios', {
+    async prepare() {},
+    async exclude() {},
+  });
+  assert.equal(nativeWithoutFilesystem.isNative(), true);
+  await assert.rejects(nativeWithoutFilesystem.prepare(OWNER), /unavailable/,
+    'a native build must fail closed instead of falling back to WebView photo storage');
+
   const malformed = load({ async readFile() { return { data: 'not base64!' }; } });
   await assert.rejects(malformed.read(OWNER, PATH), /valid base64/);
 
@@ -105,6 +113,10 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
     async prepare() { iosCalls.push(['prepare']); },
     async exclude(options) { iosCalls.push(['exclude', options.path]); },
   });
+  await ios.prepare(OWNER);
+  assert.deepEqual(iosCalls, [['prepare']],
+    'native startup prepares iOS persistent directories before photo UI');
+  iosCalls.length = 0;
   await ios.save(OWNER, ID, original);
   assert.deepEqual(iosCalls.map(call => call[0]), ['prepare', 'write', 'exclude'],
     'iOS must verify WebView storage and exclude each JPEG from backup around every write');
@@ -113,6 +125,7 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
   const missingGuard = load({
     async writeFile() { missingGuardCalls.push('write'); },
   }, true, 'ios');
+  await assert.rejects(missingGuard.prepare(OWNER), /device-only/);
   await assert.rejects(missingGuard.save(OWNER, ID, original), /device-only/);
   assert.deepEqual(missingGuardCalls, [], 'iOS must fail before writing if backup exclusion is unavailable');
 
@@ -139,6 +152,15 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
   assert.deepEqual(prepareCalls, ['prepare'],
     'an iOS JPEG must not be written before persistent directories are excluded');
 
+  const androidPrepareCalls = [];
+  const android = load({
+    async readdir() { androidPrepareCalls.push('filesystem'); },
+  });
+  assert.equal(await android.prepare(OWNER), true);
+  assert.deepEqual(androidPrepareCalls, [],
+    'Android startup uses native backup rules without reading photo data');
+  await assert.rejects(android.prepare('not-an-owner'), /account UUID/);
+
   const manifest = fs.readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
   assert.match(manifest, /android:allowBackup="false"/);
   assert.match(manifest, /android:dataExtractionRules="@xml\/data_extraction_rules"/);
@@ -153,6 +175,12 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
   assert.match(iosNative, /WayfinderBridgeViewController/);
   const scene = fs.readFileSync('ios/App/App/SceneDelegate.swift', 'utf8');
   assert.match(scene, /sceneDidEnterBackground[\s\S]*applyToPersistentDirectories/);
+  assert.doesNotMatch(scene, /try\?/,
+    'scene lifecycle backup exclusion failures must be recorded');
+  const appDelegate = fs.readFileSync('ios/App/App/AppDelegate.swift', 'utf8');
+  assert.match(appDelegate, /didFinishLaunchingWithOptions[\s\S]*excludeLocalDataFromBackup/);
+  assert.doesNotMatch(appDelegate, /try\?/,
+    'native launch backup exclusion failures must be recorded');
 
   console.log('native photo files: paths, JPEGs, failures and Android/iOS backup exclusion passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });

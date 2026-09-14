@@ -13,3 +13,8 @@
 
 /*.html
   Cache-Control: public, max-age=300, must-revalidate, no-transform
+
+# Commit only the apex to HTTPS. Do not extend this to subdomains or preload
+# until every present and future subdomain has been separately reviewed.
+https://rlapplications.com/*
+  Strict-Transport-Security: max-age=31536000

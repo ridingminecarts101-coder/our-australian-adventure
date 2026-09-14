@@ -24,9 +24,10 @@
  * which 30 are unbought gems asks for 41, not 71 - completion, stamps and
  * achievements must never be behind a paywall.
  *
- * Every product is NON-CONSUMABLE. Bought once, kept forever, restorable on a
- * new phone. Apple requires a visible Restore Purchases control for exactly
- * this kind of product, and there is one in the Me tab.
+ * Every product is NON-CONSUMABLE. Access remains while the store-backed
+ * RevenueCat entitlement is active and is restorable on a new phone. Apple
+ * requires a visible Restore Purchases control for exactly this kind of
+ * product, and there is one in the Me tab.
  */
 
 const STORE_PREFIX = 'app.wayfinder.mobile.gems.';
@@ -141,7 +142,7 @@ function sellablePacks(adventures) {
  *
  * WHY REVENUECAT AND NOT STOREKIT DIRECTLY
  *
- * The same six products have to be sold twice, on two stores whose receipt
+ * The same eight products have to be sold twice, on two stores whose receipt
  * formats, restore semantics and refund notifications have nothing in common.
  * Written by hand that is two implementations to keep correct forever, and the
  * failure mode is somebody who paid being told they did not. RevenueCat is one
@@ -149,13 +150,12 @@ function sellablePacks(adventures) {
  * changes phone or platform is not arguing with us about it. It is free below
  * $2,500 a month of tracked revenue.
  *
- * ENTITLEMENTS, NOT PRODUCT IDS
+ * ACTIVE ENTITLEMENTS ONLY
  *
- * Ownership is read from entitlements where they exist, falling back to the
- * raw list of purchased product ids. The fallback matters: it means the app
- * behaves correctly the moment the products exist in App Store Connect, before
- * anybody has configured a single entitlement in the RevenueCat dashboard, and
- * it keeps working if that configuration is later changed.
+ * RevenueCat's active entitlement map is the authority for access. Historical
+ * product identifiers include inactive and refunded purchases, so they must
+ * never unlock content. Every product therefore needs its matching entitlement
+ * configured in RevenueCat before either store can be released.
  */
 
 // Store prices, once the store has said what they actually are. Keyed by slug,
@@ -192,6 +192,9 @@ const Billing = {
   _ready: null,
   _appUserId: null,
   _generation: 0,
+  _customerInfoListener: null,
+  _listenerPlugin: null,
+  onChange: null,
 
   get native() {
     const cap = window.Capacitor;
@@ -235,8 +238,12 @@ const Billing = {
     this._ready = (async () => {
       try {
         if (previousReady) await previousReady;
+        if (runGeneration !== this._generation || runId !== this._appUserId) return false;
+        await this._removeCustomerInfoListener();
         if (alreadyConfigured && P.logIn) await P.logIn({ appUserID: runId });
         else await P.configure({ apiKey: this._key(), appUserID: runId });
+        if (runGeneration !== this._generation || runId !== this._appUserId) return false;
+        await this._addCustomerInfoListener(P, runGeneration, runId);
         if (runGeneration !== this._generation || runId !== this._appUserId) return false;
         await this.refresh(runGeneration, runId);
         if (runGeneration !== this._generation || runId !== this._appUserId) return false;
@@ -250,6 +257,44 @@ const Billing = {
     return this._ready;
   },
 
+  _acceptCustomerInfo(customerInfo, expectedGeneration, expectedId) {
+    if (expectedGeneration !== this._generation || expectedId !== this._appUserId) return [];
+    const slugs = slugsFromCustomerInfo(customerInfo);
+    const before = [...owned].sort().join('|');
+    owned = new Set(slugs);
+    saveEntitlements();
+    if (before !== [...owned].sort().join('|') && typeof this.onChange === 'function') {
+      try { this.onChange([...owned]); } catch (e) { console.warn('billing change callback', e); }
+    }
+    return slugs;
+  },
+
+  async _addCustomerInfoListener(P, expectedGeneration, expectedId) {
+    if (!P || !P.addCustomerInfoUpdateListener) return;
+    const listener = customerInfo => {
+      this._acceptCustomerInfo(customerInfo, expectedGeneration, expectedId);
+    };
+    const listenerId = await P.addCustomerInfoUpdateListener(listener);
+    if (expectedGeneration !== this._generation || expectedId !== this._appUserId) {
+      if (P.removeCustomerInfoUpdateListener) {
+        await P.removeCustomerInfoUpdateListener({ listenerToRemove: listenerId });
+      }
+      return;
+    }
+    this._customerInfoListener = listenerId;
+    this._listenerPlugin = P;
+  },
+
+  async _removeCustomerInfoListener() {
+    const listenerId = this._customerInfoListener;
+    const P = this._listenerPlugin;
+    this._customerInfoListener = null;
+    this._listenerPlugin = null;
+    if (listenerId != null && P && P.removeCustomerInfoUpdateListener) {
+      await P.removeCustomerInfoUpdateListener({ listenerToRemove: listenerId });
+    }
+  },
+
   /* Read ownership back from the store and replace what is held locally.
    *
    * Replaces rather than merges, so a refund or a revoked family share
@@ -261,10 +306,7 @@ const Billing = {
     try {
       const { customerInfo } = await this._plugin.getCustomerInfo();
       if (expectedGeneration !== this._generation || expectedId !== this._appUserId) return [];
-      const slugs = slugsFromCustomerInfo(customerInfo);
-      owned = new Set(slugs);
-      saveEntitlements();
-      return slugs;
+      return this._acceptCustomerInfo(customerInfo, expectedGeneration, expectedId);
     } catch (e) { console.warn('refresh', e); return [...owned]; }
   },
 
@@ -335,9 +377,10 @@ const Billing = {
       if (runGeneration !== this._generation || runId !== this._appUserId) {
         return { ok: false, reason: 'account changed' };
       }
-      owned = new Set(slugsFromCustomerInfo(customerInfo));
-      owned.add(slug);          // belt and braces, in case entitlements lag a moment
-      saveEntitlements();
+      this._acceptCustomerInfo(customerInfo, runGeneration, runId);
+      if (!owned.has(slug) && !owned.has('all')) {
+        return { ok: false, reason: 'purchase completed but access is not configured; try Restore Purchases' };
+      }
       return { ok: true, slug };
     } catch (e) {
       // PURCHASE_CANCELLED_ERROR is code 1. Backing out of a payment sheet is
@@ -355,6 +398,9 @@ const Billing = {
    * refunded or family-revoked purchase actually goes away.
    */
   async restore() {
+    if (onNativePlatform() && !this.native) {
+      return { ok: false, reason: 'the shop is not available in this build' };
+    }
     if (!this.native) {
       return { ok: true, restored: [...owned], simulated: true };
     }
@@ -365,14 +411,45 @@ const Billing = {
       if (runGeneration !== this._generation || runId !== this._appUserId) {
         return { ok: false, reason: 'account changed' };
       }
-      const slugs = slugsFromCustomerInfo(customerInfo);
-      owned = new Set(slugs);
-      saveEntitlements();
+      const slugs = this._acceptCustomerInfo(customerInfo, runGeneration, runId);
       return { ok: true, restored: slugs };
     } catch (e) {
       console.warn('restore', e);
       return { ok: false, reason: (e && e.message) || 'could not reach the store' };
     }
+  },
+
+  async foreground() {
+    if (!this.native || !this._appUserId) return [...owned];
+    const requestedId = this._appUserId, requestedGeneration = this._generation;
+    await this.init();
+    if (requestedGeneration !== this._generation || requestedId !== this._appUserId) return [];
+    const P = this._plugin;
+    try {
+      if (P && P.invalidateCustomerInfoCache) await P.invalidateCustomerInfoCache();
+      if (requestedGeneration !== this._generation || requestedId !== this._appUserId) return [];
+      return await this.refresh(requestedGeneration, requestedId);
+    } catch (e) {
+      console.warn('billing foreground', e);
+      return [...owned];
+    }
+  },
+
+  async deleteLocalOwner(ownerId) {
+    if (!ownerId) return false;
+    try { localStorage.removeItem(`${LS_ENTITLEMENTS}.${ownerId}`); } catch { /* private mode */ }
+    if (ownerId !== this._appUserId && ownerId !== entitlementOwner) return true;
+    const previousReady = this._ready;
+    this._generation++;
+    this._ready = null;
+    this._appUserId = null;
+    entitlementOwner = null;
+    owned = new Set();
+    try {
+      if (previousReady) await previousReady;
+      await this._removeCustomerInfoListener();
+    } catch (e) { console.warn('billing account cleanup', e); }
+    return true;
   },
 
   async signOut() {
@@ -386,28 +463,21 @@ const Billing = {
     owned = new Set();
     try {
       if (previousReady) await previousReady;
+      await this._removeCustomerInfoListener();
       if (P && P.logOut) await P.logOut();
     } catch (e) { console.warn('billing logout', e); }
   },
 };
 
-/* Which packs a RevenueCat customer record says are owned.
- *
- * Two sources, deliberately. Entitlements are the configured answer and the
- * one that survives a product id being renamed; allPurchasedProductIdentifiers
- * is the raw truth from the store and needs no dashboard setup at all. Taking
- * the union of the two means neither a missing entitlement nor a missing
- * product mapping can lock somebody out of content they have paid for.
- */
+/* Only currently active, mapped RevenueCat entitlements authorize access. */
 function slugsFromCustomerInfo(info) {
   if (!info) return [];
   const out = new Set();
 
   const active = (info.entitlements && info.entitlements.active) || {};
-  for (const slug of Object.keys(active)) if (packBySlug(slug)) out.add(slug);
-
-  const ids = info.allPurchasedProductIdentifiers || [];
-  for (const pack of PACKS) if (ids.includes(productId(pack.slug))) out.add(pack.slug);
+  for (const [slug, entitlement] of Object.entries(active)) {
+    if (packBySlug(slug) && entitlement && entitlement.isActive !== false) out.add(slug);
+  }
 
   return [...out];
 }

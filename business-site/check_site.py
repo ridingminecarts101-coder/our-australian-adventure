@@ -16,6 +16,7 @@ from urllib.parse import unquote, urljoin, urlparse
 
 
 ROOT = Path(__file__).resolve().parent / "public"
+APP_ROOT = ROOT.parent.parent
 CONTACT = "rambodog555@gmail.com"
 ABN = "RL Applications · ABN 92 363 169 656"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36"
@@ -70,6 +71,10 @@ class Document:
     lang: str | None
     title: str
     viewport: bool
+    canonicals: list[str]
+    csp: str | None
+    inline_scripts: int
+    event_handlers: list[str]
 
 
 class DocumentParser(HTMLParser):
@@ -84,6 +89,10 @@ class DocumentParser(HTMLParser):
         self.title_parts: list[str] = []
         self.in_title = False
         self.viewport = False
+        self.canonicals: list[str] = []
+        self.csp: str | None = None
+        self.inline_scripts = 0
+        self.event_handlers: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
@@ -92,7 +101,10 @@ class DocumentParser(HTMLParser):
             self.lang = values.get("lang")
         if values.get("id"):
             self.ids.append(values["id"] or "")
-        if tag in {"a", "link"} and values.get("href"):
+        rels = set((values.get("rel") or "").lower().split())
+        if tag == "link" and "canonical" in rels and values.get("href"):
+            self.canonicals.append(values["href"] or "")
+        elif tag in {"a", "link"} and values.get("href"):
             self.links.append(values["href"] or "")
         if tag in {"img", "script"} and values.get("src"):
             self.links.append(values["src"] or "")
@@ -102,8 +114,13 @@ class DocumentParser(HTMLParser):
             self.h1_count += 1
         if tag == "title":
             self.in_title = True
+        if tag == "script" and not values.get("src"):
+            self.inline_scripts += 1
         if tag == "meta" and values.get("name", "").lower() == "viewport":
             self.viewport = "width=device-width" in (values.get("content") or "").lower()
+        if tag == "meta" and values.get("http-equiv", "").lower() == "content-security-policy":
+            self.csp = values.get("content")
+        self.event_handlers.extend(name for name, _ in attrs if name.lower().startswith("on"))
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "title":
@@ -123,6 +140,10 @@ class DocumentParser(HTMLParser):
             lang=self.lang,
             title="".join(self.title_parts).strip(),
             viewport=self.viewport,
+            canonicals=self.canonicals,
+            csp=self.csp,
+            inline_scripts=self.inline_scripts,
+            event_handlers=self.event_handlers,
         )
 
 
@@ -202,6 +223,13 @@ def local_checks() -> tuple[list[str], set[str]]:
                     if parsed.fragment not in linked.ids:
                         errors.append(f"{rel}: unresolved fragment {link}")
 
+        expected_route = next((route for route, filename in ROUTES.items() if filename == rel), None)
+        expected_canonical = f"https://rlapplications.com{expected_route}" if expected_route else None
+        if expected_canonical and doc.canonicals != [expected_canonical]:
+            errors.append(f"{rel}: canonical URL is {doc.canonicals!r}, expected {[expected_canonical]!r}")
+        if not expected_canonical and doc.canonicals:
+            errors.append(f"{rel}: non-content page must not declare a canonical URL")
+
     try:
         for svg in ROOT.glob("assets/*.svg"):
             ET.parse(svg)
@@ -229,6 +257,50 @@ def local_checks() -> tuple[list[str], set[str]]:
     for required in ("script-src 'none'", "frame-ancestors 'none'", "no-transform"):
         if required not in headers:
             errors.append(f"_headers missing {required}")
+    apex_hsts = re.search(
+        r"(?m)^https://rlapplications\.com/\*\s*$\n(?:^[ \t]+.*\n?)*?^[ \t]+Strict-Transport-Security:\s*([^\r\n]+)",
+        headers,
+    )
+    if not apex_hsts or apex_hsts.group(1).strip().lower() != "max-age=31536000":
+        errors.append("_headers must set apex-only HSTS to exactly max-age=31536000")
+    if re.search(r"(?i)strict-transport-security:[^\r\n]*(includesubdomains|preload)", headers):
+        errors.append("_headers HSTS must not opt subdomains into HSTS or preload")
+
+    pwa = parse_document((APP_ROOT / "index.html").read_text(encoding="utf-8"))
+    csp = pwa.csp or ""
+    required_pwa_csp = {
+        "default-src": {"'self'"},
+        "script-src": {"'self'"},
+        "style-src": {"'self'", "'unsafe-inline'"},
+        "img-src": {"'self'", "data:", "blob:", "https://ajyuozqoukigeeyhvuqc.supabase.co"},
+        "connect-src": {"'self'", "https://ajyuozqoukigeeyhvuqc.supabase.co",
+                        "wss://ajyuozqoukigeeyhvuqc.supabase.co", "https://api.bigdatacloud.net"},
+        "font-src": {"'self'"},
+        "manifest-src": {"'self'"},
+        "worker-src": {"'self'"},
+        "object-src": {"'none'"},
+        "base-uri": {"'self'"},
+        "form-action": {"'self'"},
+        "frame-src": {"'none'"},
+    }
+    directives: dict[str, set[str]] = {}
+    for raw in csp.split(";"):
+        fields = raw.split()
+        if fields:
+            directives[fields[0].lower()] = set(fields[1:])
+    if directives != required_pwa_csp:
+        errors.append("index.html PWA CSP differs from the reviewed application-specific policy")
+    if "frame-ancestors" in directives:
+        errors.append("index.html must not imply meta CSP can enforce frame-ancestors")
+    if pwa.inline_scripts:
+        errors.append("index.html has inline script that the PWA CSP would block")
+    if pwa.event_handlers:
+        errors.append(f"index.html has inline event handlers blocked by CSP: {sorted(set(pwa.event_handlers))}")
+    app_config = (APP_ROOT / "config.js").read_text(encoding="utf-8")
+    app_source = (APP_ROOT / "app.js").read_text(encoding="utf-8")
+    for required_origin in ("https://ajyuozqoukigeeyhvuqc.supabase.co", "https://api.bigdatacloud.net"):
+        if required_origin not in csp or required_origin not in app_config + app_source:
+            errors.append(f"PWA CSP/runtime origin inventory is missing {required_origin}")
 
     css = (ROOT / "assets/site.css").read_text(encoding="utf-8")
     for required in (
@@ -264,6 +336,12 @@ def check_headers(label: str, headers: dict[str, str], errors: list[str]) -> Non
                 errors.append(f"{label}: {name} missing {fragment}")
 
 
+def check_apex_hsts(label: str, headers: dict[str, str], errors: list[str]) -> None:
+    value = headers.get("strict-transport-security", "").strip().lower()
+    if value != "max-age=31536000":
+        errors.append(f"{label}: strict-transport-security must be apex-only max-age=31536000")
+
+
 def live_checks() -> list[str]:
     errors: list[str] = []
     for host in LIVE_HOSTS:
@@ -277,6 +355,8 @@ def live_checks() -> list[str]:
             if normalise(body) != normalise(authored):
                 errors.append(f"{label}: live payload differs from authored source")
             check_headers(label, headers, errors)
+            if host == "https://rlapplications.com":
+                check_apex_hsts(label, headers, errors)
             if route in ROUTES:
                 if "no-transform" not in headers.get("cache-control", ""):
                     errors.append(f"{label}: cache-control missing no-transform")
