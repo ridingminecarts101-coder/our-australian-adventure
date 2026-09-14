@@ -104,6 +104,7 @@ li + li { margin-top: 0.45rem; }
 }
 .hero::after {
   content: "";
+  pointer-events: none;
   position: absolute;
   right: -9rem;
   bottom: -12rem;

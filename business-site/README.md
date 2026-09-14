@@ -25,6 +25,22 @@ Then open `http://localhost:8080/`. Do not preview by opening the HTML files dir
 
 There is no build step, client-side JavaScript, analytics, form handler or environment-specific configuration.
 
+## Wayfinder launch links
+
+The overview's **Open Wayfinder** button and the installation FAQ both link
+directly to the existing GitHub Pages PWA. Keep both destinations aligned.
+The iOS/iPadOS and Android installation guides are deep-linked from the product
+page; their FAQ is expanded by default so those anchors remain visible without
+JavaScript. Native App Store and Google Play listings are not yet published.
+Once the actual listings are live, replace the PWA launch destinations with
+the verified store route appropriate to the visitor, preserving access to the
+PWA and accounting for its origin-bound photos. Do not insert placeholder
+store URLs or claim automatic store routing exists before implementation.
+
+The hero's decorative pseudo-element must keep `pointer-events: none` so it
+cannot cover the mobile launch button. When changing the shared CSS, update
+its version query in all HTML pages: assets are cached for one week.
+
 ## Checks
 
 Run the authored-site checks from the repository root:
