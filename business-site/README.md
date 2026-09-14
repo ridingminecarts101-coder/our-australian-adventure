@@ -25,6 +25,16 @@ Then open `http://localhost:8080/`. Do not preview by opening the HTML files dir
 
 There is no build step, client-side JavaScript, analytics, form handler or environment-specific configuration.
 
+## Checks
+
+Run the authored-site checks from the repository root:
+
+```powershell
+python business-site/check_site.py
+```
+
+Add `--live` to compare every public route and asset with the authored source across the apex, `www` and Cloudflare Pages hosts, including redirects, the custom 404 response and required security headers. Add `--external` to request the external HTTPS links referenced by the pages.
+
 The `Cache-Control: no-transform` header preserves the public support mailto links on the custom domain. Cloudflare's automatic email obfuscation otherwise requires an injected decoder script that this site's `script-src 'none'` policy intentionally excludes. Keep the header when changing cache settings. Domain-wide Cloudflare security settings do not need to be disabled.
 
 The current public contact is `rambodog555@gmail.com`. Do not replace it with `help@rlapplications.com` until that mailbox is confirmed working. When it is ready, find every authored occurrence with `rg -n "rambodog555@gmail.com" business-site/public`, replace both visible addresses and `mailto:` targets, then repeat the local link and deployed email-link checks.

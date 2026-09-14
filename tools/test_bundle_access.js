@@ -95,4 +95,16 @@ assert.equal(run('isLocked(aqGem)'), false);
 assert.equal(run('isLocked(gem)'), false);
 assert.equal(run('safeTitle(classic)'), 'Secret ice route');
 
+// An entirely locked catalogue remains browsable; it is not an empty place.
+run("owned = new Set(); ADV=[classic,aqGem]; nav={level:'world'}; drawWorldMap=()=>{}; renderPlaces()");
+assert.match(elements.get('#continentList').innerHTML,/Included with All Continents/);
+assert.match(elements.get('#continentList').innerHTML,/Locked adventures/);
+run("nav={level:'continent',continent:'Antarctica'}; renderPlaces()");
+assert(!elements.get('#placeSub').textContent.includes('none mapped'));
+assert.match(elements.get('#placeList').innerHTML,/country/);
+assert.match(elements.get('#placeList').innerHTML,/Locked adventures/);
+run("nav={level:'country',continent:'Antarctica',country:'AQ'}; renderPlaces()");
+assert.equal(elements.get('#placeSub').textContent,'2 locked adventures');
+assert(!elements.get('#placeList').innerHTML.includes('Coming soon'));
+
 console.log('bundle access: passed (classic, Antarctic gem, regional gem, counters and locked views)');

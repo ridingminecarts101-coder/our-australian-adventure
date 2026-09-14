@@ -59,6 +59,10 @@ try {
     (created_by,title,place,country,up_votes) values ($1,'A forged recommendation','Reserve','AU',1000)`, [users[0]]);
   await denied('user cannot post under another identity', `insert into public.recommendations
     (created_by,title,place,country) values ($1,'A forged author name','Reserve','AU')`, [users[1]]);
+  await assert.rejects(asUser(users[0], `insert into public.recommendations
+    (created_by,author_name,title,place,country) values ($1,$2,'Bounded text check','Reserve','AU')`,
+    [users[0], 'x'.repeat(81)]), /recommendations_author_name_length/);
+  pass('server bounds recommendation author text independently of the form');
   assert.equal((await asUser(users[1], 'update public.recommendations set title=$1 where id=$2 returning id',
     ['Attempted other author edit', second])).rows.length, 0);
   pass('another user cannot edit the author post');
@@ -67,6 +71,12 @@ try {
   assert.equal((await row(second)).up_votes, 1);
   assert.equal((await row(second)).stars_sum, 4);
   pass('valid feedback updates totals through the server trigger');
+  await asUser(users[2], `insert into public.recommendation_votes(rec_id,user_id,vote,voted_at)
+    values ($1,$2,1,'2000-01-01')`, [second,users[2]]);
+  assert.notEqual((await db.query('select voted_at from public.recommendation_votes where rec_id=$1 and user_id=$2',
+    [second,users[2]])).rows[0].voted_at.getUTCFullYear(), 2000);
+  pass('server assigns vote time even when a client supplies one');
+  await asUser(users[2], 'delete from public.recommendation_votes where rec_id=$1', [second]);
   await asUser(users[1], 'update public.recommendation_votes set vote=-1,stars=2 where rec_id=$1', [second]);
   assert.equal((await row(second)).up_votes, 0);
   assert.equal((await row(second)).down_votes, 1);
@@ -75,6 +85,9 @@ try {
   await assert.rejects(asUser(users[1], 'update public.recommendation_votes set rec_id=$1 where rec_id=$2',
     [first,second]), /vote identity cannot be changed/);
   pass('a vote cannot be moved to corrupt another post total');
+  await assert.rejects(asUser(users[1], `update public.recommendation_votes
+    set voted_at='2000-01-01' where rec_id=$1`, [second]), /vote timestamp cannot be changed/);
+  pass('a voter cannot forge the server vote timestamp');
   assert.equal((await asUser(users[2], 'select * from public.recommendation_votes')).rows.length, 0);
   pass('individual vote and rating rows remain private');
   await asUser(users[1], 'delete from public.recommendation_votes where rec_id=$1', [second]);
@@ -83,11 +96,24 @@ try {
   pass('withdrawing feedback clears its aggregate contribution');
 
   for (const user of users.slice(1)) await asUser(user,
-    'insert into public.recommendation_reports(rec_id,user_id,reason) values ($1,$2,$3)', [second,user,'Test report']);
+    `insert into public.recommendation_reports(rec_id,user_id,reason,reported_at)
+     values ($1,$2,$3,'2000-01-01')`, [second,user,'Test report']);
+  assert.notEqual((await db.query('select reported_at from public.recommendation_reports where rec_id=$1 and user_id=$2',
+    [second,users[1]])).rows[0].reported_at.getUTCFullYear(), 2000);
+  pass('server assigns report time even when a client supplies one');
   assert.equal((await row(second)).hidden, true);
   assert.equal((await row(second)).report_count, 3);
   assert.equal((await asUser(users[1], 'select id from public.recommendations where id=$1', [second])).rows.length, 0);
   pass('three separate reporters hide the post from other readers');
+  await asUser(users[1], `update public.recommendation_reports set reason='Updated test reason'
+    where rec_id=$1`, [second]);
+  pass('a reporter can update only their own report content');
+  await assert.rejects(asUser(users[1], `update public.recommendation_reports
+    set reported_at='2000-01-01' where rec_id=$1`, [second]), /report timestamp cannot be changed/);
+  pass('a reporter cannot forge the server report timestamp');
+  await assert.rejects(asUser(users[1], 'update public.recommendation_reports set reason=$1 where rec_id=$2',
+    ['x'.repeat(301), second]), /recommendation_reports_reason_length/);
+  pass('server bounds report text independently of the prompt');
   await denied('author cannot clear the report-triggered hold', 'update public.recommendations set hidden=false where id=$1', [second]);
   await db.query('delete from auth.users where id=$1', [users[3]]);
   assert.equal((await row(second)).report_count, 2);

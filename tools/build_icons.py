@@ -45,6 +45,21 @@ def rounded(img, size):
     return im
 
 
+def rounded_square(img, size):
+    """Legacy launcher icon with a small transparent margin and soft corners."""
+    canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    margin = max(1, round(size * 0.04))
+    art_size = size - 2 * margin
+    art = square(img, art_size)
+    mask = Image.new('L', (art_size * 4, art_size * 4), 0)
+    radius = round(art_size * 0.20 * 4)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        (0, 0, art_size * 4 - 1, art_size * 4 - 1), radius=radius, fill=255)
+    art.putalpha(mask.resize((art_size, art_size), Image.LANCZOS))
+    canvas.paste(art, (margin, margin), art)
+    return canvas
+
+
 def stars_only(img):
     """Key the cream artwork out of the gradient by brightness.
 
@@ -84,24 +99,11 @@ FOREGROUND = {'mdpi': 108, 'hdpi': 162, 'xhdpi': 216, 'xxhdpi': 324, 'xxxhdpi': 
 
 for dpi, size in MIPMAP.items():
     d = ('android', 'app', 'src', 'main', 'res', 'mipmap-' + dpi)
-    square(SRC, size).save(out(*d, 'ic_launcher.png'))
+    rounded_square(SRC, size).save(out(*d, 'ic_launcher.png'))
     rounded(SRC, size).save(out(*d, 'ic_launcher_round.png'))
     # 108dp canvas, artwork at 60% of it so nothing important leaves the
     # 72dp safe circle no matter how aggressively the launcher masks.
     inset(FOREGROUND[dpi], 0.60).save(out(*d, 'ic_launcher_foreground.png'))
-
-# The background layer stops being Android Studio's teal grid.
-with io.open(out('android', 'app', 'src', 'main', 'res', 'drawable',
-                 'ic_launcher_background.xml'), 'w', encoding='utf-8', newline='\n') as fh:
-    fh.write('<?xml version="1.0" encoding="utf-8"?>\n'
-             '<!-- Flat rust behind the stars. A gradient would band on low\n'
-             '     density launchers and the adaptive crop hides the edges\n'
-             '     anyway, so there is nothing to gain from one. -->\n'
-             '<vector xmlns:android="http://schemas.android.com/apk/res/android"\n'
-             '    android:width="108dp" android:height="108dp"\n'
-             '    android:viewportWidth="108" android:viewportHeight="108">\n'
-             '    <path android:fillColor="#8c3d1f" android:pathData="M0,0h108v108h-108z" />\n'
-             '</vector>\n')
 
 with io.open(out('android', 'app', 'src', 'main', 'res', 'values',
                  'ic_launcher_background.xml'), 'w', encoding='utf-8', newline='\n') as fh:
@@ -113,8 +115,11 @@ with io.open(out('android', 'app', 'src', 'main', 'res', 'values',
 # only thing that renders as intended.
 for dpi, size in {'mdpi': 24, 'hdpi': 36, 'xhdpi': 48,
                   'xxhdpi': 72, 'xxxhdpi': 96}.items():
-    inset(size, 0.85).save(out('android', 'app', 'src', 'main', 'res',
-                               'drawable-' + dpi, 'ic_stat_icon.png'))
+    alpha = inset(size, 0.85).getchannel('A')
+    mono = Image.new('RGBA', (size, size), (255, 255, 255, 0))
+    mono.putalpha(alpha)
+    mono.save(out('android', 'app', 'src', 'main', 'res',
+                  'drawable-' + dpi, 'ic_stat_icon.png'))
 
 
 # -- Splash -----------------------------------------------------------
@@ -132,17 +137,12 @@ def splash(size, logo_frac=0.28):
 
 SPLASH_DPI = {'mdpi': 480, 'hdpi': 720, 'xhdpi': 960, 'xxhdpi': 1440, 'xxxhdpi': 1920}
 for dpi, size in SPLASH_DPI.items():
-    img = splash(size)
-    for orient in ('port', 'land'):
-        img.save(out('android', 'app', 'src', 'main', 'res',
-                     'drawable-%s-%s' % (orient, dpi), 'splash.png'))
-splash(1920).save(out('android', 'app', 'src', 'main', 'res', 'drawable', 'splash.png'))
+    splash(size).save(out('android', 'app', 'src', 'main', 'res',
+                          'drawable-' + dpi, 'splash.png'))
 
-# Android 12 draws its own splash from a 108dp icon on a solid colour and
-# ignores the drawable above, so it needs the stars separately.
-for dpi, size in FOREGROUND.items():
-    inset(size, 0.60).save(out('android', 'app', 'src', 'main', 'res',
-                               'drawable-' + dpi, 'ic_splash.png'))
+# Android 12 draws its own splash from the same adaptive foreground used by
+# the launcher, referenced directly from styles.xml. Avoid a byte-identical
+# second resource so the two can never drift.
 
 # -- iOS --------------------------------------------------------------
 #

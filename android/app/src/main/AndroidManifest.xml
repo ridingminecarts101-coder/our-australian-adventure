@@ -2,6 +2,43 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permissions and optional hardware must precede the application node;
+         Android has historically handled out-of-order manifests inconsistently. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- The app uses plain web APIs for these - navigator.geolocation and a
+         file input with capture= - which Capacitor's WebView bridge services.
+         The bridge asks the user at the point of use, but it can only ask for
+         a permission the manifest declares, so without these lines Near me
+         silently returns nothing and the camera button opens the gallery. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Photo attachments use the system picker exposed by the WebView file
+         input. Android grants access only to the selected URI, so broad photo
+         library or external-storage read permission is neither needed nor
+         appropriate. Captured photos stay in app storage and are not saved
+         back to the gallery. -->
+
+    <!-- Pulled in by the notifications plugin and removed again on purpose.
+         Play treats exact alarms as a restricted permission and asks you to
+         justify it against a list that an alarm clock is on and a travel
+         checklist is not. Nothing here needs to fire at an exact minute: the
+         one reminder is a seasonal nudge that is just as useful an hour
+         later, and an inexact alarm costs the battery far less. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        tools:node="remove" />
+
+    <!-- Declared optional so the app installs on hardware that has none of
+         them. Every one of these features is a nice-to-have: no camera means
+         no photo attached, no GPS means Near me falls back to picking a
+         region by name, and the app is otherwise unaffected. Without these
+         lines Play would hide the listing from those devices entirely. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -32,7 +69,7 @@
                  a "open with" chooser instead of going straight in - one
                  extra tap, and nothing silently broken. Turn autoVerify on
                  the day the app has a domain of its own. -->
-            <intent-filter>
+            <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -63,42 +100,4 @@
         </provider>
     </application>
 
-    <!-- Permissions -->
-
-    <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- The app uses plain web APIs for these - navigator.geolocation and a
-         file input with capture= - which Capacitor's WebView bridge services.
-         The bridge asks the user at the point of use, but it can only ask for
-         a permission the manifest declares, so without these lines Near me
-         silently returns nothing and the camera button opens the gallery. -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-
-    <!-- Photo attachments use the system picker exposed by the WebView file
-         input. Android grants access only to the selected URI, so broad photo
-         library or external-storage read permission is neither needed nor
-         appropriate. Captured photos stay in app storage and are not saved
-         back to the gallery. -->
-
-    <!-- Pulled in by the notifications plugin and removed again on purpose.
-         Play treats exact alarms as a restricted permission and asks you to
-         justify it against a list that an alarm clock is on and a travel
-         checklist is not. Nothing here needs to fire at an exact minute: the
-         one reminder is a seasonal nudge that is just as useful an hour
-         later, and an inexact alarm costs the battery far less. -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
-        tools:node="remove" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM"
-        tools:node="remove" />
-
-    <!-- Declared optional so the app installs on hardware that has none of
-         them. Every one of these features is a nice-to-have: no camera means
-         no photo attached, no GPS means Near me falls back to picking a
-         region by name, and the app is otherwise unaffected. Without these
-         lines Play would hide the listing from those devices entirely. -->
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
-    <uses-feature android:name="android.hardware.location" android:required="false" />
-    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 </manifest>

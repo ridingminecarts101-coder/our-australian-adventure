@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Flat rust behind the stars. A gradient would band on low
-     density launchers and the adaptive crop hides the edges
-     anyway, so there is nothing to gain from one. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#8c3d1f" android:pathData="M0,0h108v108h-108z" />
-</vector>

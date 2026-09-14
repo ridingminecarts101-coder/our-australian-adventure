@@ -80,6 +80,24 @@ create index if not exists group_trips_shared_by_idx
 alter table public.group_members
   add column if not exists share_completions boolean not null default false;
 
+-- RPCs already enforce this bound. Keep direct display-name edits subject to
+-- the same database rule without blocking deployment on historical rows that
+-- may need separate review.
+do $membership_constraints$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'public.group_members'::regclass
+       and conname = 'group_members_display_name_length'
+  ) then
+    alter table public.group_members
+      add constraint group_members_display_name_length
+      check (display_name is null or length(btrim(display_name)) between 1 and 80)
+      not valid;
+  end if;
+end
+$membership_constraints$;
+
 -- Preserve visibility intentionally created by the legacy group_id model once.
 -- The durable marker prevents a later replay from recreating consent a person
 -- has revoked.
@@ -258,6 +276,25 @@ create trigger group_members_guard_identity
 before update on public.group_members
 for each row execute function public.guard_membership_identity();
 
+-- Consent changes are RPC-only.  A table-level UPDATE grant would let a
+-- client flip share_completions without the RPC adding/removing projections.
+-- Revoke both table- and column-level grants so replay also repairs an older
+-- or manually broadened grant; display-name edits remain available directly.
+revoke update on public.group_members from public, anon, authenticated;
+do $membership_column_grants$
+declare col record;
+begin
+  for col in select column_name from information_schema.columns
+    where table_schema = 'public' and table_name = 'group_members'
+  loop
+    execute format(
+      'revoke update (%I) on public.group_members from public, anon, authenticated',
+      col.column_name
+    );
+  end loop;
+end
+$membership_column_grants$;
+
 -- Personal record ownership and legacy group metadata cannot be reassigned by
 -- an authenticated client. Administrative migrations have auth.uid() = null.
 create or replace function public.guard_personal_record_identity()
@@ -288,6 +325,31 @@ begin
   end loop;
 end
 $triggers$;
+
+-- A photo metadata row must never point at another account's object. Storage
+-- policies consult this metadata for legacy paths and explicit group shares,
+-- so allowing an arbitrary storage_path would turn an owned row into a read
+-- or delete capability for somebody else's file. Existing legacy rows are
+-- preserved; authenticated inserts and path changes must use the caller's
+-- UUID as their first folder, matching the upload policy and current client.
+create or replace function public.guard_photo_storage_path()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public
+as $$
+begin
+  if auth.uid() is not null
+     and (storage.foldername(new.storage_path))[1] is distinct from auth.uid()::text then
+    raise exception 'photo storage path must belong to its owner';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists photos_guard_storage_path on public.photos;
+create trigger photos_guard_storage_path
+before insert or update of storage_path on public.photos
+for each row execute function public.guard_photo_storage_path();
 
 -- Canonical completion attribution follows the personal owner. Historical
 -- group rows retain truthful non-owner attribution until completion changes.
@@ -425,7 +487,12 @@ drop policy if exists "upload own memory files" on storage.objects;
 drop policy if exists "delete own or shared memory files" on storage.objects;
 drop policy if exists "read owned or projected memory files" on storage.objects;
 drop policy if exists "upload owned memory files" on storage.objects;
+drop policy if exists "move owned memory files" on storage.objects;
 drop policy if exists "delete owned memory files" on storage.objects;
+
+alter table storage.objects enable row level security;
+revoke select, insert, update, delete on storage.objects from public, anon;
+grant select, insert, update, delete on storage.objects to authenticated;
 
 create policy "read owned or projected memory files" on storage.objects
 for select to authenticated
@@ -433,6 +500,17 @@ using (bucket_id = 'memories' and public.can_read_memory_object(name));
 
 create policy "upload owned memory files" on storage.objects
 for insert to authenticated
+with check (
+  bucket_id = 'memories'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Storage move() and an upload with upsert both require UPDATE. The existing
+-- object must be owned through its UUID prefix or its legacy metadata row;
+-- the destination always moves under the caller's UUID prefix.
+create policy "move owned memory files" on storage.objects
+for update to authenticated
+using (bucket_id = 'memories' and public.can_manage_memory_object(name))
 with check (
   bucket_id = 'memories'
   and (storage.foldername(name))[1] = auth.uid()::text
@@ -485,12 +563,20 @@ with check (
   )
 );
 
+-- Grants mirror the operations exposed by the policies. Clear inherited or
+-- historical broad grants first; SECURITY DEFINER lifecycle RPCs continue to
+-- perform group inserts/deletes and consent changes as the function owner.
+revoke all on public.groups, public.group_members,
+  public.progress, public.photos, public.trips,
+  public.group_progress, public.group_photos, public.group_trips
+from public, anon, authenticated;
+
 grant select on public.groups, public.group_members,
   public.progress, public.photos, public.trips,
   public.group_progress, public.group_photos, public.group_trips
 to authenticated;
 grant insert, update, delete on public.progress, public.photos, public.trips to authenticated;
-grant update on public.group_members to authenticated;
+grant update (display_name) on public.group_members to authenticated;
 grant insert, delete on public.group_progress, public.group_photos, public.group_trips to authenticated;
 
 -- Group lifecycle is server-owned so invite codes never require a discovery
@@ -740,6 +826,20 @@ as $$
 declare caller uuid := auth.uid();
 begin
   if caller is null then raise exception 'not signed in'; end if;
+  if exists (
+    select 1
+      from storage.objects o
+     where o.bucket_id = 'memories'
+       and (
+         (storage.foldername(o.name))[1] = caller::text
+         or exists (
+           select 1 from public.photos p
+            where p.user_id = caller and p.storage_path = o.name
+         )
+       )
+  ) then
+    raise exception 'owned Storage objects must be removed before account deletion';
+  end if;
   delete from auth.users where id = caller;
 end;
 $$;

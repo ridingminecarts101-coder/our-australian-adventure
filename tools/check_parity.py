@@ -108,8 +108,7 @@ except Exception:
 print('\n  capability                 android                ios')
 print('  ' + '-' * 72)
 for label, and_perm, ios_key in (
-    ('camera',        'android.permission.CAMERA',                'NSCameraUsageDescription'),
-    ('photo library', 'android.permission.READ_MEDIA_IMAGES',     'NSPhotoLibraryUsageDescription'),
+    ('camera',        'android.permission.CAMERA',                 'NSCameraUsageDescription'),
     ('location',      'android.permission.ACCESS_COARSE_LOCATION', 'NSLocationWhenInUseUsageDescription'),
 ):
     a_has = and_perm in manifest
@@ -119,6 +118,31 @@ for label, and_perm, ios_key in (
         'ok' if a_has == i_has else 'DIFFERENT'))
     if a_has != i_has:
         problems.append('%s is available on one platform and not the other' % label)
+
+# Photo selection deliberately differs by platform. Android's WebView file
+# input uses the system picker, which grants only the selected URI and must not
+# request broad library/storage access. iOS retains a human-readable usage
+# string for its native photo chooser. Treating READ_MEDIA_IMAGES as parity
+# with that string would reintroduce a permission Google rejects for this
+# occasional attachment flow.
+android_broad_photo = any(p in manifest for p in (
+    'android.permission.READ_MEDIA_IMAGES',
+    'android.permission.READ_EXTERNAL_STORAGE',
+    'android.permission.WRITE_EXTERNAL_STORAGE',
+))
+ios_photo_copy = bool(plist.get('NSPhotoLibraryUsageDescription'))
+ios_photo_add_copy = bool(plist.get('NSPhotoLibraryAddUsageDescription'))
+print('  %-26s %-22s %-22s %s' % (
+    'photo picker',
+    'BROAD PERMISSION' if android_broad_photo else 'system picker',
+    'declared' if ios_photo_copy else 'MISSING COPY',
+    'ok' if not android_broad_photo and ios_photo_copy and not ios_photo_add_copy else 'CHECK'))
+if android_broad_photo:
+    problems.append('Android photo picker declares broad media/storage access')
+if not ios_photo_copy:
+    problems.append('iOS photo chooser has no usage description')
+if ios_photo_add_copy:
+    problems.append('iOS declares photo-library write access but the app has no save-to-library flow')
 
 # Notifications come from the plugin's own manifest on Android and need no
 # plist string on iOS, so there is nothing to compare - but the JS has to be

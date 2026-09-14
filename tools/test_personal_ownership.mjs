@@ -99,6 +99,17 @@ await rejected('wrong invite code is rejected', () =>
   asUser(bob, `select * from public.join_group_by_code('WRONG','Bob')`));
 await asUser(bob, 'select * from public.join_group_by_code($1,$2)', [code, 'Bob']);
 pass('valid invite joins only the caller');
+await asUser(bob, `update public.group_members set display_name='Bob renamed'
+  where group_id=$1 and user_id=$2`, [groupId, bob]);
+equal('member can still rename their own display name',
+  (await asUser(bob, 'select display_name from public.group_members where group_id=$1 and user_id=$2',
+    [groupId, bob])).rows[0].display_name, 'Bob renamed');
+await rejected('direct display-name edits obey the server length bound', () =>
+  asUser(bob, 'update public.group_members set display_name=$1 where group_id=$2 and user_id=$3',
+    ['x'.repeat(81), groupId, bob]));
+await rejected('direct membership update cannot bypass completion consent RPC', () =>
+  asUser(bob, `update public.group_members set share_completions=true
+    where group_id=$1 and user_id=$2`, [groupId, bob]));
 
 await asUser(bob, `insert into public.progress
   (adventure_id,user_id,completed,completed_at,completed_by,memory,rating,shortlisted)
@@ -109,6 +120,32 @@ equal('group member cannot select another owner private progress row',
   (await asUser(alice, 'select count(*)::int as n from public.progress where adventure_id=42')).rows[0].n, 0);
 equal('private-by-default join exposes no completion',
   (await asUser(alice, 'select count(*)::int as n from public.group_completion_feed($1)', [groupId])).rows[0].n, 0);
+
+await asUser(alice, `insert into public.photos (adventure_id,storage_path,user_id)
+  values (42,$1,$2)`, [`${alice}/42/alice.jpg`, alice]);
+await rejected('photo metadata cannot alias another owner Storage path', () =>
+  asUser(bob, `insert into public.photos (adventure_id,storage_path,user_id)
+    values (42,$1,$2)`, [`${alice}/42/alice.jpg`, bob]));
+await asUser(bob, `insert into public.photos (adventure_id,storage_path,user_id)
+  values (42,$1,$2)`, [`${bob}/42/bob.jpg`, bob]);
+await rejected('photo owner cannot retarget metadata to another owner path', () =>
+  asUser(bob, 'update public.photos set storage_path=$1 where user_id=$2',
+    [`${alice}/42/alice.jpg`, bob]));
+pass('owned photo metadata accepts only the caller Storage prefix');
+await db.query(`insert into public.photos (adventure_id,storage_path,user_id)
+  values (43,'43/legacy.jpg',$1)`, [alice]);
+await db.query(`insert into storage.objects(bucket_id,name)
+  values ('memories','43/legacy.jpg')`);
+equal('another account cannot read an owned legacy object',
+  (await asUser(bob, `select count(*)::int as n from storage.objects
+    where name='43/legacy.jpg'`)).rows[0].n, 0);
+await asUser(alice, `update storage.objects set name=$1 where name='43/legacy.jpg'`,
+  [`${alice}/43/legacy.jpg`]);
+await asUser(alice, `update public.photos set storage_path=$1 where storage_path='43/legacy.jpg'`,
+  [`${alice}/43/legacy.jpg`]);
+equal('owner can migrate a metadata-linked legacy object under their UUID prefix',
+  (await asUser(alice, 'select count(*)::int as n from storage.objects where name=$1',
+    [`${alice}/43/legacy.jpg`])).rows[0].n, 1);
 
 await asUser(bob, 'select public.set_group_completion_sharing($1,true)', [groupId]);
 const feed = await asUser(alice, 'select * from public.group_completion_feed($1)', [groupId]);
@@ -153,6 +190,12 @@ equal('rejoining does not silently share earlier personal completions',
   (await asUser(alice, 'select count(*)::int as n from public.group_completion_feed($1)', [groupId])).rows[0].n, 0);
 await asUser(bob, 'select public.leave_group($1)', [groupId]);
 
+await db.query(`insert into storage.objects(bucket_id,name) values ('memories',$1)`, [`${bob}/42/bob.jpg`]);
+await rejected('account deletion stops while an owned Storage object remains', () =>
+  asUser(bob, 'select public.delete_my_account()'));
+equal('blocked account deletion preserves the auth identity',
+  (await db.query('select count(*)::int as n from auth.users where id=$1', [bob])).rows[0].n, 1);
+await db.query('delete from storage.objects where name=$1', [`${bob}/42/bob.jpg`]);
 await asUser(bob, 'select public.delete_my_account()');
 equal('account deletion cascades personal progress',
   (await db.query('select count(*)::int as n from public.progress where user_id=$1', [bob])).rows[0].n, 0);
@@ -171,6 +214,7 @@ await asUser(outsider, 'select * from public.join_group_by_code($1,$2)', [code,'
 await asUser(outsider, `insert into public.progress (adventure_id,user_id,completed,completed_at)
   values (77,$1,true,now())`, [outsider]);
 await asUser(outsider, 'select public.set_group_completion_sharing($1,true)', [groupId]);
+await db.query('delete from storage.objects where name=$1', [`${alice}/43/legacy.jpg`]);
 await asUser(alice, 'select public.delete_my_account()');
 equal('deleting the group creator preserves the group for remaining members',
   (await asUser(outsider, 'select count(*)::int as n from public.groups where id=$1', [groupId])).rows[0].n, 1);

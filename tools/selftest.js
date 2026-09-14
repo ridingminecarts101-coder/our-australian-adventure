@@ -154,10 +154,22 @@
     }
     ok('map canvas has size', `${Math.round(r.width)}x${Math.round(r.height)}`);
 
-    const at = (lat, lon) => continentFromPoint(map,
-      r.left + ((lon + 180) / 360) * r.width, r.top + ((78 - lat) / 136) * r.height);
+    // Use the exact geographic window that drawWorldMap projected. The map
+    // now includes Antarctica and clamps its aspect ratio, so converting a
+    // latitude with the old hard-coded 136-degree screen span lands too far
+    // south (for example, Saudi Arabia was tested on an African dot).
+    const at = (lat, lon) => {
+      const { s, n, w, e } = lastMap;
+      let projectedLon = lon;
+      while (projectedLon < w) projectedLon += 360;
+      while (projectedLon > e) projectedLon -= 360;
+      return continentFromPoint(map,
+        r.left + ((projectedLon - w) / (e - w)) * r.width,
+        r.top + ((n - lat) / (n - s)) * r.height);
+    };
     const spots = [[-25, 134, 'Oceania'], [39.5, -98.5, 'North America'], [51, 10, 'Europe'],
-                   [36, 138, 'Asia'], [24, 45, 'Middle East'], [-10, -55, 'South America'], [0, 20, 'Africa']];
+                   [36, 138, 'Asia'], [24, 45, 'Middle East'], [-10, -55, 'South America'],
+                   [0, 20, 'Africa'], [-80, 0, 'Antarctica']];
     let wrong = [];
     for (const [lat, lon, want] of spots) if (at(lat, lon) !== want) wrong.push(`${want}->${at(lat, lon)}`);
     chk('map taps resolve to the right continent', wrong.length === 0, wrong.join(', '));
@@ -401,8 +413,11 @@
     chk('every sellable pack has something in it',
         sell.every(p => p.slug === 'all' || (counts[p.slug] || 0) > 0),
         sell.map(p => `${p.slug}:${counts[p.slug] || 0}`).join(' '));
-    chk('empty continents are not for sale',
-        !sell.some(p => ['south-america', 'africa'].includes(p.slug)));
+    const expectedSell = PACKS.filter(p => !p.unreleased &&
+      (p.slug === 'all' || (counts[p.slug] || 0) > 0)).map(p => p.slug).sort();
+    chk('the store offers exactly the bundle and populated continent packs',
+        sell.map(p => p.slug).sort().join(',') === expectedSell.join(','),
+        sell.map(p => p.slug).join(', '));
     chk('the bundle counts every gem',
         counts.all === ADV.filter(a => a.hidden_gem).length,
         `${counts.all} vs ${ADV.filter(a => a.hidden_gem).length}`);
@@ -449,9 +464,18 @@
     // The point of the whole design: paying for nothing must still let you
     // finish. A region's target is what you can actually reach.
     const gemCount = ADV.filter(a => a.hidden_gem).length;
-    chk('locked gems are excluded from the total',
-        countableTotal() === ADV.length - gemCount,
-        `${countableTotal()} countable of ${ADV.length}, ${gemCount} gems`);
+    const bundleOnlyClassics = ADV.filter(a => a.bundle_only && !a.hidden_gem);
+    chk('bundle-only classics are the six standard Antarctica entries',
+        bundleOnlyClassics.length === 6 && bundleOnlyClassics.every(a => a.continent === 'Antarctica'),
+        `${bundleOnlyClassics.length} standard bundle-only entries`);
+    const antarctica = ADV.filter(a => a.continent === 'Antarctica');
+    chk('Antarctica remains entirely bundle-exclusive',
+        antarctica.length === 10 && antarctica.every(a => a.bundle_only),
+        `${antarctica.filter(a => a.bundle_only).length} of ${antarctica.length} bundle-only`);
+    const lockedWithoutEntitlements = ADV.filter(a => a.hidden_gem || a.bundle_only).length;
+    chk('all initially locked adventures are excluded from the total',
+        countableTotal() === ADV.length - lockedWithoutEntitlements,
+        `${countableTotal()} countable of ${ADV.length}, ${gemCount} gems and ${bundleOnlyClassics.length} bundle-only classics`);
 
     const inSA = a => a.country === 'AU' && a.admin1 === 'sa';
     const saAll = ADV.filter(inSA).length;
@@ -606,16 +630,17 @@
     chk('and it appears, reachable, once unlocked', gemTarget() > 0 && gemTarget() <= 25);
     setPreview(false);
 
-    // The 1-in-5 rule means no region can be entirely paid.
+    // Outside bundle-exclusive Antarctica, the 1-in-5 rule means no region
+    // can be entirely paid.
     const byRegion = new Map();
-    for (const a of ADV) {
+    for (const a of ADV.filter(x => x.continent !== 'Antarctica')) {
       const k = a.country + '/' + a.admin1;
       if (!byRegion.has(k)) byRegion.set(k, []);
       byRegion.get(k).push(a);
     }
     const dead = [...byRegion.entries()].filter(([, v]) => v.every(isLocked));
-    chk('no region is completable only by paying', dead.length === 0,
-        dead.slice(0, 3).map(([k]) => k).join(', '));
+    chk('no non-Antarctica region is completable only by paying', dead.length === 0,
+        `${dead.length} regions: ${dead.slice(0, 6).map(([k]) => k).join(', ')}${dead.length > 6 ? ' …' : ''}`);
 
     // Rendering has to stay quick as the list grows.
     goTo('continent', { continent: 'North America' });
@@ -772,9 +797,32 @@
   const HIT_AREA_EXPANDED = ['tick', 'crumb-link', 'star', 'recv', 'reclink'];
 
   async function testAccessibility() {
+    // Earlier suites deliberately visit Me and Community. goTo() changes the
+    // drill-down state but does not select the Adventures tab, so measuring
+    // after those suites used to inspect whichever panel they left visible.
+    // Re-establish the real offline app fixture and keep injected diagnostic
+    // controls outside #app out of the accessibility sample.
+    const appRoot = $('#app'), lockRoot = $('#lock');
+    lockRoot.classList.add('hidden');
+    appRoot.classList.remove('hidden');
+    const adventureTab = $('.tab[data-tab="tab-list"]');
+    if (!adventureTab.classList.contains('active') || $('#tab-list').classList.contains('hidden')) {
+      adventureTab.classList.remove('active');
+      adventureTab.click();
+    }
     goTo('adventures', { continent: 'Oceania', country: 'AU' }); await wait(120);
 
-    const interactive = $$$('button, a[href], input, select, textarea')
+    const fixtureVisible = appRoot.offsetParent !== null && lockRoot.offsetParent === null &&
+      !$('#tab-list').classList.contains('hidden') &&
+      $$$('#list .card').some(e => e.offsetParent !== null);
+    chk('accessibility measures the visible adventure fixture', fixtureVisible,
+        `${$$$('#list .card').filter(e => e.offsetParent !== null).length} visible cards`);
+    if (!fixtureVisible) return;
+
+    const appOwnedRoots = [appRoot, $('#sheet'), $('#tripSheet'), $('#recSheet'), $('#lightbox'), $('#toast')];
+    const inApp = selector => appOwnedRoots.flatMap(root =>
+      [...(root.matches(selector) ? [root] : []), ...root.querySelectorAll(selector)]);
+    const interactive = inApp('button, a[href], input, select, textarea')
       .filter(e => e.offsetParent !== null);
     R.metric.interactiveControls = interactive.length;
 
@@ -791,7 +839,7 @@
       const r = e.getBoundingClientRect();
       return r.width && r.height && (r.width < 40 || r.height < 40);
     });
-    if (small.length) warn('tap targets under 44px',
+    if (small.length) warn('tap targets under 40px',
       `${small.length} of ${interactive.length}: ${[...new Set(small.map(e => e.className || e.tagName))].slice(0, 5).join(', ')}`);
     else ok('all tap targets at least 40px');
 
@@ -801,10 +849,10 @@
     chk('every control has an accessible name', unlabelled.length === 0,
         unlabelled.slice(0, 4).map(e => e.id || e.className || e.tagName).join(', '));
 
-    const imgs = $$$('img').filter(i => i.offsetParent !== null);
+    const imgs = inApp('img').filter(i => i.offsetParent !== null);
     chk('images carry alt attributes', imgs.every(i => i.hasAttribute('alt')), `${imgs.length} images`);
 
-    const text = $$$('.card-title, .card-meta, .placerow-label, .muted, .fineprint, .resultcount')
+    const text = inApp('.card-title, .card-meta, .placerow-label, .muted, .fineprint, .resultcount')
       .filter(e => e.offsetParent !== null).slice(0, 60);
     const low = text.map(e => ({ e, c: contrast(e) })).filter(x => x.c && x.c < 4.5);
     R.metric.lowestContrast = text.length
@@ -815,8 +863,9 @@
 
     chk('page declares a language', !!document.documentElement.lang, document.documentElement.lang);
     chk('viewport meta present', !!document.querySelector('meta[name="viewport"]'));
-    chk('dialogs marked up as dialogs', $$$('[role="dialog"]').length >= 3);
-    chk('live regions for status', $$$('[aria-live]').length >= 2);
+    chk('dialogs marked up as dialogs',
+        ['#sheet', '#tripSheet', '#recSheet', '#lightbox'].every(s => $(s).getAttribute('role') === 'dialog'));
+    chk('live regions for status', inApp('[aria-live]').length >= 2);
 
     const zoomBlocked = (document.querySelector('meta[name="viewport"]')?.content || '').includes('maximum-scale=1');
     if (zoomBlocked) warn('pinch zoom disabled', 'maximum-scale=1 stops users enlarging the page');

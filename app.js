@@ -168,14 +168,18 @@ function refreshSyncBar() {
 //  Data loading
 // ══════════════════════════════════════════════════════════════════════
 async function loadAdventures() {
+  const usable = rows => Array.isArray(rows) && rows.length > 0
+    && rows.every(a => a && Number.isInteger(a.id) && typeof a.title === 'string');
   try {
     const res = await fetch('data/adventures.json', { cache: 'no-cache' });
     if (!res.ok) throw new Error(res.status);
-    ADV = await res.json();
+    const incoming = await res.json();
+    if (!usable(incoming)) throw new Error('Invalid adventure list');
+    ADV = incoming;
     writeLS(LS.adv, ADV);
   } catch {
     ADV = readLS(LS.adv, []);                 // fall back to last good copy
-    if (!ADV.length) throw new Error('Could not load the adventure list.');
+    if (!usable(ADV)) throw new Error('Could not load the adventure list.');
   }
 }
 
@@ -883,33 +887,16 @@ async function addPhotos(adventureId, files) {
   flushPhotoQueue();
 }
 
-/* Move photo objects uploaded before paths carried a scope.
+/* Keep photo objects uploaded before paths carried a scope where they are.
  *
- * Runs once in the background after sign-in. A failure is not worth
- * interrupting anyone over: the storage policy still allows the old shape,
- * so an unmoved object keeps working, it is just readable by any signed-in
- * account rather than only by the group.
+ * Storage moves and Postgres metadata updates are separate operations. Moving
+ * first can strand the row at the old path if its update fails; updating first
+ * can point the row at a file that never moves. The hardened policy resolves a
+ * legacy path through its photo metadata, so leaving both unchanged preserves
+ * the file and applies the same owner and explicit-sharing checks.
  */
 async function migrateLegacyPhotos() {
-  if (!sb || !online || !userId) return;
-  const scope = userId, runGeneration = authGeneration;
-  const legacy = photos.filter(p => p.user_id === scope && /^\d+\//.test(p.storage_path || ''));
-  if (!legacy.length) return;
-
-  let moved = 0;
-  for (const p of legacy) {
-    const to = `${scope}/${p.storage_path}`;
-    const { error } = await sb.storage.from(BUCKET).move(p.storage_path, to);
-    if (runGeneration !== authGeneration || scope !== userId) return;
-    if (error) { console.warn('photo move', error.message); continue; }
-    const upd = await sb.from('photos').update({ storage_path: to }).eq('id', p.id);
-    if (runGeneration !== authGeneration || scope !== userId) return;
-    if (upd.error) { console.warn('photo path', upd.error.message); continue; }
-    signedUrls.delete(p.storage_path);
-    p.storage_path = to;
-    moved++;
-  }
-  if (moved) { console.info(`moved ${moved} photo(s) under ${scope}`); renderAll(); }
+  return;
 }
 
 async function flushPhotoQueue() {
@@ -925,8 +912,8 @@ async function flushPhotoQueue() {
       try {
       // <scope>/<adventure>/<id>.jpg — the first segment is what the storage
       // policy checks, so a stranger cannot read someone else's memories by
-      // guessing a path. Older objects have no prefix; migrateLegacyPhotos
-      // moves them across once, in the background.
+      // guessing a path. Legacy objects remain at their existing paths and
+      // the hardened policy checks ownership through their photo metadata.
       const path = `${runOwner}/${item.adventure_id}/${item.id}.jpg`;
       const up = await sb.storage.from(BUCKET)
         .upload(path, item.blob, { contentType: 'image/jpeg', upsert: true });
@@ -979,7 +966,8 @@ async function deletePhoto(photoId) {
   if (!p) return;
   if (!confirm('Delete this photo? It will disappear from both phones.')) return;
   try {
-    await sb.storage.from(BUCKET).remove([p.storage_path]);
+    const removed = await sb.storage.from(BUCKET).remove([p.storage_path]);
+    if (removed.error) throw removed.error;
     const { error } = await sb.from('photos').delete().eq('id', photoId);
     if (error) throw error;
     photos = photos.filter(x => x.id !== photoId);
@@ -1948,7 +1936,7 @@ function lockNote(a) {
   return `Locked. Part of ${pack.name} — ${pack.price}.`;
 }
 
-function placeRow({ label, sub, count, done, flag, swatch, advisory, onClick }) {
+function placeRow({ label, sub, count, total = count, done, flag, swatch, advisory, onClick }) {
   const pct = count ? Math.round((done / count) * 100) : 0;
   const mark = advisory === 'avoid' ? '<span class="advisory avoid">Do not travel</span>'
              : advisory === 'care' ? '<span class="advisory care">Check advice</span>'
@@ -1957,13 +1945,13 @@ function placeRow({ label, sub, count, done, flag, swatch, advisory, onClick }) 
     <div class="placerow-main">
       <div class="placerow-top">
         <span class="placerow-label">${swatch ? `<i class="swatch" style="background:${esc(swatch)}"></i>` : ''}${flag ? flag + ' ' : ''}${esc(label)}</span>
-        <span class="placerow-count">${count ? `${done} / ${count}` : (advisory ? '' : 'Coming soon')}</span>
+        <span class="placerow-count">${count ? `${done} / ${count}` : (total ? 'Locked adventures' : (advisory ? '' : 'Coming soon'))}</span>
       </div>
       ${mark}
       ${sub ? `<div class="placerow-sub">${esc(sub)}</div>` : ''}
       ${count ? `<div class="minibar"><i style="width:${pct}%"></i></div>` : ''}
     </div>
-    ${count ? '<span class="placerow-chev">›</span>' : ''}
+    ${total ? '<span class="placerow-chev">›</span>' : ''}
   </button>`;
 }
 
@@ -2014,13 +2002,15 @@ function renderPlaces() {
 
     $('#continentList').innerHTML = ordered.map(name => {
       const count = counts[name];
-      const countries = new Set(ADV.filter(a => a.continent === name).map(a => a.country)).size;
+      const entries = ADV.filter(a => a.continent === name);
+      const countries = new Set(entries.map(a => a.country)).size;
       return placeRow({
         label: name,
-        swatch: count ? CONTINENT_COLOUR[name] : null,
-        sub: count ? `${countries} ${countries === 1 ? 'country' : 'countries'}`
+        swatch: entries.length ? CONTINENT_COLOUR[name] : null,
+        sub: entries.length ? (name === 'Antarctica' && !count ? 'Included with All Continents'
+                     : `${countries} ${countries === 1 ? 'country' : 'countries'}`)
                    : `${countriesIn(name, () => 0).length} countries, none mapped yet`,
-        count, done: doneOf(a => a.continent === name),
+        count, total: entries.length, done: doneOf(a => a.continent === name),
         // Openable either way: an empty continent still lists its countries,
         // which is more use than a dead row.
         onClick: { level: 'continent', continent: name },
@@ -2043,10 +2033,11 @@ function renderPlaces() {
     for (const a of ADV) {
       if (a.continent !== nav.continent) continue;
       let t = tally.get(a.country);
-      if (!t) tally.set(a.country, t = { n: 0, done: 0, regions: new Set() });
+      if (!t) tally.set(a.country, t = { n: 0, total: 0, done: 0, regions: new Set() });
+      t.total++;
+      t.regions.add(a.admin1);
       if (isLocked(a)) continue;
       t.n++;
-      t.regions.add(a.admin1);
       if (isDone(a.id)) t.done++;
     }
     const countIn = c => (tally.get(c) || { n: 0 }).n;
@@ -2060,19 +2051,19 @@ function renderPlaces() {
     const codes = islandsOnly ? islands : mainland;
 
     const countryRow = code => {
-      const t = tally.get(code) || { n: 0, done: 0, regions: new Set() };
+      const t = tally.get(code) || { n: 0, total: 0, done: 0, regions: new Set() };
       const n = t.n;
       const regions = t.regions.size;
       const adv = advisoryFor(code);
       // The advisory outranks the region count: if the honest answer is "not
       // right now", that is the first thing worth saying about the place.
       const sub = adv ? adv.note
-                      : (n ? `${regions} ${regions === 1 ? 'region' : 'regions'}`
+                      : (t.total ? `${regions} ${regions === 1 ? 'region' : 'regions'}`
                            : 'Not mapped yet');
       return placeRow({
         label: countryName(code), flag: countryFlag(code),
-        sub, count: n, done: t.done, advisory: adv ? adv.level : null,
-        onClick: n ? { level: 'country', continent: nav.continent, country: code } : null,
+        sub, count: n, total: t.total, done: t.done, advisory: adv ? adv.level : null,
+        onClick: t.total ? { level: 'country', continent: nav.continent, country: code } : null,
       });
     };
 
@@ -2092,7 +2083,8 @@ function renderPlaces() {
     $('#placeTitle').textContent = nav.continent;
     $('#placeSub').textContent = countOf(inCont)
       ? `${countOf(inCont)} adventures across ${withContent.length} of ${all.length} countries`
-      : `${all.length} countries, none mapped yet`;
+      : (ADV.some(inCont) ? 'Browse locked adventures included with All Continents'
+                         : `${all.length} countries, none mapped yet`);
     // Group the island nations whenever there are enough of them, not only when
     // they hold adventures - otherwise an unmapped continent silently drops
     // them and the country count stops adding up.
@@ -2101,7 +2093,7 @@ function renderPlaces() {
         label: 'Island nations', flag: '🏝️',
         sub: islands.map(countryName).slice(0, 4).join(', ') +
              (islands.length > 4 ? ` and ${islands.length - 4} more` : ''),
-        count: islandCount, done: doneOf(inIslands),
+        count: islandCount, total: ADV.filter(inIslands).length, done: doneOf(inIslands),
         onClick: { level: 'islands', continent: nav.continent },
       }) : islands.map(countryRow).join(''));
     return;
@@ -2112,7 +2104,8 @@ function renderPlaces() {
     const regions = [...new Set(ADV.filter(inC).map(a => a.admin1))];
     $('#crumb').innerHTML = crumbHTML();
     $('#placeTitle').textContent = countryFlag(nav.country) + ' ' + countryName(nav.country);
-    $('#placeSub').textContent = `${countOf(inC)} adventures`;
+    $('#placeSub').textContent = countOf(inC) ? `${countOf(inC)} adventures`
+      : `${ADV.filter(inC).length} locked adventures`;
     renderAdvisory(nav.country);
 
     const rows = regions.map(code => {
@@ -2120,7 +2113,7 @@ function renderPlaces() {
       const sample = ADV.find(inR);
       return {
         label: regionName(sample), code,
-        count: countOf(inR), done: doneOf(inR),
+        count: countOf(inR), total: ADV.filter(inR).length, done: doneOf(inR),
       };
     }).sort((a, b) => a.label.localeCompare(b.label));
 
@@ -2128,11 +2121,11 @@ function renderPlaces() {
       placeRow({
         label: `Everything in ${countryName(nav.country)}`,
         sub: 'Skip the regions and see the lot',
-        count: countOf(inC), done: doneOf(inC),
+        count: countOf(inC), total: ADV.filter(inC).length, done: doneOf(inC),
         onClick: { level: 'adventures', continent: nav.continent, country: nav.country },
       }) +
       rows.map(r => placeRow({
-        label: r.label, count: r.count, done: r.done,
+        label: r.label, count: r.count, total: r.total, done: r.done,
         onClick: { level: 'adventures', continent: nav.continent, country: nav.country, admin1: r.code },
       })).join('');
     return;
@@ -3841,15 +3834,17 @@ function configureAccountLock({ email, password, form = true }) {
 async function trySignIn(email, password) {
   const btn = $('#lockBtn');
   if (!sb) { setAuthMessage('Can’t reach the server. Check your connection.'); return false; }
+  if (btn.disabled) return false;
   btn.disabled = true; setAuthMessage('Signing in…');
-
-  const { error } = await sb.auth.signInWithPassword({
-    email: email.trim(), password,
-  });
-  btn.disabled = false;
-  if (error) { setAuthMessage(error.message || 'That email or password didn’t work.'); return false; }
-  setAuthMessage('Welcome back.', true);
-  return true;
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) { setAuthMessage(error.message || 'That email or password didn’t work.'); return false; }
+    setAuthMessage('Welcome back.', true);
+    return true;
+  } catch {
+    setAuthMessage('Could not sign in. Check your connection and try again.');
+    return false;
+  } finally { btn.disabled = false; }
 }
 
 function wireAccountLock() {
@@ -3897,28 +3892,36 @@ async function handleSignedOut(message = 'Signed out. Sign in to continue.') {
 async function createAccount(email, password) {
   if (!sb) return setAuthMessage('Can’t reach the server. Check your connection.');
   if (password.length < 6) return setAuthMessage('Use at least 6 characters for your password.');
-  $('#createAccountBtn').disabled = true;
+  const btn = $('#createAccountBtn');
+  if (btn.disabled) return;
+  btn.disabled = true;
   setAuthMessage('Creating your account…');
-  const { data, error } = await sb.auth.signUp({
-    email: email.trim(), password,
-    options: { emailRedirectTo: authRedirectUrl() },
-  });
-  $('#createAccountBtn').disabled = false;
-  if (error) return setAuthMessage(error.message || 'Could not create the account.');
-  if (data && data.session) { setAuthMessage('Account created.', true); return enterApp(); }
-  setAuthMessage('Check your email to verify the account, then sign in.', true);
+  try {
+    const { data, error } = await sb.auth.signUp({
+      email: email.trim(), password,
+      options: { emailRedirectTo: authRedirectUrl() },
+    });
+    if (error) return setAuthMessage(error.message || 'Could not create the account.');
+    if (data && data.session) { setAuthMessage('Account created.', true); return enterApp(); }
+    setAuthMessage('Check your email to verify the account, then sign in.', true);
+  } catch {
+    setAuthMessage('Could not create the account. Check your connection and try again.');
+  } finally { btn.disabled = false; }
 }
 
 async function sendPasswordReset(email, target = 'lock') {
+  const report = (message, ok = false) => target === 'lock' ? setAuthMessage(message, ok) : toast(message);
+  if (!sb) return report('Can’t reach the server. Check your connection.');
   const clean = String(email || '').trim();
   if (!clean || !clean.includes('@')) {
     if (target === 'lock') setAuthMessage('Enter your email first.'); else toast('Enter your email first');
     return;
   }
-  const { error } = await sb.auth.resetPasswordForEmail(clean, { redirectTo: authRedirectUrl() });
-  const message = error ? (error.message || 'Could not send the recovery email.')
-                        : 'Recovery email sent. Check your inbox.';
-  if (target === 'lock') setAuthMessage(message, !error); else toast(message);
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(clean, { redirectTo: authRedirectUrl() });
+    report(error ? (error.message || 'Could not send the recovery email.')
+      : 'Recovery email sent. Check your inbox.', !error);
+  } catch { report('Could not send the recovery email. Check your connection and try again.'); }
 }
 
 async function startAnonymousUpgrade(email) {
@@ -3952,6 +3955,12 @@ async function startAnonymousUpgrade(email) {
     writeAccountUpgrade(before, 'awaiting-email');
     showAnonymousUpgradeScreen('awaiting-email');
     return true;
+  } catch {
+    if (generation === authGeneration && userId === before) {
+      showAnonymousUpgradeScreen();
+      setAuthMessage('Could not send verification. Check your connection and try again.');
+    }
+    return false;
   } finally {
     accountUpgradeBusy = false;
   }
@@ -3990,6 +3999,12 @@ async function finishAnonymousUpgrade(password) {
     clearAccountUpgrade(before);
     await enterApp();
     return true;
+  } catch {
+    if (generation === authGeneration && userId === before) {
+      showAnonymousUpgradeScreen('set-password');
+      setAuthMessage('Could not finish account setup. Check your connection and try again.');
+    }
+    return false;
   } finally {
     accountUpgradeBusy = false;
   }
@@ -4033,7 +4048,15 @@ async function enterApp() {
   if (sb) {
     // getSession reads the persisted session locally. getUser validates over
     // the network and would lock a previously signed-in traveller out offline.
-    const { data } = await sb.auth.getSession();
+    let data;
+    try {
+      const sessionResult = await sb.auth.getSession();
+      if (sessionResult.error) throw sessionResult.error;
+      data = sessionResult.data;
+    } catch {
+      showStartupError();
+      return false;
+    }
     accountUser = data && data.session ? data.session.user : null;
     if (!accountUser) { showAccountLock('Sign in to continue.'); return false; }
     userId = accountUser ? accountUser.id : null;
@@ -4131,75 +4154,92 @@ function openDeepLink(search = location.search) {
 //  Boot
 // ══════════════════════════════════════════════════════════════════════
 async function boot() {
-  $('#lock').classList.add('hidden');
-  const cfg = window.OAA_CONFIG || {};
-  const configured = cfg.supabaseUrl && !/YOUR_/.test(cfg.supabaseUrl) &&
-                     cfg.supabaseAnonKey && !/YOUR_/.test(cfg.supabaseAnonKey);
+  try {
+    $('#lock').classList.add('hidden');
+    const cfg = window.OAA_CONFIG || {};
+    const configured = cfg.supabaseUrl && !/YOUR_/.test(cfg.supabaseUrl) &&
+                       cfg.supabaseAnonKey && !/YOUR_/.test(cfg.supabaseAnonKey);
 
-  if (configured && window.supabase) {
-    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
-      auth: { persistSession: true, autoRefreshToken: true, storageKey: 'oaa.auth' },
-    });
-    sb.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        void handleSignedOut();
-        return;
-      } else if (userId && session && session.user && session.user.id !== userId) {
-        authGeneration++;
-        userId = session.user.id;
-        location.reload();
-        return;
-      }
-      if (event === 'PASSWORD_RECOVERY') passwordRecoveryMode = true;
-      else if (event !== 'SIGNED_IN' && event !== 'USER_UPDATED') return;
-      const upgrade = session && session.user ? accountUpgradeFor(session.user) : null;
-      if (event !== 'PASSWORD_RECOVERY' && (!upgrade || accountUpgradeBusy)) return;
-      // Run outside the auth callback: Supabase warns against awaiting another
-      // auth method from inside it, and enterApp() asks auth.getSession().
-      setTimeout(() => {
-        if (upgrade || $('#app').classList.contains('hidden')) enterApp(); else renderMe();
-      }, 0);
-    });
-  }
-
-  try { await loadAdventures(); }
-  catch (e) { $('#lockMsg').textContent = e.message; return; }
-
-  loadLocalProgress();
-  buildFilterOptions();
-  wireUI();
-  wireAccountLock();
-
-  if (!sb) {
-    $('#lock').classList.remove('hidden');
-    setAuthMessage('Account service is not configured. Wayfinder cannot create a recoverable account.');
-    return;
-  }
-
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) return enterApp();
-
-  // Anonymous sign-in remains available only as an explicitly enabled
-  // compatibility path. New installs require a recoverable email/password
-  // account; an existing persisted anonymous session is upgraded in place
-  // from the Me tab so its user id and rows stay intact.
-  if (cfg.allowAnonymous === true) {
-    const { error } = await sb.auth.signInAnonymously();
-    if (!error) return enterApp();
-
-    // An existing deployment may temporarily retain this compatibility mode,
-    // but it must still show the recoverable-account screen if the server
-    // cannot create the anonymous session. It never opens a fresh local-only
-    // identity that cannot be recovered on another device.
-    const offline = !navigator.onLine || !error.status
-      || error.name === 'AuthRetryableFetchError';
-    if (offline) {
-      console.info('no connection at launch; account sign-in required:', error.message);
+    if (configured && window.supabase) {
+      sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: 'oaa.auth' },
+      });
+      sb.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+          void handleSignedOut();
+          return;
+        } else if (userId && session && session.user && session.user.id !== userId) {
+          authGeneration++;
+          userId = session.user.id;
+          location.reload();
+          return;
+        }
+        if (event === 'PASSWORD_RECOVERY') passwordRecoveryMode = true;
+        else if (event !== 'SIGNED_IN' && event !== 'USER_UPDATED') return;
+        const upgrade = session && session.user ? accountUpgradeFor(session.user) : null;
+        if (event !== 'PASSWORD_RECOVERY' && (!upgrade || accountUpgradeBusy)) return;
+        // Run outside the auth callback: Supabase warns against awaiting another
+        // auth method from inside it, and enterApp() asks auth.getSession().
+        setTimeout(() => {
+          if (upgrade || $('#app').classList.contains('hidden')) enterApp(); else renderMe();
+        }, 0);
+      });
     }
-    else console.info('anonymous sign-in unavailable; showing account sign-in:', error.message);
-  }
 
-  showAccountLock();
+    await loadAdventures();
+
+    loadLocalProgress();
+    buildFilterOptions();
+    wireUI();
+    wireAccountLock();
+
+    if (!sb) {
+      showAccountLock('Account service is not configured. Wayfinder cannot create a recoverable account.');
+      return;
+    }
+
+    const { data, error: sessionError } = await sb.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (data && data.session) return await enterApp();
+
+    // Anonymous sign-in remains available only as an explicitly enabled
+    // compatibility path. New installs require a recoverable email/password
+    // account; an existing persisted anonymous session is upgraded in place
+    // from the Me tab so its user id and rows stay intact.
+    if (cfg.allowAnonymous === true) {
+      const { error } = await sb.auth.signInAnonymously();
+      if (!error) return await enterApp();
+
+      // An existing deployment may temporarily retain this compatibility mode,
+      // but it must still show the recoverable-account screen if the server
+      // cannot create the anonymous session. It never opens a fresh local-only
+      // identity that cannot be recovered on another device.
+      const offline = !navigator.onLine || !error.status
+        || error.name === 'AuthRetryableFetchError';
+      if (offline) {
+        console.info('no connection at launch; account sign-in required:', error.message);
+      }
+      else console.info('anonymous sign-in unavailable; showing account sign-in:', error.message);
+    }
+
+    showAccountLock();
+  } catch (error) {
+    console.warn('Wayfinder startup failed:', error);
+    showStartupError();
+  }
+}
+
+function showStartupError() {
+  $('#app').classList.add('hidden');
+  $('#lock').classList.remove('hidden');
+  $('.lock-sub').textContent = 'Wayfinder could not finish opening.';
+  configureAccountLock({ email: false, password: false });
+  $('#createAccountBtn').classList.add('hidden');
+  $('#forgotPasswordBtn').classList.add('hidden');
+  $('#lockBtn').disabled = false;
+  $('#lockBtn').textContent = 'Try again';
+  $('#lockForm').onsubmit = e => { e.preventDefault(); location.reload(); };
+  setAuthMessage('Check your connection, then try again. Your saved progress has not been removed.');
 }
 
 addEventListener('DOMContentLoaded', boot);

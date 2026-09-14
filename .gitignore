@@ -10,6 +10,7 @@ www/
 
 # Native build output and machine-local paths
 android/.gradle/
+android/.kotlin/
 android/build/
 android/app/build/
 android/local.properties

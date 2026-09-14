@@ -106,6 +106,15 @@ def main() -> int:
     guard = body("guard_membership_identity")
     check("membership updates cannot change group id", "new.group_id is distinct from old.group_id" in guard)
     check("membership updates cannot change user id", "new.user_id is distinct from old.user_id" in guard)
+    check("direct membership update is limited to display name",
+          "revoke update on public.group_members from public, anon, authenticated" in NORMAL and
+          "grant update (display_name) on public.group_members to authenticated" in NORMAL and
+          "grant update on public.group_members to authenticated" not in NORMAL)
+    check("direct display names have the same server length bound as RPC names",
+          "group_members_display_name_length" in NORMAL)
+    check("table grants are reset before the minimum client grants",
+          "revoke all on public.groups, public.group_members" in NORMAL and
+          "from public, anon, authenticated" in NORMAL)
 
     leave = body("leave_group")
     check("leave removes caller projections", all(
@@ -119,6 +128,9 @@ def main() -> int:
 
     delete_account = body("delete_my_account")
     check("account deletion targets only the caller", "delete from auth.users where id = caller" in delete_account)
+    check("account deletion refuses to orphan owned Storage objects",
+          "owned storage objects must be removed before account deletion" in delete_account and
+          "from storage.objects" in delete_account)
     check(
         "account deletion has a fixed search path",
         re.search(r"delete_my_account\(\).*?security definer\s+set search_path = pg_catalog, public", NORMAL)
@@ -152,6 +164,18 @@ def main() -> int:
     check("shared photo files require an explicit projection", "join public.group_photos" in memory_read)
     check("shared photo files require current membership", "join public.group_members" in memory_read)
     check("photo file deletion is owner-only", "p.user_id = auth.uid()" in memory_manage)
+    check("authenticated owner can move a legacy photo only under their UUID prefix",
+          'create policy "move owned memory files"' in NORMAL and
+          "public.can_manage_memory_object(name)" in NORMAL and
+          "storage.foldername(name)" in NORMAL)
+    check("Storage grants are explicit and signed-in only",
+          "revoke select, insert, update, delete on storage.objects from public, anon" in NORMAL and
+          "grant select, insert, update, delete on storage.objects to authenticated" in NORMAL)
+    photo_path_guard = body("guard_photo_storage_path")
+    check("photo metadata cannot alias another owner's Storage path",
+          "storage.foldername(new.storage_path)" in photo_path_guard and
+          "auth.uid()::text" in photo_path_guard and
+          "photos_guard_storage_path" in NORMAL)
     check(
         "numeric legacy paths are no longer globally readable",
         "^[0-9]+$" not in NORMAL,

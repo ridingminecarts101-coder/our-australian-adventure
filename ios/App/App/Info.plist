@@ -51,8 +51,6 @@
 	<string>To take a photo of an adventure you have just finished. You can always pick one from your library instead.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>To attach your own photos to the places you have been.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>To save a photo you took in the app back to your library.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>To find adventures near you. Only used when you press Near me; your coordinates are sent to BigDataCloud to identify the region and are not saved in your Wayfinder account.</string>
 	<!-- The app uses HTTPS and nothing but standard system encryption, which
