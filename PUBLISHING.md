@@ -1,5 +1,11 @@
 # Publishing Wayfinder
 
+> **Historical guide — do not use this file as the current release checklist.**
+> It contains superseded catalogue totals, account behavior, prices and backend
+> assumptions. Use `STORE-SUBMISSION-DRAFT.md` and the dated coordination record
+> `STORE-READINESS-2026-09-14.md` for the current facts. Nothing in this warning
+> authorizes a store upload or production database change.
+
 Everything that can be done from this machine is done, including a signed
 Android release. What is left needs a Mac, an Apple account, or a human
 pressing a button on somebody else's website, and is listed at the bottom in

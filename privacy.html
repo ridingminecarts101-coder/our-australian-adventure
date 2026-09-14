@@ -33,11 +33,18 @@
 <body>
 <main>
   <h1>Privacy</h1>
-  <p class="sub">Wayfinder · last updated 11 September 2026</p>
+  <p class="sub">Wayfinder · last updated 14 September 2026</p>
 
   <p>Wayfinder is a travel checklist. It keeps the places you want to go, the ones
      you have been to, and the photos you attach to them. This page says exactly
      what that means for your data, in plain terms.</p>
+  <p class="note"><strong>Testing status:</strong> Account email and recovery may be
+     unreliable. Group sharing is currently unavailable, Community protections are
+     still being tested, and purchases are not active in the web review build. Avoid
+     uploading sensitive material and keep another copy of important photos and trip
+     notes. See the
+     <a href="https://rlapplications.com/wayfinder/privacy/">current Wayfinder privacy supplement</a>
+     for testing updates.</p>
 
   <h2>What is stored</h2>
   <table>
@@ -91,29 +98,32 @@
      using the app, along with the display name you have set. Your votes and star
      ratings are private &mdash; the totals are public, but nobody can see who voted
      which way. Reports you make are visible only to us, and blocking somebody is
-     private to you. You can delete your own posts at any time, and deleting your
-     account removes them all.</p>
+     private to you. Community protections and complete account-deletion behaviour
+     are still being tested; do not post private or sensitive information there.</p>
 
   <h2>Personal progress and groups</h2>
-  <p>Your progress belongs to your account. A group is optional, and joining uses an
-     invitation code. When joining, you choose whether to share your completed
-     adventures. If enabled, the group can see your past and future completion ticks,
-     completion dates and display name. This choice does not share your private
-     notes, ratings, shortlist, new photos or trip plans.</p>
-  <p>You can change completion sharing under <em>Me → Sharing</em>, or switch between
-     <em>Personal</em> and <em>Group</em> views. Leaving removes your membership and
-     shared entries from that group while keeping your own records. It does not
-     copy other members' achievements into your account. Older shared lists retain
-     their existing sharing choices when upgraded. Someone who has already viewed
-     shared information may have kept a separate copy.</p>
+  <p>Your progress belongs to your account. Group sharing is currently unavailable
+     while its ownership and privacy controls are prepared. When available, a group
+     will be optional and joining will use an invitation code. You will choose whether
+     to share completed adventures. If enabled, the group can see past and future
+     completion ticks, completion dates and your display name. This choice does not
+     share private notes, ratings, shortlist, new photos or trip plans.</p>
+  <p>When group sharing is available, its intended controls let you change completion
+     sharing under <em>Me → Sharing</em> and switch between <em>Personal</em> and
+     <em>Group</em> views. Leaving is intended to remove your membership and shared
+     entries from that group while keeping your own records. It does not copy other
+     members' achievements into your account. Older shared lists retain their existing
+     sharing choices when upgraded. Someone who has already viewed shared information
+     may have kept a separate copy.</p>
 
   <h2>Purchases</h2>
-  <p>Hidden-gem packs are one-time purchases for an individual Wayfinder account.
-     Joining a group does not give other members your purchases. Apple or Google
-     handles payment details; Wayfinder does not receive your card number.
-     RevenueCat processes your Wayfinder account identifier, purchase and receipt
-     information, unlocked packs and technical information needed to operate billing.
-     <a href="https://www.revenuecat.com/privacy-policy">RevenueCat privacy policy</a>.</p>
+  <p>Purchases are not active in the web review build. If one-time hidden-gem packs
+     are enabled in a future native release, they will belong to an individual
+     Wayfinder account; joining a group will not give other members your purchases.
+     Apple or Google will handle payment details, and Wayfinder will not receive your
+     card number. RevenueCat is planned to process your Wayfinder account identifier,
+     purchase and receipt information, unlocked packs and technical information needed
+     to operate billing. <a href="https://www.revenuecat.com/privacy-policy">RevenueCat privacy policy</a>.</p>
 
   <h2>Notifications</h2>
   <p>Optional, off unless you turn them on, and generated on your own device. They
@@ -121,28 +131,33 @@
      No notification content leaves your phone.</p>
 
   <h2 id="delete-account">Deleting your account</h2>
-  <p>Me → <strong>Delete my account and all my data</strong>. It removes your account,
-     personal progress, uploaded photos, trips, group memberships and Community
-     contributions. It requires a connection and confirmation. It cannot be undone;
-     uninstalling the app alone does not delete your account.</p>
-  <p>If you cannot use the app, you can
-     <a href="support.html#delete-account">request account and data deletion through Support</a>.
-     We verify that the request comes from the account owner before acting. Deleting
-     Wayfinder data does not itself issue a store refund or erase Apple's or Google's
-     transaction records. Purchase-provider records require a separate provider
-     deletion step; contact Support for help with that request. We cannot remove
-     copies another person has independently saved.</p>
+  <p>The review build includes Me → <strong>Delete my account and all my data</strong>,
+     which requires a connection and confirmation. Complete removal of associated
+     hosted files and service-provider records is still being verified, so email is
+     the recommended route during testing. Uninstalling the app alone does not delete
+     your account.</p>
+  <p>Use the
+     <a href="https://rlapplications.com/wayfinder/delete-account/">Wayfinder account-deletion page</a>
+     to request deletion without the app. We verify that the request comes from the
+     account owner and confirm completion only after the relevant data and
+     service-provider steps have been checked. The request is intended to cover the
+     account, personal progress, uploaded photos, trips, group memberships and
+     Community contributions. Store transaction records and copies another person
+     independently saved are separate; account deletion does not itself issue a refund.</p>
 
   <h2>Who runs it</h2>
-  <p>Wayfinder is developed by Riley Lawler in Australia.
+  <p>Wayfinder is developed and operated by Riley Nicholas Lawler, a sole trader
+     operating RL Applications in Australia (ABN 92 363 169 656).
      Contact <a href="mailto:rambodog555@gmail.com">rambodog555@gmail.com</a>
      about privacy, access, corrections or deletion.</p>
   <p>Supabase hosts account authentication, the database and photo storage. GitHub
-     Pages serves the website. Authentication emails are delivered through the
-     configured email service. RevenueCat and the app stores support native purchases;
-     BigDataCloud handles optional location lookups. These services receive the
-     information needed for their role, including normal network request information,
-     and may process it outside Australia.</p>
+     Pages serves the web review build. Production delivery of account verification
+     and recovery email is not yet configured and verified. Google's email
+     infrastructure carries and stores messages sent to the current public support
+     address. RevenueCat and the app stores are planned to support future native
+     purchases; BigDataCloud handles optional location lookups. These services receive
+     the information needed for their role, including normal network request
+     information, and may process it outside Australia.</p>
 
   <h2>Retention and device copies</h2>
   <p>Your saved travel records remain until you remove them or delete your account.
@@ -169,7 +184,10 @@
 
   <footer>
     Questions: <a href="mailto:rambodog555@gmail.com">rambodog555@gmail.com</a> ·
-    <a href="./">Open Wayfinder</a> · <a href="support.html">Support</a>
+    <a href="./">Open Wayfinder</a> ·
+    <a href="https://rlapplications.com/wayfinder/support/">Support</a> ·
+    <a href="https://rlapplications.com/wayfinder/privacy/">Privacy supplement</a> ·
+    <a href="https://rlapplications.com/wayfinder/delete-account/">Delete account</a>
   </footer>
 </main>
 </body>

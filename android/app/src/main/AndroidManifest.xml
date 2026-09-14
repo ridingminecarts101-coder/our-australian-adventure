@@ -76,11 +76,11 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-    <!-- Reading a photo the person picked. Split at API 33, when Android
-         replaced blanket storage access with per-type media access. -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+    <!-- Photo attachments use the system picker exposed by the WebView file
+         input. Android grants access only to the selected URI, so broad photo
+         library or external-storage read permission is neither needed nor
+         appropriate. Captured photos stay in app storage and are not saved
+         back to the gallery. -->
 
     <!-- Pulled in by the notifications plugin and removed again on purpose.
          Play treats exact alarms as a restricted permission and asks you to
