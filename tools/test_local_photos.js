@@ -240,6 +240,8 @@ function harness() {
 
   {
     const h = { signOutHandling: false, authGeneration: 1, userId: 'owner-a', accountUser: {},
+      passwordRecoveryMode: true, passwordRecoveryBusy: true, passwordRecoveryOwnerId: 'owner-a',
+      passwordRecoveryAttempt: 0, pendingPasswordRecovery: { ownerId: 'owner-a', attempt: 0 },
       accountIsAnonymous: false, progress: new Map(), personalProgress: new Map(), personalCacheReady: true,
       photos: [{}], pendingPhotos: [], trips: [], myGroups: [], members: new Map(), activeGroupId: null,
       signedUrls: new Map(), releaseCalls: 0, releaseLocalPhotoUrls() { h.releaseCalls++; },
@@ -253,6 +255,11 @@ function harness() {
     await h.handleSignedOut();
     assert.equal(h.releaseCalls, 1, 'sign-out must revoke private local-photo URLs');
     assert.equal(h.photos.length, 0);
+    assert.equal(h.passwordRecoveryMode, false);
+    assert.equal(h.passwordRecoveryBusy, false);
+    assert.equal(h.passwordRecoveryOwnerId, null);
+    assert.equal(h.passwordRecoveryAttempt, 1);
+    assert.equal(h.pendingPasswordRecovery, null);
   }
 
   {

@@ -56,6 +56,12 @@ let openId = null;
 let accountUser = null;
 let accountIsAnonymous = false;
 let passwordRecoveryMode = false;
+let passwordRecoveryBusy = false;
+let passwordRecoveryOwnerId = null;
+let passwordRecoveryAttempt = 0;
+let accountUiReady = false;
+let accountBootReady = false;
+let pendingPasswordRecovery = null;
 let accountUpgradeBusy = false;
 let authGeneration = 0;
 let signOutHandling = false;
@@ -477,6 +483,9 @@ const RT_CHANNELS = ['progress-sync', 'group-progress-sync', 'member-sync', 'pho
 
 function subscribeRealtime() {
   if (!sb) return;
+  const subscriptionOwner = userId, subscriptionGeneration = authGeneration;
+  const subscriptionCurrent = () => subscriptionOwner === userId
+    && subscriptionGeneration === authGeneration;
   // Supabase hands back the EXISTING channel for a topic, and refuses new
   // listeners on one that has already subscribed - it throws. So calling this
   // twice used to kill the caller, and a reconnect where removeAllChannels()
@@ -491,6 +500,7 @@ function subscribeRealtime() {
 
   sb.channel('progress-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'progress' }, payload => {
+      if (!subscriptionCurrent()) return;
       const r = payload.new;
       if (progressView === 'group') { pullProgress(); return; }
       const changed = payload.new || payload.old;
@@ -510,6 +520,7 @@ function subscribeRealtime() {
       renderAll();
     })
     .subscribe((status, err) => {
+      if (!subscriptionCurrent()) return;
       realtimeOk = status === 'SUBSCRIBED';
       realtimeStatus = status + (err ? ` (${err.message})` : '');
       if (err) console.warn('realtime', status, err);
@@ -519,6 +530,7 @@ function subscribeRealtime() {
 
   sb.channel('group-progress-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'group_progress' }, () => {
+      if (!subscriptionCurrent()) return;
       if (progressView === 'group') pullProgress();
     })
     .subscribe();
@@ -527,13 +539,16 @@ function subscribeRealtime() {
   // or "ticked by" goes stale again in a different way.
   sb.channel('member-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, async () => {
+      if (!subscriptionCurrent()) return;
       await loadMembers();
+      if (!subscriptionCurrent()) return;
       renderAll();
     })
     .subscribe();
 
   sb.channel('photo-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'photos' }, payload => {
+      if (!subscriptionCurrent()) return;
       if (payload.eventType === 'DELETE') {
         photos = photos.filter(p => p.id !== payload.old.id);
       } else if (payload.new) {
@@ -547,6 +562,7 @@ function subscribeRealtime() {
 
   sb.channel('trip-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, payload => {
+      if (!subscriptionCurrent()) return;
       if (readLS(LS.tripOutbox, []).some(t => t.id === (payload.new || payload.old).id)) return;
       if (payload.eventType === 'DELETE') trips = trips.filter(t => t.id !== payload.old.id);
       else if (payload.new) {
@@ -1689,10 +1705,12 @@ async function requireName(reason) {
 
 async function loadGroups() {
   if (!sb || !online || !userId) return;
+  const owner = userId, generation = authGeneration;
   const { data, error } = await sb
     .from('group_members')
     .select('group_id, display_name, share_completions, groups(id, name, join_code)')
-    .eq('user_id', userId);
+    .eq('user_id', owner);
+  if (owner !== userId || generation !== authGeneration) return;
   if (error) {
     // The tables may simply not exist yet - that is a valid state, not a fault.
     if (!/does not exist|schema cache/i.test(error.message)) console.warn('groups', error.message);
@@ -1732,8 +1750,10 @@ async function loadGroups() {
 async function loadMembers() {
   members = new Map();
   if (!sb || !activeGroupId) return;
+  const owner = userId, generation = authGeneration, groupId = activeGroupId;
   const { data, error } = await sb.from('group_members')
-    .select('user_id, display_name').eq('group_id', activeGroupId);
+    .select('user_id, display_name').eq('group_id', groupId);
+  if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
   if (error) {
     // Before the cutover you can only read your own membership. Not fatal:
     // names simply fall back to whatever was stored on the row.
@@ -1765,13 +1785,15 @@ async function pushMyName() {
    * and stay stale forever, which is the bug this function was fixed for.
    */
   if (pushedName === who) return;
+  const owner = userId, generation = authGeneration, name = who;
   const ids = myGroups.map(g => g.id);
   if (!ids.length) return;
   const { error } = await sb.from('group_members')
-    .update({ display_name: who }).in('group_id', ids).eq('user_id', userId);
+    .update({ display_name: name }).in('group_id', ids).eq('user_id', owner);
+  if (owner !== userId || generation !== authGeneration || name !== who) return;
   if (error) { console.warn('name', error.message); return; }
-  pushedName = who;
-  members.set(userId, who);
+  pushedName = name;
+  members.set(owner, name);
 }
 
 function rpcRow(data) { return Array.isArray(data) ? data[0] : data; }
@@ -3610,12 +3632,7 @@ function wireUI() {
     }
     if (b.dataset.authact === 'new-password') {
       const password = $('#accountPanel').querySelector('[type="password"]').value;
-      if (password.length < 6) return toast('Use at least 6 characters');
-      const { error } = await sb.auth.updateUser({ password });
-      if (error) return toast(error.message || 'Could not change the password');
-      passwordRecoveryMode = false;
-      renderMe();
-      toast('Password updated');
+      await finishPasswordRecovery(password);
     }
   });
 
@@ -3728,10 +3745,12 @@ function recStars(r) {
 
 async function pullRecommendations() {
   if (!sb || !online) { renderRecs(); return; }
+  const owner = userId, generation = authGeneration, sort = recSort;
   recBusy = true; renderRecStatus();
   let q = sb.from('recommendations').select('*');
-  if (recSort === 'mine' && userId) q = q.eq('created_by', userId);
+  if (sort === 'mine' && owner) q = q.eq('created_by', owner);
   const { data, error } = await q.limit(300);
+  if (owner !== userId || generation !== authGeneration || sort !== recSort) return;
   recBusy = false;
   if (error) {
     // The tables may not exist yet, which is a valid state rather than a fault.
@@ -3742,9 +3761,10 @@ async function pullRecommendations() {
   }
   recs = data || [];
 
-  if (userId && recs.length) {
+  if (owner && recs.length) {
     const { data: votes } = await sb.from('recommendation_votes')
-      .select('rec_id, vote, stars').eq('user_id', userId);
+      .select('rec_id, vote, stars').eq('user_id', owner);
+    if (owner !== userId || generation !== authGeneration || sort !== recSort) return;
     myVotes = new Map((votes || []).map(v => [v.rec_id, v]));
   }
   renderRecs();
@@ -4062,6 +4082,7 @@ function wireAccountLock() {
 }
 
 function showAccountLock(message = '') {
+  hideAndClearPrivateOverlays();
   $('#app').classList.add('hidden');
   $('#lock').classList.remove('hidden');
   $('.lock-sub').textContent = 'Keep your places, purchases and groups when you change devices.';
@@ -4074,15 +4095,98 @@ function showAccountLock(message = '') {
   setAuthMessage(message);
 }
 
+function hideAndClearPrivateOverlays() {
+  for (const id of ['#sheet', '#tripSheet', '#recSheet', '#lightbox']) {
+    const overlay = $(id);
+    if (overlay) overlay.classList.add('hidden');
+  }
+  for (const id of ['#sheetBody', '#tripBody', '#recBody']) {
+    const body = $(id);
+    if (body) body.innerHTML = '';
+  }
+  const image = $('#lbImg');
+  if (image) image.src = '';
+  for (const id of ['#lbTitle', '#lbSub']) {
+    const text = $(id);
+    if (text) text.textContent = '';
+  }
+  for (const id of ['#photoInput', '#cameraInput']) {
+    const input = $(id);
+    if (input) input.value = '';
+  }
+  openId = null; openTripId = null;
+  photoTargetId = null;
+  lightbox = { list: [], index: 0 };
+}
+
+function clearPrivateMemoryForAccountTransition() {
+  progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
+  releaseLocalPhotoUrls();
+  photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
+  activeGroupId = null; who = null; progressView = 'personal'; signedUrls.clear();
+  recs = []; myVotes = new Map(); recBusy = false; pushedName = null;
+  hideAndClearPrivateOverlays();
+}
+
+function receivePasswordRecovery(session) {
+  hideAndClearPrivateOverlays();
+  const recoveryUser = session && session.user;
+  if (!recoveryUser || !recoveryUser.id) {
+    passwordRecoveryMode = false;
+    passwordRecoveryOwnerId = null;
+    passwordRecoveryBusy = false;
+    passwordRecoveryAttempt++;
+    pendingPasswordRecovery = { error: true };
+    if (accountUiReady) showAccountLock('That recovery link is invalid or expired. Request a new one.');
+    return false;
+  }
+  const ownerChanged = !!userId && userId !== recoveryUser.id;
+  authGeneration++;
+  passwordRecoveryMode = true;
+  passwordRecoveryOwnerId = recoveryUser.id;
+  passwordRecoveryBusy = false;
+  passwordRecoveryAttempt++;
+  const recoveryAttempt = passwordRecoveryAttempt;
+  pendingPasswordRecovery = { ownerId: recoveryUser.id, attempt: recoveryAttempt };
+  $('#app').classList.add('hidden');
+  if (sb) {
+    try {
+      const removing = sb.removeAllChannels();
+      if (removing && typeof removing.catch === 'function') removing.catch(() => {});
+    } catch { /* already disconnected */ }
+  }
+  realtimeOk = false;
+  if (ownerChanged) {
+    clearPrivateMemoryForAccountTransition();
+  }
+  userId = recoveryUser.id;
+  accountUser = recoveryUser;
+  accountIsAnonymous = isAnonymousUser(accountUser);
+  if (accountUiReady && accountBootReady) {
+    const ownerId = recoveryUser.id;
+    pendingPasswordRecovery = null;
+    setTimeout(() => {
+      if (accountUiReady && accountBootReady && passwordRecoveryMode && passwordRecoveryOwnerId === ownerId) {
+        void enterApp({ recoveryOwnerId: ownerId, recoveryAttempt });
+      }
+    }, 0);
+  }
+  return true;
+}
+
 async function handleSignedOut(message = 'Signed out. Sign in to continue.') {
   if (signOutHandling) return;
   signOutHandling = true;
   authGeneration++;
   userId = null; accountUser = null; accountIsAnonymous = false;
+  passwordRecoveryMode = false; passwordRecoveryBusy = false; passwordRecoveryOwnerId = null;
+  passwordRecoveryAttempt++;
+  pendingPasswordRecovery = null;
   progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
   releaseLocalPhotoUrls();
   photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
   activeGroupId = null; signedUrls.clear();
+  recs = []; myVotes = new Map(); recBusy = false; pushedName = null;
   flushOutbox.requested = false; flushPhotoQueue.requested = false; flushTrips.requested = false;
   showAccountLock(message); // remove private UI before asynchronous cleanup
   for (const key of [LS.progress, LS.personalProgress, LS.outbox, LS.trips,
@@ -4127,6 +4231,82 @@ async function sendPasswordReset(email, target = 'lock') {
     report(error ? (error.message || 'Could not send the recovery email.')
       : 'Recovery email sent. Check your inbox.', !error);
   } catch { report('Could not send the recovery email. Check your connection and try again.'); }
+}
+
+function showPasswordRecoveryScreen(message = '') {
+  hideAndClearPrivateOverlays();
+  if (!passwordRecoveryMode || !passwordRecoveryOwnerId || passwordRecoveryOwnerId !== userId) {
+    showAccountLock('Open a fresh recovery link, then try again.');
+    return false;
+  }
+  passwordRecoveryAttempt++;
+  passwordRecoveryBusy = false;
+  $('#app').classList.add('hidden');
+  $('#lock').classList.remove('hidden');
+  $('#createAccountBtn').classList.add('hidden');
+  $('#forgotPasswordBtn').classList.add('hidden');
+  $('.lock-sub').textContent = 'Choose a new password for this account.';
+  configureAccountLock({ email: false, password: true });
+  $('#accountPassword').autocomplete = 'new-password';
+  $('#accountPassword').value = '';
+  $('#lockBtn').textContent = 'Save new password';
+  $('#lockBtn').disabled = false;
+  const formOwner = passwordRecoveryOwnerId, formAttempt = passwordRecoveryAttempt;
+  $('#lockForm').onsubmit = async event => {
+    event.preventDefault();
+    await finishPasswordRecovery($('#accountPassword').value, formOwner, formAttempt);
+  };
+  setAuthMessage(message);
+  return true;
+}
+
+async function finishPasswordRecovery(password, expectedOwner = passwordRecoveryOwnerId,
+                                        expectedAttempt = passwordRecoveryAttempt) {
+  if (expectedAttempt !== passwordRecoveryAttempt
+      || (expectedOwner && passwordRecoveryOwnerId && expectedOwner !== passwordRecoveryOwnerId)) return false;
+  if (!sb || !passwordRecoveryMode || !expectedOwner || passwordRecoveryOwnerId !== expectedOwner
+      || userId !== expectedOwner || !accountUser || accountUser.id !== expectedOwner) {
+    showAccountLock('Open a fresh recovery link, then try again.');
+    return false;
+  }
+  if (String(password || '').length < 6) {
+    setAuthMessage('Use at least 6 characters for your password.');
+    return false;
+  }
+  if (passwordRecoveryBusy) return false;
+  const before = userId, generation = authGeneration, attempt = expectedAttempt;
+  const button = $('#lockBtn');
+  passwordRecoveryBusy = true;
+  button.disabled = true;
+  setAuthMessage('Saving password…');
+  try {
+    const { data, error } = await sb.auth.updateUser({ password });
+    if (attempt !== passwordRecoveryAttempt || generation !== authGeneration
+        || before !== userId || passwordRecoveryOwnerId !== before) return false;
+    if (error || !data || !data.user || data.user.id !== before) {
+      setAuthMessage((error && error.message) || 'Could not update the password. Try a fresh recovery link.');
+      return false;
+    }
+    accountUser = data.user;
+    passwordRecoveryMode = false;
+    passwordRecoveryOwnerId = null;
+    passwordRecoveryBusy = false;
+    button.disabled = false;
+    setAuthMessage('Password updated.', true);
+    await enterApp();
+    return true;
+  } catch {
+    if (attempt === passwordRecoveryAttempt && generation === authGeneration
+        && before === userId && passwordRecoveryOwnerId === before) {
+      setAuthMessage('Could not update the password. Check your connection and try again.');
+    }
+    return false;
+  } finally {
+    if (attempt === passwordRecoveryAttempt && passwordRecoveryOwnerId === before) {
+      passwordRecoveryBusy = false;
+      button.disabled = false;
+    }
+  }
 }
 
 async function startAnonymousUpgrade(email) {
@@ -4216,6 +4396,7 @@ async function finishAnonymousUpgrade(password) {
 }
 
 function showAnonymousUpgradeScreen(requestedStage = null) {
+  hideAndClearPrivateOverlays();
   $('#lock').classList.remove('hidden');
   $('#app').classList.add('hidden');
   $('#createAccountBtn').classList.add('hidden');
@@ -4249,7 +4430,8 @@ function showAnonymousUpgradeScreen(requestedStage = null) {
   };
 }
 
-async function enterApp() {
+async function enterApp({ recoveryOwnerId = passwordRecoveryMode ? passwordRecoveryOwnerId : null,
+                          recoveryAttempt = recoveryOwnerId ? passwordRecoveryAttempt : null } = {}) {
   if (sb) {
     // getSession reads the persisted session locally. getUser validates over
     // the network and would lock a previously signed-in traveller out offline.
@@ -4262,38 +4444,72 @@ async function enterApp() {
       showStartupError();
       return false;
     }
+    if (recoveryAttempt !== null && recoveryAttempt !== passwordRecoveryAttempt) return false;
     accountUser = data && data.session ? data.session.user : null;
-    if (!accountUser) { showAccountLock('Sign in to continue.'); return false; }
+    if (!accountUser) {
+      if (recoveryOwnerId) {
+        passwordRecoveryMode = false; passwordRecoveryOwnerId = null;
+        passwordRecoveryAttempt++;
+      }
+      showAccountLock(recoveryOwnerId
+        ? 'That recovery session is missing or expired. Request a new recovery email.'
+        : 'Sign in to continue.');
+      return false;
+    }
+    if (recoveryOwnerId && (!passwordRecoveryMode || passwordRecoveryOwnerId !== recoveryOwnerId
+        || accountUser.id !== recoveryOwnerId)) {
+      passwordRecoveryMode = false; passwordRecoveryOwnerId = null;
+      passwordRecoveryAttempt++;
+      showAccountLock('That recovery session does not match this link. Request a new recovery email.');
+      return false;
+    }
     userId = accountUser ? accountUser.id : null;
     accountIsAnonymous = isAnonymousUser(accountUser);
     await bindLocalDataToUser();
+    if (recoveryAttempt !== null && (recoveryAttempt !== passwordRecoveryAttempt
+        || recoveryOwnerId !== passwordRecoveryOwnerId || recoveryOwnerId !== userId)) return false;
+    if (!userId || userId !== accountUser.id) return false;
+    if (recoveryOwnerId) return showPasswordRecoveryScreen();
     await loadGroups();
     if (!userId || userId !== accountUser.id) return false;
   }
+  if (passwordRecoveryMode) return showPasswordRecoveryScreen();
   const upgrade = accountUpgradeFor(accountUser);
   if (upgrade) return showAnonymousUpgradeScreen(upgrade.stage);
   if (accountIsAnonymous) return showAnonymousUpgradeScreen();
-  $('#lock').classList.add('hidden');
-  $('#app').classList.remove('hidden');
+  const enteringOwner = userId, enteringGeneration = authGeneration;
+  $('#app').classList.add('hidden');
   loadLocalTrips();
-  pendingPhotos = await idbAll();
-  for (const item of pendingPhotos) {
+  const loadedPendingPhotos = await idbAll();
+  if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
+  pendingPhotos = loadedPendingPhotos;
+  for (const item of loadedPendingPhotos) {
     if (!item.owner_id) { item.owner_id = userId; await idbPut(item); }
   }
+  if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
   // Asked for before the first paint so the Reminders button in Me shows the
   // right label straight away rather than correcting itself a moment later.
   await notificationPermission();
+  if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
   /* Deliberately not awaited. Talking to the store means a network round trip
    * on a cold app, and none of the first screen depends on the answer - the
    * gems are locked until it says otherwise, which is the safe default. It
    * repaints when it lands.
    */
-  Billing.init(userId).then(ok => { if (ok) renderAll(); });
+  Billing.init(userId).then(ok => {
+    if (ok && enteringOwner === userId && enteringGeneration === authGeneration) renderAll();
+  });
   renderAll();
+  if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
+  $('#lock').classList.add('hidden');
+  $('#app').classList.remove('hidden');
   openDeepLink();
   await pullProgress();
+  if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
   await pullPhotos();
+  if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
   await pullTrips();
+  if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
   renderAll();
   subscribeRealtime();
   startSyncTicker();
@@ -4303,6 +4519,7 @@ async function enterApp() {
   flushTrips();
   seasonalNudge();
   migrateLegacyPhotos();
+  return true;
 }
 
 // A shared link lands directly on the adventure or trip it names.
@@ -4373,20 +4590,24 @@ async function boot() {
         if (event === 'SIGNED_OUT') {
           void handleSignedOut();
           return;
+        }
+        if (event === 'PASSWORD_RECOVERY') {
+          receivePasswordRecovery(session);
+          return;
         } else if (userId && session && session.user && session.user.id !== userId) {
           authGeneration++;
           userId = session.user.id;
           location.reload();
           return;
         }
-        if (event === 'PASSWORD_RECOVERY') passwordRecoveryMode = true;
-        else if (event !== 'SIGNED_IN' && event !== 'USER_UPDATED') return;
+        if (event !== 'SIGNED_IN' && event !== 'USER_UPDATED') return;
         const upgrade = session && session.user ? accountUpgradeFor(session.user) : null;
-        if (event !== 'PASSWORD_RECOVERY' && (!upgrade || accountUpgradeBusy)) return;
+        if (!upgrade || accountUpgradeBusy) return;
         // Run outside the auth callback: Supabase warns against awaiting another
         // auth method from inside it, and enterApp() asks auth.getSession().
         setTimeout(() => {
-          if (upgrade || $('#app').classList.contains('hidden')) enterApp(); else renderMe();
+          if (upgrade || $('#app').classList.contains('hidden')) enterApp();
+          else renderMe();
         }, 0);
       });
     }
@@ -4397,6 +4618,18 @@ async function boot() {
     buildFilterOptions();
     wireUI();
     wireAccountLock();
+    accountUiReady = true;
+
+    if (pendingPasswordRecovery) {
+      const pending = pendingPasswordRecovery;
+      pendingPasswordRecovery = null;
+      if (pending.error || !pending.ownerId || pending.ownerId !== passwordRecoveryOwnerId) {
+        showAccountLock('That recovery link is invalid or expired. Request a new one.');
+        return false;
+      }
+      accountBootReady = true;
+      return await enterApp({ recoveryOwnerId: pending.ownerId, recoveryAttempt: pending.attempt });
+    }
 
     if (!sb) {
       showAccountLock('Account service is not configured. Wayfinder cannot create a recoverable account.');
@@ -4405,6 +4638,17 @@ async function boot() {
 
     const { data, error: sessionError } = await sb.auth.getSession();
     if (sessionError) throw sessionError;
+    if (pendingPasswordRecovery) {
+      const pending = pendingPasswordRecovery;
+      pendingPasswordRecovery = null;
+      accountBootReady = true;
+      if (!pending.error && pending.ownerId === passwordRecoveryOwnerId) {
+        return await enterApp({ recoveryOwnerId: pending.ownerId, recoveryAttempt: pending.attempt });
+      }
+      showAccountLock('That recovery link is invalid or expired. Request a new one.');
+      return false;
+    }
+    accountBootReady = true;
     if (data && data.session) return await enterApp();
 
     // Anonymous sign-in remains available only as an explicitly enabled

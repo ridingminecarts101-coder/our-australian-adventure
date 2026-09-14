@@ -57,6 +57,262 @@ function harness() {
   return { context, values, elements, run: code => vm.runInContext(code, context) };
 }
 
+async function testPasswordRecovery() {
+  const h = harness(), run = h.run;
+  const el = key => h.elements.get(key);
+  const owner = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const other = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  run(`writeLS(LS.progress,[{adventure_id:7,memory:'keep'}]);
+    writeLS(LS.outbox,[{adventure_id:7,queue_rev:'keep'}]);`);
+  const progressBefore = h.values.get('oaa.progress.v3');
+  const outboxBefore = h.values.get('oaa.outbox.v2');
+  const assertOwnerState = () => {
+    assert.equal(h.values.get('oaa.progress.v3'), progressBefore);
+    assert.equal(h.values.get('oaa.outbox.v2'), outboxBefore);
+  };
+
+  h.context.mockAuth = {};
+  run(`sb={auth:mockAuth}; userId='${owner}'; accountUser={id:userId,email:'owner@example.test'};
+    accountIsAnonymous=false; passwordRecoveryMode=true; passwordRecoveryOwnerId=userId; authGeneration=4;`);
+  run('showPasswordRecoveryScreen()');
+  assert(!el('#lock').classList.contains('hidden'));
+  assert(el('#app').classList.contains('hidden'));
+  assert(el('#accountEmail').classList.contains('hidden'));
+  assert.equal(el('#accountEmail').required, false);
+  assert(!el('#accountPassword').classList.contains('hidden'));
+  assert.equal(el('#accountPassword').required, true);
+  assert.equal(el('#accountPassword').autocomplete, 'new-password');
+  assert.equal(el('#lockBtn').textContent, 'Save new password');
+  assert(el('#createAccountBtn').classList.contains('hidden'));
+  assert(el('#forgotPasswordBtn').classList.contains('hidden'));
+
+  let calls = 0;
+  h.context.mockAuth.updateUser = async () => { calls++; return {data:{user:{id:owner}},error:null}; };
+  assert.equal(await run("finishPasswordRecovery('short')"), false);
+  assert.equal(calls, 0);
+  assert.equal(run('passwordRecoveryMode'), true);
+  assert.match(el('#lockMsg').textContent, /at least 6/);
+  assertOwnerState();
+
+  h.context.mockAuth.updateUser = async () => ({data:{user:null},error:new Error('rejected')});
+  assert.equal(await run("finishPasswordRecovery('long-enough')"), false);
+  assert.equal(run('passwordRecoveryMode'), true);
+  assert.match(el('#lockMsg').textContent, /rejected/);
+  assert.equal(el('#lockBtn').disabled, false);
+  assertOwnerState();
+
+  h.context.pending = deferred();
+  h.context.mockAuth.updateUser = () => h.context.pending.promise;
+  const stale = run("finishPasswordRecovery('long-enough')");
+  run(`receivePasswordRecovery({user:{id:'${other}',email:'other@example.test'}});
+    showPasswordRecoveryScreen();`);
+  h.context.pending.resolve({data:{user:{id:owner}},error:null});
+  assert.equal(await stale, false);
+  assert.equal(run('passwordRecoveryMode'), true);
+  assert.equal(run('passwordRecoveryOwnerId'), other);
+  assert.equal(el('#lockBtn').disabled, false);
+  assertOwnerState();
+
+  run(`userId='${owner}'; accountUser={id:userId,email:'owner@example.test'};
+    passwordRecoveryOwnerId=userId; authGeneration++; enterApp=async()=>true;`);
+  h.context.mockAuth.updateUser = async () => ({data:{user:{id:owner,email:'owner@example.test'}},error:null});
+  assert.equal(await run("finishPasswordRecovery('long-enough')"), true);
+  assert.equal(run('passwordRecoveryMode'), false);
+  assertOwnerState();
+
+  const h2 = harness(), run2 = h2.run;
+  let groupCalls = 0;
+  h2.context.mockAuth = {getSession: async () => ({data:{session:{user:{id:other,email:'other@example.test'}}},error:null})};
+  h2.context.groupCall = () => { groupCalls++; };
+  h2.context.URL.revokeObjectURL = () => {};
+  run2(`sb={auth:mockAuth}; accountUiReady=true; accountBootReady=true;
+    userId='${owner}'; accountUser={id:userId}; localStorage.setItem(LS.owner,'legacy-owner-a');
+    progress=new Map([[7,{adventure_id:7,memory:'owner A'}]]); personalProgress=new Map(progress);
+    photos=[{id:'photo-a',owner_id:userId}]; pendingPhotos=[{id:'queued-a',owner_id:userId}];
+    trips=[{id:'trip-a'}]; members=new Map([['${owner}','Owner A']]); myGroups=[{id:'group-a'}];
+    recs=[{id:'private-rec-a'}]; myVotes=new Map([['private-rec-a',{vote:1}]]); recBusy=true; pushedName='Owner A';
+    objectUrls.set('photo-a','blob:owner-a'); signedUrls.set('path-a',{url:'signed-a'});
+    openId=7; openTripId='trip-a'; photoTargetId=7; lightbox={list:photos,index:0};
+    for (const id of ['#sheet','#tripSheet','#recSheet','#lightbox']) $(id).classList.remove('hidden');
+    $('#sheetBody').innerHTML='private memory'; $('#tripBody').innerHTML='private trip';
+    $('#recBody').innerHTML='private draft'; $('#lbImg').src='blob:owner-a';
+    $('#lbTitle').textContent='private title'; $('#lbSub').textContent='private location';
+    $('#photoInput').value='private-file'; $('#cameraInput').value='private-camera';
+    loadGroups=async()=>{groupCall();};`);
+  run2(`receivePasswordRecovery({user:{id:'${other}',email:'other@example.test'}})`);
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(run2('progress.size + personalProgress.size + photos.length + pendingPhotos.length + trips.length + members.size + myGroups.length'), 0);
+  assert.equal(run2('objectUrls.size + signedUrls.size'), 0);
+  assert.equal(run2('recs.length + myVotes.size + (recBusy?1:0) + (pushedName?1:0)'), 0);
+  for (const id of ['#sheet','#tripSheet','#recSheet','#lightbox']) assert(h2.elements.get(id).classList.contains('hidden'));
+  for (const id of ['#sheetBody','#tripBody','#recBody']) assert.equal(h2.elements.get(id).innerHTML, '');
+  assert.equal(h2.elements.get('#lbImg').src, '');
+  assert.equal(h2.elements.get('#lbTitle').textContent + h2.elements.get('#lbSub').textContent, '');
+  assert.equal(h2.elements.get('#photoInput').value + h2.elements.get('#cameraInput').value, '');
+  assert.equal(run2('openId === null && openTripId === null && photoTargetId === null && lightbox.list.length'), 0);
+  assert.equal(run2('passwordRecoveryOwnerId'), other);
+  assert.equal(groupCalls, 0);
+  assert.equal(h2.elements.get('#lockBtn').textContent, 'Save new password');
+
+  const h3 = harness(), run3 = h3.run;
+  const adventureGate = deferred(), sessionGate = deferred(), groupGate = deferred();
+  let authEvent, bootGroupCalls = 0, updates = 0;
+  h3.context.OAA_CONFIG.supabaseUrl = 'https://example.test';
+  h3.context.OAA_CONFIG.supabaseAnonKey = 'test-key';
+  h3.context.adventureGate = adventureGate;
+  h3.context.groupCall = () => { bootGroupCalls++; };
+  h3.context.mockAuth = {
+    onAuthStateChange: callback => { authEvent = callback; },
+    getSession: () => sessionGate.promise,
+    updateUser: async () => {
+      updates++;
+      return updates === 1
+        ? {data:{user:null},error:new Error('temporary rejection')}
+        : {data:{user:{id:owner,email:'owner@example.test'}},error:null};
+    },
+  };
+  h3.context.supabase = {createClient: () => ({auth:h3.context.mockAuth})};
+  h3.context.groupGate = groupGate;
+  run3(`loadAdventures=()=>adventureGate.promise; wireUI=()=>{};
+    loadGroups=()=>{groupCall(); return groupGate.promise;};`);
+  const booting = run3('boot()');
+  authEvent('PASSWORD_RECOVERY', {user:{id:owner,email:'owner@example.test'}});
+  assert.equal(run3('accountUiReady'), false);
+  adventureGate.resolve();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(run3('accountUiReady'), true);
+  assert.equal(bootGroupCalls, 0);
+  sessionGate.resolve({data:{session:{user:{id:owner,email:'owner@example.test'}}},error:null});
+  await booting;
+  assert.equal(run3('accountUiReady && accountBootReady'), true);
+  assert.equal(bootGroupCalls, 0);
+  assert.equal(h3.elements.get('#lockBtn').textContent, 'Save new password');
+  run3(`idbAll=async()=>[]; notificationPermission=async()=>{}; pullProgress=async()=>{};
+    pullPhotos=async()=>{}; pullTrips=async()=>{}; subscribeRealtime=()=>{};
+    startSyncTicker=()=>{}; wirePullToRefresh=()=>{}; flushOutbox=()=>{};
+    flushPhotoQueue=()=>{}; flushTrips=()=>{}; seasonalNudge=()=>{}; migrateLegacyPhotos=()=>{};`);
+  h3.elements.get('#accountPassword').value = 'new-password';
+  await h3.elements.get('#lockForm').onsubmit({preventDefault(){}});
+  assert.equal(updates, 1);
+  assert.equal(run3('passwordRecoveryMode'), true);
+  assert.equal(h3.elements.get('#lockBtn').disabled, false);
+  assert.match(h3.elements.get('#lockMsg').textContent, /temporary rejection/);
+  const successfulRetry = h3.elements.get('#lockForm').onsubmit({preventDefault(){}});
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(updates, 2);
+  assert.equal(bootGroupCalls, 1);
+  groupGate.resolve();
+  await successfulRetry;
+  assert.equal(run3('passwordRecoveryMode'), false);
+  assert.equal(bootGroupCalls, 1);
+  assert.equal(h3.elements.get('#lockBtn').disabled, false);
+  run3(`for (const id of ['#sheet','#tripSheet','#recSheet','#lightbox']) $(id).classList.remove('hidden');
+    $('#sheetBody').innerHTML='signed-out memory'; $('#tripBody').innerHTML='signed-out trip';
+    $('#recBody').innerHTML='signed-out draft'; $('#lbImg').src='blob:signed-out';`);
+  await run3('handleSignedOut()');
+  assert.equal(h3.elements.get('#lockBtn').textContent, 'Sign in');
+  assert.equal(h3.elements.get('#lockBtn').disabled, false);
+  for (const id of ['#sheet','#tripSheet','#recSheet','#lightbox']) assert(h3.elements.get(id).classList.contains('hidden'));
+  for (const id of ['#sheetBody','#tripBody','#recBody']) assert.equal(h3.elements.get(id).innerHTML, '');
+  assert.equal(h3.elements.get('#lbImg').src, '');
+
+  const h4 = harness(), run4 = h4.run;
+  h4.context.mockAuth = {getSession: async () => ({data:{session:{user:{id:other}}},error:null})};
+  run4(`sb={auth:mockAuth}; accountUiReady=true; accountBootReady=true;
+    userId='${other}'; accountUser={id:userId}; passwordRecoveryMode=true;
+    passwordRecoveryOwnerId='${owner}'; passwordRecoveryAttempt=9;`);
+  assert.equal(await run4(`enterApp({recoveryOwnerId:'${owner}',recoveryAttempt:9})`), false);
+  assert.equal(run4('passwordRecoveryMode'), false);
+  assert.match(h4.elements.get('#lockMsg').textContent, /does not match/);
+  assert.equal(run4('receivePasswordRecovery(null)'), false);
+  assert.match(h4.elements.get('#lockMsg').textContent, /invalid or expired/);
+
+  const h5 = harness(), run5 = h5.run, photoGate = deferred();
+  h5.context.mockAuth = {getSession: async () => ({data:{session:{user:{id:owner}}},error:null})};
+  h5.context.photoGate = photoGate;
+  run5(`sb={auth:mockAuth}; bindLocalDataToUser=async()=>{}; loadGroups=async()=>{};
+    idbAll=()=>photoGate.promise; loadLocalTrips=()=>{}; notificationPermission=async()=>{};
+    Billing.init=async()=>false; openDeepLink=()=>{}; pullProgress=async()=>{}; pullPhotos=async()=>{};
+    pullTrips=async()=>{}; subscribeRealtime=()=>{}; startSyncTicker=()=>{}; wirePullToRefresh=()=>{};
+    flushOutbox=()=>{}; flushPhotoQueue=()=>{}; flushTrips=()=>{}; seasonalNudge=()=>{};
+    migrateLegacyPhotos=()=>{}; renderAll=()=>{$('#passportGrid').innerHTML='owner render';};
+    $('#app').classList.add('hidden'); $('#lock').classList.remove('hidden');
+    $('#passportGrid').innerHTML='previous owner DOM';`);
+  const opening = run5('enterApp()');
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert(h5.elements.get('#app').classList.contains('hidden'));
+  assert.equal(h5.elements.get('#passportGrid').innerHTML, 'previous owner DOM');
+  photoGate.resolve([]);
+  assert.equal(await opening, true);
+  assert(!h5.elements.get('#app').classList.contains('hidden'));
+  assert.equal(h5.elements.get('#passportGrid').innerHTML, 'owner render');
+
+  const h5stale = harness(), run5stale = h5stale.run, stalePhotoGate = deferred();
+  h5stale.context.mockAuth = {getSession: async () => ({data:{session:{user:{id:owner}}},error:null})};
+  h5stale.context.stalePhotoGate = stalePhotoGate;
+  run5stale(`sb={auth:mockAuth}; bindLocalDataToUser=async()=>{}; loadGroups=async()=>{};
+    idbAll=()=>stalePhotoGate.promise; loadLocalTrips=()=>{}; notificationPermission=async()=>{};
+    renderAll=()=>{throw new Error('stale owner rendered');};
+    $('#app').classList.add('hidden'); $('#lock').classList.remove('hidden');`);
+  const staleOpening = run5stale('enterApp()');
+  await new Promise(resolve => setTimeout(resolve, 0));
+  run5stale(`authGeneration++; userId=null; accountUser=null;`);
+  stalePhotoGate.resolve([]);
+  assert.equal(await staleOpening, false);
+  assert(h5stale.elements.get('#app').classList.contains('hidden'));
+
+  const h6 = harness(), run6 = h6.run;
+  const callbacks = {}, statuses = {};
+  h6.context.callbacks = callbacks; h6.context.statuses = statuses;
+  h6.context.makeChannel = name => {
+    const chain = {
+      on(_kind, _filter, callback) { callbacks[name] = callback; return chain; },
+      subscribe(callback) { if (callback) statuses[name] = callback; return chain; },
+    };
+    return chain;
+  };
+  run6(`sb={getChannels:()=>[],removeAllChannels:async()=>{},removeChannel:()=>{},channel:name=>makeChannel(name)};
+    userId='${owner}'; accountUser={id:userId}; accountIsAnonymous=false; authGeneration=3;
+    progress=new Map([[7,{adventure_id:7}]]); photos=[{id:'old-photo'}]; trips=[{id:'old-trip'}];
+    subscribeRealtime(); receivePasswordRecovery({user:{id:'${other}'}});`);
+  callbacks['progress-sync']({eventType:'INSERT',new:{adventure_id:8,user_id:owner}});
+  callbacks['photo-sync']({eventType:'INSERT',new:{id:'late-photo',user_id:owner}});
+  callbacks['trip-sync']({eventType:'INSERT',new:{id:'late-trip',user_id:owner}});
+  if (statuses['progress-sync']) statuses['progress-sync']('SUBSCRIBED');
+  assert.equal(run6('progress.size + photos.length + trips.length'), 0);
+  assert.notEqual(run6('realtimeOk'), true);
+
+  const h7 = harness(), run7 = h7.run, memberGate = deferred(), recommendationGate = deferred();
+  h7.context.memberGate = memberGate; h7.context.recommendationGate = recommendationGate;
+  h7.context.table = name => {
+    if (name === 'group_members') return {
+      select() { return this; }, eq() { return memberGate.promise; },
+    };
+    if (name === 'recommendations') return {
+      select() { return this; }, limit() { return recommendationGate.promise; },
+    };
+    throw new Error('unexpected table ' + name);
+  };
+  run7(`sb={from:name=>table(name),removeAllChannels:async()=>{}}; online=true;
+    userId='${owner}'; accountUser={id:userId}; authGeneration=2; activeGroupId='group-a';
+    members=new Map([['${owner}','Old owner']]);`);
+  const oldMembers = run7('loadMembers()');
+  run7(`receivePasswordRecovery({user:{id:'${other}'}})`);
+  memberGate.resolve({data:[{user_id:owner,display_name:'Late owner A'}],error:null});
+  await oldMembers;
+  assert.equal(run7('members.size'), 0);
+
+  run7(`userId='${owner}'; accountUser={id:userId}; authGeneration=8;
+    passwordRecoveryMode=false; passwordRecoveryOwnerId=null; recs=[{id:'old-a'}];
+    myVotes=new Map([['old-a',{vote:1}]]);`);
+  const oldRecommendations = run7('pullRecommendations()');
+  run7(`receivePasswordRecovery({user:{id:'${other}'}})`);
+  recommendationGate.resolve({data:[{id:'late-a',created_by:owner}],error:null});
+  await oldRecommendations;
+  assert.equal(run7('recs.length + myVotes.size + (recBusy?1:0)'), 0);
+  console.log('password recovery: automatic screen, failures, stale account guard and owner-state preservation passed');
+}
+
 
 async function main() {
   const h = harness(), run = h.run;
@@ -128,6 +384,7 @@ async function main() {
   assert.equal(run('accountUpgradeBusy'),false);
   assert.equal(run('readAccountUpgrade().stage'),'set-password');
   preserve();
+  await testPasswordRecovery();
   console.log('startup/auth failures: visible recovery, catalogue fallback, retries and saved data passed');
 }
 main().catch(error=>{console.error(error);process.exit(1);});
