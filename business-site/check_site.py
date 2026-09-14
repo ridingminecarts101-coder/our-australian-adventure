@@ -72,6 +72,7 @@ class Document:
     title: str
     viewport: bool
     canonicals: list[str]
+    stylesheets: list[str]
     csp: str | None
     inline_scripts: int
     event_handlers: list[str]
@@ -90,6 +91,7 @@ class DocumentParser(HTMLParser):
         self.in_title = False
         self.viewport = False
         self.canonicals: list[str] = []
+        self.stylesheets: list[str] = []
         self.csp: str | None = None
         self.inline_scripts = 0
         self.event_handlers: list[str] = []
@@ -102,6 +104,8 @@ class DocumentParser(HTMLParser):
         if values.get("id"):
             self.ids.append(values["id"] or "")
         rels = set((values.get("rel") or "").lower().split())
+        if tag == "link" and "stylesheet" in rels and values.get("href"):
+            self.stylesheets.append(values["href"] or "")
         if tag == "link" and "canonical" in rels and values.get("href"):
             self.canonicals.append(values["href"] or "")
         elif tag in {"a", "link"} and values.get("href"):
@@ -141,6 +145,7 @@ class DocumentParser(HTMLParser):
             title="".join(self.title_parts).strip(),
             viewport=self.viewport,
             canonicals=self.canonicals,
+            stylesheets=self.stylesheets,
             csp=self.csp,
             inline_scripts=self.inline_scripts,
             event_handlers=self.event_handlers,
@@ -165,6 +170,21 @@ def target_for(path: str) -> Path:
     return target / "index.html" if decoded.endswith("/") else target
 
 
+def authored_assets() -> tuple[dict[str, str], str]:
+    """Use the stylesheet URL visitors receive, including its cache version."""
+    homepage = parse_document((ROOT / "index.html").read_text(encoding="utf-8"))
+    if len(homepage.stylesheets) != 1:
+        raise ValueError(f"index.html: expected one stylesheet, found {homepage.stylesheets!r}")
+    stylesheet = homepage.stylesheets[0]
+    parsed = urlparse(stylesheet)
+    if parsed.scheme or parsed.netloc or parsed.fragment or parsed.path != "/assets/site.css":
+        raise ValueError(f"index.html: unexpected stylesheet reference {stylesheet!r}")
+    assets = dict(ASSETS)
+    assets.pop("/assets/site.css")
+    assets[stylesheet] = "assets/site.css"
+    return assets, stylesheet
+
+
 def normalise(data: bytes) -> bytes:
     return data.replace(b"\r\n", b"\n")
 
@@ -175,6 +195,12 @@ def local_checks() -> tuple[list[str], set[str]]:
     html_files = sorted(ROOT.rglob("*.html"))
     if len(html_files) != 8:
         errors.append(f"expected 8 HTML pages, found {len(html_files)}")
+
+    try:
+        _, expected_stylesheet = authored_assets()
+    except ValueError as exc:
+        errors.append(str(exc))
+        expected_stylesheet = None
 
     for path in html_files:
         rel = path.relative_to(ROOT).as_posix()
@@ -188,6 +214,10 @@ def local_checks() -> tuple[list[str], set[str]]:
             errors.append(f"{rel}: missing responsive viewport")
         if doc.h1_count != 1:
             errors.append(f"{rel}: expected one h1, found {doc.h1_count}")
+        if expected_stylesheet and doc.stylesheets != [expected_stylesheet]:
+            errors.append(
+                f"{rel}: stylesheet is {doc.stylesheets!r}, expected {[expected_stylesheet]!r}"
+            )
         for landmark in ("nav", "main", "footer"):
             if landmark not in doc.tags:
                 errors.append(f"{rel}: missing {landmark} landmark")
@@ -344,8 +374,12 @@ def check_apex_hsts(label: str, headers: dict[str, str], errors: list[str]) -> N
 
 def live_checks() -> list[str]:
     errors: list[str] = []
+    try:
+        assets, _ = authored_assets()
+    except ValueError as exc:
+        return [str(exc)]
     for host in LIVE_HOSTS:
-        for route, relative in {**ROUTES, **ASSETS}.items():
+        for route, relative in {**ROUTES, **assets}.items():
             status, headers, body = fetch(host + route)
             label = host + route
             if status != 200:
