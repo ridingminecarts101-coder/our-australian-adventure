@@ -15,6 +15,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from countries import ADVISORIES, COUNTRIES          # noqa: E402
+from subdivisions import NAVIGATION_SUBDIVISION_COUNTS  # noqa: E402
 
 OUT = 'countries.js'
 
@@ -28,6 +29,7 @@ def main():
     names = {c: v[0] for c, v in COUNTRIES.items()}
     cont = {c: v[1] for c, v in COUNTRIES.items()}
     flags = {c: flag(c) for c in COUNTRIES}
+    subdivisions = {c: NAVIGATION_SUBDIVISION_COUNTS.get(c, 0) for c in COUNTRIES}
     adv = {c: {'level': lvl, 'note': note} for c, (lvl, note) in ADVISORIES.items()}
 
     for code in adv:
@@ -45,6 +47,10 @@ def main():
 const COUNTRY_NAME = @NAMES@;
 const COUNTRY_FLAG = @FLAGS@;
 const COUNTRY_CONT = @CONT@;
+// Reviewed administrative subdivision count used only for navigation depth.
+// See tools/subdivisions.py for CLDR input, explicit overrides and provenance;
+// catalogue admin1 coverage must never stand in for a country's real structure.
+const COUNTRY_SUBDIVISION_COUNT = @SUBDIVISIONS@;
 
 /* Places where the honest advice is not when to go but whether to.
  *
@@ -74,6 +80,8 @@ function countriesIn(continent, countFn) {
                                separators=(',', ':'))),
         ('@CONT@', json.dumps(cont, ensure_ascii=False, sort_keys=True,
                               separators=(',', ':'))),
+        ('@SUBDIVISIONS@', json.dumps(subdivisions, sort_keys=True,
+                                      separators=(',', ':'))),
         ('@ADV@', json.dumps(adv, ensure_ascii=False, sort_keys=True, indent=2)),
     ]:
         body = body.replace(token, value)

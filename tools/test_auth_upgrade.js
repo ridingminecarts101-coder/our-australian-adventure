@@ -157,4 +157,5 @@ async function main() {
   console.log('auth upgrade: sequencing, failures, account switch, local data and schema fallback passed');
 }
 
-main().catch(error => { console.error(error); process.exit(1); });
+if (require.main === module) main().catch(error => { console.error(error); process.exit(1); });
+module.exports = { harness, deferred };

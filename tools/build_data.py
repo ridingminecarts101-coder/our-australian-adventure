@@ -5,6 +5,7 @@ Run from the repo root:  python tools/build_data.py
 Edit the per-region .jsonl files, run this, commit the result.
 """
 import collections
+import datetime
 import glob
 import io
 import json
@@ -100,7 +101,122 @@ def stamp_listing(records):
         print(f'  updated the store listing counts in PLAY.md ({places}, {destinations} countries and territories)')
 
 
+def is_available(record):
+    """Return whether a stored row belongs in discovery and public counts."""
+    return record.get('availability', {}).get('status') != 'unavailable'
+
+
 IDS = os.path.join('data', 'ids.json')
+AVAILABILITY = os.path.join('data', 'availability.json')
+
+
+def apply_availability(records, path=AVAILABILITY, ids_path=IDS):
+    """Attach reviewed per-ID availability without removing catalogue rows."""
+    if not os.path.exists(path):
+        return [f'{path}: availability sidecar is missing']
+    try:
+        payload = json.load(io.open(path, encoding='utf-8'))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f'{path}: cannot read availability sidecar - {exc}']
+    if not isinstance(payload, dict) or payload.get('version') != 1 \
+            or not isinstance(payload.get('entries'), list):
+        return [f'{path}: expected version 1 with an entries list']
+
+    registry = json.load(io.open(ids_path, encoding='utf-8'))['ids']
+    records_by_key = {f"{row.get('country')}|{row.get('place')}": row for row in records}
+    active_keys_by_id = collections.defaultdict(list)
+    for identity in records_by_key:
+        if identity in registry:
+            active_keys_by_id[registry[identity]].append(identity)
+    seen, problems, candidates = set(), [], []
+    required = {'id', 'status', 'reason', 'reviewed_at', 'source'}
+    allowed = required | {'replacement_id'}
+    for index, entry in enumerate(payload['entries'], 1):
+        where = f'{path}:entries[{index}]'
+        if not isinstance(entry, dict):
+            problems.append(f'{where}: entry must be an object')
+            continue
+        missing = required - set(entry)
+        extra = set(entry) - allowed
+        if missing:
+            problems.append(f'{where}: missing {", ".join(sorted(missing))}')
+        if extra:
+            problems.append(f'{where}: unknown {", ".join(sorted(extra))}')
+        record_id = entry.get('id')
+        if type(record_id) is not int:
+            problems.append(f'{where}: id must be an integer')
+        elif record_id in seen:
+            problems.append(f'{where}: duplicate id {record_id}')
+        else:
+            seen.add(record_id)
+        active_keys = active_keys_by_id.get(record_id, [])
+        identity = active_keys[0] if len(active_keys) == 1 else None
+        if not active_keys:
+            problems.append(f'{where}: id {record_id!r} is not a current catalogue row')
+        elif len(active_keys) != 1:
+            problems.append(f'{where}: id {record_id!r} resolves to {len(active_keys)} active catalogue rows')
+        if entry.get('status') not in {'available', 'unavailable'}:
+            problems.append(f'{where}: status must be available or unavailable')
+        if len(str(entry.get('reason') or '').strip()) < 20:
+            problems.append(f'{where}: reason must explain the reviewed operational status')
+        reviewed_at = str(entry.get('reviewed_at') or '')
+        valid_date = bool(re.fullmatch(r'\d{4}-\d{2}-\d{2}', reviewed_at))
+        if valid_date:
+            try:
+                datetime.date.fromisoformat(reviewed_at)
+            except ValueError:
+                valid_date = False
+        if not valid_date:
+            problems.append(f'{where}: reviewed_at must be YYYY-MM-DD')
+        source = entry.get('source')
+        if not isinstance(source, dict) or set(source) != {'type', 'publisher', 'url'}:
+            problems.append(f'{where}: source must contain only type, publisher and url')
+        elif source.get('type') != 'primary' or not str(source.get('publisher') or '').strip() \
+                or not str(source.get('url') or '').startswith('https://'):
+            problems.append(f'{where}: source must be a named primary publisher with an HTTPS URL')
+        replacement_id = entry.get('replacement_id')
+        if replacement_id is not None:
+            if type(replacement_id) is not int:
+                problems.append(f'{where}: replacement_id must be an integer')
+            elif replacement_id == record_id:
+                problems.append(f'{where}: replacement_id must name a different row')
+            elif len(active_keys_by_id.get(replacement_id, [])) != 1:
+                problems.append(f'{where}: replacement_id {replacement_id!r} must resolve to exactly one current row')
+            if entry.get('status') != 'unavailable':
+                problems.append(f'{where}: only an unavailable listing may name a replacement_id')
+        if not any(problem.startswith(where) for problem in problems):
+            candidates.append((where, identity, entry))
+
+    entries_by_id = {entry.get('id'): entry for entry in payload['entries']
+                     if isinstance(entry, dict) and type(entry.get('id')) is int}
+    replacement_map = {}
+    for where, _, entry in candidates:
+        replacement_id = entry.get('replacement_id')
+        if replacement_id is None:
+            continue
+        target = entries_by_id.get(replacement_id)
+        if target and target.get('status') == 'unavailable':
+            problems.append(f'{where}: replacement_id {replacement_id} is also unavailable')
+        replacement_map[entry['id']] = replacement_id
+    for start in replacement_map:
+        visited, current = set(), start
+        while current in replacement_map:
+            if current in visited:
+                problems.append(f'{path}: replacement_id cycle includes {current}')
+                break
+            visited.add(current)
+            current = replacement_map[current]
+
+    if problems:
+        return problems
+    for _, identity, entry in candidates:
+        records_by_key[identity]['availability'] = {
+            'status': entry['status'], 'reason': entry['reason'].strip(),
+            'reviewed_at': entry['reviewed_at'], 'source': entry['source'],
+        }
+        if entry.get('replacement_id') is not None:
+            records_by_key[identity]['availability']['replacement_id'] = entry['replacement_id']
+    return []
 
 
 def assign_ids(records):
@@ -182,15 +298,16 @@ def load():
                 # Opening days were being written here, which made an entry
                 # invisible to the seasonal reminder or matched every month.
                 season = str(rec.get('season', ''))
-                if not re.fullmatch(r'Year-round|%s|%s-%s' % (MONTHS_RE, MONTHS_RE, MONTHS_RE),
+                if not re.fullmatch(r'Check dates|Year-round|%s|%s-%s' % (MONTHS_RE, MONTHS_RE, MONTHS_RE),
                                     season):
-                    problems.append(f'{where}: season {season!r} is not a month range')
+                    problems.append(f'{where}: season {season!r} is not Check dates, a month range or Year-round')
                 if rec.get('dog_friendly') not in DOG:
                     problems.append(f'{where}: dog_friendly must be yes/no/check')
                 if not isinstance(rec.get('difficulty'), int) or not 1 <= rec['difficulty'] <= 5:
                     problems.append(f'{where}: difficulty must be 1-5')
-                if not isinstance(rec.get('cost'), int) or not 0 <= rec['cost'] <= 4:
-                    problems.append(f'{where}: cost must be 0-4')
+                if rec.get('cost') is not None and (not isinstance(rec.get('cost'), int)
+                                                    or not 0 <= rec['cost'] <= 4):
+                    problems.append(f'{where}: cost must be null or 0-4')
                 if not isinstance(rec.get('hidden_gem'), bool):
                     problems.append(f'{where}: hidden_gem must be true/false')
                 if not isinstance(rec.get('bundle_only'), bool):
@@ -247,6 +364,7 @@ def load():
 
 def main():
     records, problems = load()
+    problems.extend(apply_availability(records))
     if problems:
         print(f'{len(problems)} problem(s):', file=sys.stderr)
         for p in problems[:40]:
@@ -256,7 +374,12 @@ def main():
         return 1
 
     assign_ids(records)
-    ordered = [{k: r[k] for k in ['id'] + FIELDS + list(OPTIONAL)} for r in records]
+    ordered = []
+    for r in records:
+        row = {k: r[k] for k in ['id'] + FIELDS + list(OPTIONAL)}
+        if 'availability' in r:
+            row['availability'] = r['availability']
+        ordered.append(row)
 
     os.makedirs('data', exist_ok=True)
     with open(os.path.join('data', 'adventures.json'), 'w', encoding='utf-8') as fh:
@@ -267,9 +390,11 @@ def main():
     dogs = collections.Counter(r['dog_friendly'] for r in records)
     gems = sum(1 for r in records if r['hidden_gem'])
 
-    stamp_counts(len(records))
-    stamp_listing(records)
-    print(f'{len(records)} adventures written to data/adventures.json')
+    available = [r for r in records if is_available(r)]
+    stamp_counts(len(available))
+    stamp_listing(available)
+    print(f'{len(records)} stored adventures written to data/adventures.json')
+    print(f'  available in discovery: {len(available)}')
     print('  continents: ' + ', '.join(f'{k} {v}' for k, v in by_continent.most_common()))
     print('  countries:  ' + ', '.join(f'{k} {v}' for k, v in by_country.most_common()))
     print(f'  hidden gems (paid): {gems}')

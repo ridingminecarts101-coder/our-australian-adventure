@@ -113,7 +113,7 @@ function packStats(adventures) {
   const n = {};
   let total = 0;
   for (const a of adventures) {
-    if (!a.hidden_gem || !a.pack) continue;
+    if (a.availability?.status === 'unavailable' || !a.hidden_gem || !a.pack) continue;
     total++;
     if (a.pack !== 'all') n[a.pack] = (n[a.pack] || 0) + 1;
   }
@@ -122,7 +122,8 @@ function packStats(adventures) {
 }
 
 function bundleOnlyStats(adventures) {
-  return adventures.reduce((n, a) => n + (a.bundle_only ? 1 : 0), 0);
+  return adventures.reduce((n, a) => n + (a.bundle_only
+    && a.availability?.status !== 'unavailable' ? 1 : 0), 0);
 }
 
 // Packs worth showing: everything with something in it, plus the bundle.

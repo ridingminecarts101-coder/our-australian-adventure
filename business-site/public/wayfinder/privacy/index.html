@@ -13,7 +13,7 @@
   <main id="main">
     <header class="page-hero"><div class="narrow"><p class="breadcrumbs"><a href="/">RL Applications</a> / <a href="/wayfinder/">Wayfinder</a> / Privacy</p><p class="eyebrow">Privacy information</p><h1>Your data in Wayfinder</h1><p class="lede">A plain-language account of what the testing build may handle, why it is used and what remains under verification.</p><p class="meta">Last updated 14 September 2026</p></div></header>
     <article class="prose"><div class="narrow">
-      <div class="notice warning"><p><strong>Testing status:</strong> Account email and recovery may be unreliable. Group sharing is currently unavailable, Community protections are still being tested, and purchases are not active in the web review build. Contact support for help with account deletion. Avoid posting sensitive material and keep another copy of important photos and trip notes during testing.</p></div>
+      <div class="notice warning"><p><strong>Testing status:</strong> Email verification and password recovery are available. Group sharing is currently unavailable, Community protections are still being tested, and purchases are not active in the web review build. Contact support for help with account deletion. Avoid posting sensitive material and keep another copy of important photos and trip notes during testing.</p></div>
       <h2>Who operates Wayfinder</h2>
       <p>Wayfinder is developed and operated by Riley Nicholas Lawler, a sole trader operating RL Applications in Australia (ABN 92 363 169 656). Questions and privacy requests can be sent to <a href="mailto:rambodog555@gmail.com?subject=Wayfinder%20privacy">rambodog555@gmail.com</a>. The <a href="/privacy/">studio privacy page</a> explains how the RL Applications website and general enquiries are handled.</p>
 
@@ -51,7 +51,8 @@
         <li><strong>GitHub Pages</strong> hosts the current Wayfinder PWA.</li>
         <li><strong>Cloudflare Pages</strong> hosts this support and policy website. These hosting providers may receive normal connection information such as IP address and browser details.</li>
         <li><strong>BigDataCloud</strong> receives coordinates when you choose the optional Near me lookup.</li>
-        <li><strong>Email infrastructure</strong> carries messages sent to support and will support account emails once production delivery is configured.</li>
+        <li><strong>Resend</strong> sends Wayfinder account confirmation and recovery email for Supabase. It receives the recipient email address, the authentication message and link or code, and delivery metadata needed to send and troubleshoot the message. The configured sending region is Tokyo (<code>ap-northeast-1</code>), but that setting does not mean all processing or storage stays in Japan. Open and click tracking are disabled. Resend does not receive Wayfinder photos through this account-email flow. <a href="https://resend.com/legal/privacy-policy">Resend privacy policy</a>.</li>
+        <li><strong>Google email infrastructure</strong> carries messages sent to the current public support address. The Resend no-reply address is only an automated account sender and is not a monitored support mailbox.</li>
       </ul>
       <p>Providers may process information outside Australia under their own infrastructure and terms. This website contains no advertising or analytics script and does not set advertising cookies.</p>
 

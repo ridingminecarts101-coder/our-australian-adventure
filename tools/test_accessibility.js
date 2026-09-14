@@ -99,6 +99,7 @@ async function modalBehavior() {
 function cardAndSelectionBehavior() {
   const context = {
     row: () => ({completed:false,shortlisted:false}), isLocked: () => false,
+    isUnavailable: () => false, progressView: 'personal', personalProgress: new Map(),
     esc: value => String(value).replaceAll('&','&amp;').replaceAll('"','&quot;'),
     lockedTitle: () => 'Locked adventure', lockNote: () => '', metaLine: () => 'Place',
   };

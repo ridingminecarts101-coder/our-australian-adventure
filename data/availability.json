@@ -1,0 +1,196 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": 489,
+      "status": "unavailable",
+      "reason": "This earlier same-day two-coast challenge has no verified end-to-end itinerary. The linked sunrise activity covers Cape Byron only, so Wayfinder has paused the combined recommendation while preserving existing memories.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "NSW National Parks and Wildlife Service",
+        "url": "https://www.nationalparks.nsw.gov.au/things-to-do/guided-tours/guided-sunrise-tour-to-byron-bay-lighthouse"
+      }
+    },
+    {
+      "id": 1393,
+      "status": "unavailable",
+      "reason": "The National Park Service currently lists mainland ice-cave access as closed. Lake ice can become unsafe rapidly; only plan this walk after the park explicitly reopens access.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "US National Park Service",
+        "url": "https://home.nps.gov/apis/mainland-caves-winter.htm"
+      }
+    },
+    {
+      "id": 1415,
+      "status": "unavailable",
+      "reason": "Cape Hatteras Lighthouse climbing is closed throughout 2026 for restoration. The surrounding outdoor grounds remain open; this listing specifically concerns the climb.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "US National Park Service",
+        "url": "https://www.nps.gov/caha/planyourvisit/lighthouseclimbs.htm"
+      }
+    },
+    {
+      "id": 2166,
+      "status": "unavailable",
+      "reason": "Wayfinder has paused this general Marquette ice-cave listing because it does not identify a confirmed managed route or access point. Regional ice information cannot establish that a particular shoreline is safe to enter.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "NOAA",
+        "url": "https://www.ecowatch.noaa.gov/index.php/regions/great-lakes/lake-superior"
+      }
+    },
+    {
+      "id": 2476,
+      "status": "unavailable",
+      "replacement_id": 714,
+      "reason": "This earlier listing duplicates the Giant's Causeway experience in Northern Ireland. Your existing memories and photos remain here; open the current listing to plan a new visit.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "National Trust",
+        "url": "https://www.nationaltrust.org.uk/visit/northern-ireland/giants-causeway"
+      }
+    },
+    {
+      "id": 2699,
+      "status": "unavailable",
+      "reason": "The exact San-guided tracking and plant-use experience in this earlier listing has not been corroborated. Local nature walks exist, but Wayfinder has paused this specific promise until the community or operator confirms its arrangements.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "Okavango Jakotsha Community Trust",
+        "url": "https://www.okavangojakotshatrust.com/"
+      }
+    },
+    {
+      "id": 2727,
+      "status": "unavailable",
+      "reason": "Painted Dog Conservation says it does not offer game drives. Wayfinder's earlier claim that visitors could join its radio-tracking drives is unsupported; this specific experience has been paused. Its visitor centre is a separate activity.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "Painted Dog Conservation",
+        "url": "https://www.painteddog.org/faq"
+      }
+    },
+    {
+      "id": 2890,
+      "status": "unavailable",
+      "reason": "This listing no longer recommends swimming in Guelta d'Archei. The protected waterhole supports a remnant crocodile population; its conservation description does not establish swimming as a permitted visitor activity.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "UNESCO World Heritage Centre",
+        "url": "https://whc.unesco.org/en/list/1475/"
+      }
+    },
+    {
+      "id": 2895,
+      "status": "unavailable",
+      "reason": "Virunga National Park has suspended Nyiragongo treks until further notice. The older activity description is not an indication that a trek can currently be booked.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "Virunga National Park",
+        "url": "https://visit.virunga.org/"
+      }
+    },
+    {
+      "id": 2896,
+      "status": "unavailable",
+      "reason": "Virunga National Park has suspended gorilla treks until further notice. The older activity description is not an indication that trekking is currently available.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "Virunga National Park",
+        "url": "https://visit.virunga.org/"
+      }
+    },
+    {
+      "id": 3015,
+      "status": "unavailable",
+      "reason": "Wayfinder has paused this swimming recommendation while responsible operator practices are verified. Field research recorded disturbance and breaches of dolphin-interaction guidelines; this pause does not claim that all local tours are closed.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "Rebecca Hamilton, SIT field research",
+        "url": "https://digitalcollections.sit.edu/isp_collection/1695/"
+      }
+    },
+    {
+      "id": 3074,
+      "status": "unavailable",
+      "reason": "Current arrangements for this named trail need confirmation. Uganda Wildlife Authority promotes Batwa-guided visits, but its December 2025 safeguard report records an expired community tourism agreement under renewal. This listing is paused pending clarification, rather than a claim that every Batwa experience is closed.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "Uganda Wildlife Authority",
+        "url": "https://ugandawildlife.org/wp-content/uploads/2022/09/Mgahinga-Validated-VMGP-FINAL_IFPA-CD_DEC-2025.pdf"
+      }
+    },
+    {
+      "id": 4448,
+      "status": "unavailable",
+      "replacement_id": 623,
+      "reason": "This earlier listing duplicates the same experience in the current catalogue. Your existing memories and photos remain here; open the current listing to plan a new visit.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "New Zealand Department of Conservation",
+        "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/nelson-tasman/places/kahurangi-national-park/things-to-do/tracks/oparara-arch/"
+      }
+    },
+    {
+      "id": 4450,
+      "status": "unavailable",
+      "replacement_id": 531,
+      "reason": "This earlier listing duplicates the same experience in the current catalogue. Your existing memories and photos remain here; open the current listing to plan a new visit.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "New Zealand Department of Conservation",
+        "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/waikato/places/waitomo-area/tracks/marokopa-falls-walk/"
+      }
+    },
+    {
+      "id": 4453,
+      "status": "unavailable",
+      "replacement_id": 624,
+      "reason": "This earlier listing duplicates the same experience in the current catalogue. Your existing memories and photos remain here; open the current listing to plan a new visit.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "New Zealand Department of Conservation",
+        "url": "https://www.doc.govt.nz/parks-and-recreation/places-to-go/west-coast/places/mokihinui-river-area/things-to-do/tracks/the-old-ghost-road/"
+      }
+    },
+    {
+      "id": 4797,
+      "status": "unavailable",
+      "reason": "The primary page confirms the biosphere reserve and community-livelihood context, but no exact current page was found for the catalogue's promised community-guided visitor activity. A commercial itinerary reaches Khar Us Lake with local guides, but does not establish a community guide or reserve-authorised programme.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "UNESCO Man and the Biosphere Programme",
+        "url": "https://www.unesco.org/en/mab/khar-us-lake"
+      }
+    },
+    {
+      "id": 4828,
+      "status": "unavailable",
+      "reason": "The exact official park page confirms the lake, public hours, paths and wetland viewing, but no current park or operator page confirms paddling on Tasek Merimbun. A Tutong package mentions paddling at a different resort, which cannot be transferred to this lake.",
+      "reviewed_at": "2026-09-14",
+      "source": {
+        "type": "primary",
+        "publisher": "Brunei Tourism Development Department",
+        "url": "https://www.bruneitourism.com/places/tasek-merimbun-heritage-park/"
+      }
+    }
+  ]
+}

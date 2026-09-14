@@ -28,9 +28,20 @@ NOTES = {
     'TT': 'Trinidad sits on the South American shelf but is grouped with the '
           'Caribbean, and so with North America. Standard, but a choice.',
     'AW': 'Aruba likewise sits off the South American coast; Caribbean grouping.',
-    'ID': 'Transcontinental - mostly Asia, with Papua in Oceania. Filed under Asia.',
-    'TR': 'Transcontinental. Istanbul west of the Bosphorus resolves to Europe '
-          'on the map; the rest of Anatolia to the Middle East.',
+    'ID': 'Transcontinental - mostly Asia, with Papua in Oceania. The product '
+          'files the whole country under Asia.',
+    'TL': 'Geographically in Southeast Asia, though it appears beside Oceania '
+          'in some travel catalogues. The product files it under Asia.',
+    'TR': 'Transcontinental. The product files the whole country under its '
+          'Middle East travel region, so every named Turkish map dot agrees '
+          'with the country list.',
+    'RU': 'Transcontinental. The product files the whole country under Europe; '
+          'this deliberately makes the Europe map window span northern Asia.',
+    'GE': 'The product files Georgia under its Middle East travel region rather '
+          'than splitting the Caucasus between Europe and Asia.',
+    'AM': 'The product files Armenia under its Middle East travel region.',
+    'AZ': 'The product files Azerbaijan under its Middle East travel region.',
+    'CY': 'The product files Cyprus under its Middle East travel region.',
     'IL': 'Jerusalem Old City sits in East Jerusalem, which most of the world '
           'regards as occupied. The entry says so rather than skirting it.',
     'HK': 'Listed separately from China because it has its own ISO code and its '

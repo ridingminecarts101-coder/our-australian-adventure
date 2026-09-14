@@ -9,6 +9,13 @@
  */
 'use strict';
 
+// GitHub Pages cannot attach CSP frame-ancestors or X-Frame-Options response
+// headers. frame-guard.js paints a refusal; this aborts before any account or
+// device-local state is read. It is defense in depth, not a header substitute.
+if (window.__WAYFINDER_FRAMED__) {
+  throw new Error('Wayfinder refused to start inside a frame');
+}
+
 // ── Constants ────────────────────────────────────────────────────────
 const LS = {
   progress: 'oaa.progress.v1',
@@ -41,6 +48,13 @@ const TOURISM = {
   AUS: 'https://www.australia.com',
 };
 const COST_LABEL = ['Free', 'Under $25pp', '$25–75pp', '$75–200pp', '$200+pp'];
+function costLabel(cost) {
+  return Number.isInteger(cost) && cost >= 0 && cost < COST_LABEL.length
+    ? COST_LABEL[cost] : 'Check pricing';
+}
+function seasonShareLabel(season) {
+  return season === 'Check dates' ? 'dates: check before visiting' : `best ${season}`;
+}
 const DIFF_LABEL = ['', 'Very easy', 'Easy', 'Moderate', 'Hard', 'Serious undertaking'];
 
 // ── App state ────────────────────────────────────────────────────────
@@ -66,12 +80,14 @@ let pendingPasswordRecovery = null;
 let recoveryRequestBusy = false;
 let recoveryRequestAttempt = 0;
 let accountUpgradeBusy = false;
+let verificationRefreshBusy = false;
+let verificationResendBusy = false;
 let authGeneration = 0;
 let signOutHandling = false;
 let signOutWork = null;
 let accountDeletionInProgress = false;
 
-const filters = { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 4, dog: 'All' };
+const filters = { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 'All', dog: 'All' };
 
 // Where we are in world -> continent -> country -> region -> adventures.
 let nav = { level: 'world', continent: null, country: null, admin1: null };
@@ -154,10 +170,14 @@ function metaLine(a) {
  *
  * Display is separate: locked gems still appear in the list, blurred.
  */
-function countable(a)  { return !isLocked(a); }
+function isUnavailable(a) {
+  return !!(a && a.availability && a.availability.status === 'unavailable');
+}
+function countable(a)  { return !isUnavailable(a) && !isLocked(a); }
 function countableTotal() { return ADV.reduce((n, a) => n + (countable(a) ? 1 : 0), 0); }
 function countOf(pred) { return ADV.filter(a => countable(a) && pred(a)).length; }
 function doneOf(pred)  { return ADV.filter(a => countable(a) && pred(a) && isDone(a.id)).length; }
+function unavailableOf(pred) { return ADV.filter(a => isUnavailable(a) && pred(a)).length; }
 function catalogueHas(pred) { return ADV.some(pred); }
 function doneCount() {
   let n = 0;
@@ -496,7 +516,7 @@ async function resubscribeRealtime() {
   }
 }
 
-const RT_CHANNELS = ['progress-sync', 'group-progress-sync', 'member-sync', 'photo-sync', 'trip-sync'];
+const RT_CHANNELS = ['progress-sync', 'group-progress-sync', 'group-sync', 'member-sync', 'photo-sync', 'trip-sync'];
 
 function subscribeRealtime() {
   if (!sb) return;
@@ -552,12 +572,24 @@ function subscribeRealtime() {
     })
     .subscribe();
 
+  // Invite state and ownership are account-visible group fields. Refresh the
+  // aligned membership model when an owner rotates/revokes an invite,
+  // transfers ownership or disposes of the group on another device.
+  sb.channel('group-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, async () => {
+      if (!subscriptionCurrent()) return;
+      await loadGroups();
+      if (!subscriptionCurrent()) return;
+      renderAll();
+    })
+    .subscribe();
+
   // Someone renaming themselves has to reach the other phones straight away,
   // or "ticked by" goes stale again in a different way.
   sb.channel('member-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, async () => {
       if (!subscriptionCurrent()) return;
-      await loadMembers();
+      await loadGroups();
       if (!subscriptionCurrent()) return;
       renderAll();
     })
@@ -1460,6 +1492,7 @@ async function share(payload, fallbackText) {
 async function shareAdventure(id) {
   const a = ADV.find(x => x.id === id);
   if (!a) return;
+  if (isUnavailable(a)) return toast('That listing is paused');
   // Sharing a gem you cannot read would put the paid description into a
   // message. The sheet for a locked one has no share button, but a deep link
   // or a stale trip can still reach here.
@@ -1471,7 +1504,7 @@ async function shareAdventure(id) {
     '',
     a.description,
     '',
-    `${a.category} · ${DIFF_LABEL[a.difficulty]} · ${COST_LABEL[a.cost]} · best ${a.season}`,
+    `${a.category} · ${DIFF_LABEL[a.difficulty]} · ${costLabel(a.cost)} · ${seasonShareLabel(a.season)}`,
   ];
   const text = lines.join('\n');
   await share({ title: `${a.title} — Wayfinder`, text, url }, `${text}\n\n${url}`);
@@ -1580,6 +1613,7 @@ async function showNotification(title, body, tag) {
  * explicit browsing, and "take care" destinations remain eligible.
  */
 function automaticDiscoveryAllowed(a) {
+  if (isUnavailable(a)) return false;
   const adv = a && advisoryFor(a.country);
   return !adv || adv.level !== 'avoid';
 }
@@ -1642,6 +1676,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
  */
 function inSeason(season, month = new Date().getMonth()) {
   if (!season) return true;
+  if (String(season).trim().toLowerCase() === 'check dates') return false;
   if (/year.?round/i.test(season)) return true;
   const parts = String(season).split('-').map(x => x.trim());
   if (parts.length !== 2) return MONTHS[month] === parts[0];
@@ -1729,7 +1764,7 @@ async function loadGroups() {
   const owner = userId, generation = authGeneration;
   const { data, error } = await sb
     .from('group_members')
-    .select('group_id, display_name, share_completions, groups(id, name, join_code)')
+    .select('group_id, display_name, share_completions, groups(id, name, join_code, owner_id, invite_enabled)')
     .eq('user_id', owner);
   if (owner !== userId || generation !== authGeneration) return;
   if (error) {
@@ -1781,7 +1816,8 @@ async function loadMembers() {
     if (!/does not exist|schema cache/i.test(error.message)) console.warn('members', error.message);
     return;
   }
-  for (const m of data || []) if (m.display_name) members.set(m.user_id, m.display_name);
+  for (const m of data || []) members.set(m.user_id,
+    m.display_name || (m.user_id === userId ? who || 'You' : 'Group member'));
   await pushMyName();
 }
 
@@ -1906,7 +1942,7 @@ async function joinGroup(code) {
   if (!await requireName('You are about to join a shared list.')) return;
   if (!current()) return;
   const clean = code.trim().toUpperCase();
-  if (!/^[A-Z0-9]{6,12}$/.test(clean)) return toast('That join code is not valid');
+  if (!/^[A-Z0-9]{6,32}$/.test(clean)) return toast('That join code is not valid');
   const sharePast = confirm('Share your past and future completion ticks with this group?\n\nNotes, ratings and shortlist stay private. Choose Cancel to join privately and share later.');
   const result = await sb.rpc('join_group_by_code', {
     p_join_code: clean, p_display_name: who,
@@ -1943,6 +1979,9 @@ async function joinGroup(code) {
  */
 async function leaveGroup(id) {
   if (!sb || !userId) return;
+  const lifecycle = claimGroupLifecycle();
+  if (!lifecycle) return toast('A group change is already in progress');
+  try {
   const owner = userId, generation = authGeneration;
   const current = () => owner === userId && generation === authGeneration;
   const g = myGroups.find(x => x.id === id);
@@ -1965,6 +2004,130 @@ async function leaveGroup(id) {
   if (!current()) return;
   renderAll();
   toast('Left the group. Your personal data is still yours.');
+  } finally {
+    releaseGroupLifecycle(lifecycle);
+  }
+}
+
+function currentGroupLifecycle(token, groupId) {
+  return token === groupLifecycleBusy
+    && token.owner === userId
+    && token.generation === authGeneration
+    && (!groupId || activeGroupId === groupId);
+}
+
+async function rotateGroupInvite(groupId) {
+  if (!sb || !userId || !groupId) return;
+  const lifecycle = claimGroupLifecycle();
+  if (!lifecycle) return toast('A group change is already in progress');
+  try {
+    const result = await sb.rpc('rotate_group_invite', { p_group_id: groupId });
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    if (result.error) { toast('Could not create a new invite'); console.warn(result.error); return; }
+    await loadGroups();
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    renderMe();
+    toast('New invite ready. Earlier links no longer work.');
+  } finally {
+    releaseGroupLifecycle(lifecycle);
+  }
+}
+
+async function revokeGroupInvite(groupId) {
+  if (!sb || !userId || !groupId) return;
+  const lifecycle = claimGroupLifecycle();
+  if (!lifecycle) return toast('A group change is already in progress');
+  try {
+    const { error } = await sb.rpc('revoke_group_invite', { p_group_id: groupId });
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    if (error) { toast('Could not pause invitations'); console.warn(error); return; }
+    await loadGroups();
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    renderMe();
+    toast('Invitations paused. Existing members are unchanged.');
+  } finally {
+    releaseGroupLifecycle(lifecycle);
+  }
+}
+
+async function removeGroupMember(groupId, memberId) {
+  if (!sb || !userId || !groupId || !memberId || memberId === userId) return;
+  const lifecycle = claimGroupLifecycle();
+  if (!lifecycle) return toast('A group change is already in progress');
+  try {
+    const label = nameOf(memberId, 'this member');
+    if (!confirm(`Remove ${label} from this group?\n\nTheir personal progress, trips and photos remain theirs. Their shared completion view is removed from this group.`)) return;
+    const { error } = await sb.rpc('remove_group_member', {
+      p_group_id: groupId, p_user_id: memberId,
+    });
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    if (error) { toast('Could not remove that member'); console.warn(error); return; }
+    await loadMembers();
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    await pullProgress();
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    await pullPhotos();
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    await pullTrips();
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    renderAll();
+    toast(`${label} was removed. Their personal data was not deleted.`);
+  } finally {
+    releaseGroupLifecycle(lifecycle);
+  }
+}
+
+async function transferGroupOwnership(groupId, memberId) {
+  if (!sb || !userId || !groupId || !memberId || memberId === userId) return;
+  const lifecycle = claimGroupLifecycle();
+  if (!lifecycle) return toast('A group change is already in progress');
+  try {
+    const label = nameOf(memberId, 'this member');
+    if (!confirm(`Make ${label} the group owner?\n\nThey will control invitations, members and group disposal.`)) return;
+    const { error } = await sb.rpc('transfer_group_ownership', {
+      p_group_id: groupId, p_user_id: memberId,
+    });
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    if (error) { toast('Could not transfer ownership'); console.warn(error); return; }
+    await loadGroups();
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    renderMe();
+    toast(`${label} is now the group owner.`);
+  } finally {
+    releaseGroupLifecycle(lifecycle);
+  }
+}
+
+async function deleteOwnedGroup(groupId) {
+  if (!sb || !userId || !groupId) return;
+  const lifecycle = claimGroupLifecycle();
+  if (!lifecycle) return toast('A group change is already in progress');
+  try {
+    const group = myGroups.find(g => g.id === groupId);
+    const expected = group ? group.name : 'DELETE';
+    const entered = prompt(`Delete ${expected}?\n\nThis removes the shared group and memberships. Everyone keeps their personal progress, trips, photos and purchases.\n\nType the group name to confirm.`, '');
+    if (entered !== expected) {
+      if (entered !== null) toast('Group name did not match');
+      return;
+    }
+    const { error } = await sb.rpc('delete_group', { p_group_id: groupId });
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    if (error) { toast('Could not delete the group'); console.warn(error); return; }
+    activeGroupId = null;
+    localStorage.removeItem(LS.group);
+    await loadGroups();
+    if (!currentGroupLifecycle(lifecycle)) return;
+    await setProgressView('personal');
+    if (!currentGroupLifecycle(lifecycle)) return;
+    await pullPhotos();
+    if (!currentGroupLifecycle(lifecycle)) return;
+    await pullTrips();
+    if (!currentGroupLifecycle(lifecycle)) return;
+    renderAll();
+    toast('Group deleted. Everyone’s personal data is unchanged.');
+  } finally {
+    releaseGroupLifecycle(lifecycle);
+  }
 }
 
 /* The shop, such as it is. Counts come from the data, so a pack can never
@@ -2028,6 +2191,8 @@ function renderMe_groups() {
   }
 
   const active = myGroups.find(g => g.id === activeGroupId);
+  const isOwner = !!active && active.owner_id === userId;
+  const otherMembers = [...members.entries()].filter(([id]) => id !== userId);
   el.innerHTML = `
     ${active ? `
       <p>Group: <strong>${esc(active.name)}</strong>.</p>
@@ -2041,10 +2206,25 @@ function renderMe_groups() {
       <button class="btn-ghost" data-groupact="sharing" data-enabled="${active.share_completions ? 'false' : 'true'}">
         ${active.share_completions ? 'Stop sharing my completion ticks' : 'Share my completion ticks'}
       </button>
-      <p class="fineprint">Join code <code class="joincode">${esc(active.join_code)}</code> — read it
-         out, or send the link below and they will be asked to confirm.</p>
-      <button class="btn-ghost" data-groupact="invite">↗ Send an invite link</button>
-      <button class="btn-ghost danger" data-groupact="leave" data-id="${esc(active.id)}">Leave this group</button>
+      ${active.invite_enabled ? `
+        <p class="fineprint">Join code <code class="joincode">${esc(active.join_code)}</code> — read it
+           out, or send the link below and they will be asked to confirm.</p>
+        <button class="btn-ghost" data-groupact="invite">↗ Send an invite link</button>
+      ` : '<p class="fineprint">Invitations are paused. Existing members can still use the group.</p>'}
+      ${isOwner ? `
+        <p class="fineprint"><strong>You manage this group.</strong> A new invite immediately invalidates every earlier link.</p>
+        <button class="btn-ghost" data-groupact="rotate-invite">${active.invite_enabled ? 'Rotate invite code' : 'Create a new invite'}</button>
+        ${active.invite_enabled ? '<button class="btn-ghost" data-groupact="revoke-invite">Pause invitations</button>' : ''}
+        ${otherMembers.length ? `<div class="group-list"><p class="fineprint">Members:</p>${otherMembers.map(([id, name]) => `
+          <div class="group-member"><span>${esc(name)}</span>
+            <button class="btn-ghost" data-groupact="transfer-owner" data-member="${esc(id)}">Make owner</button>
+            <button class="btn-ghost danger" data-groupact="remove-member" data-member="${esc(id)}">Remove</button>
+          </div>`).join('')}</div>` : '<p class="fineprint">You are the only member.</p>'}
+        ${otherMembers.length
+          ? '<p class="fineprint">Transfer ownership before leaving this group.</p>'
+          : `<button class="btn-ghost danger" data-groupact="leave" data-id="${esc(active.id)}">Leave and dispose of this group</button>`}
+        <button class="btn-ghost danger" data-groupact="delete-group">Delete this group</button>
+      ` : `<button class="btn-ghost danger" data-groupact="leave" data-id="${esc(active.id)}">Leave this group</button>`}
     ` : `
       <p class="muted">This list is yours alone at the moment.</p>
       <button class="btn-ghost" data-groupact="create">Create a group</button>
@@ -2219,24 +2399,98 @@ async function deleteAccount() {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-//  Navigation: world -> continent -> country -> region -> adventures
+//  Navigation: world -> continent -> country -> optional subdivision -> adventures
 // ══════════════════════════════════════════════════════════════════════
+const SUBDIVISION_NAV_MIN = 6;
+const COUNTRY_WIDE_ADMIN1 = Object.freeze({ AU: Object.freeze(['AUS']) });
+
+// Saved browser-history states and old bookmarks can outlive a reviewed
+// geographic correction. These aliases are the unambiguous old->current
+// subdivision pairs from geographic-correction-overlay.json. They affect only
+// navigation: adventure IDs, progress and catalogue rows are never rewritten.
+// Barbados|Barbados is deliberately absent because it split across six
+// parishes; placeholderAdmin1() safely opens Everything in Barbados instead.
+const ADMIN1_NAV_ALIASES = Object.freeze({
+  'AL|Gjirokaster': ['AL', 'Gjirokastër'],
+  'AL|Kukes': ['AL', 'Kukës'],
+  'AL|Sarande': ['AL', 'Vlorë'],
+  'AL|Shkoder': ['AL', 'Shkodër'],
+  'AL|Tirane': ['AL', 'Tirana'],
+  'AL|Vlore': ['AL', 'Vlorë'],
+  'AR|Rio Negro': ['AR', 'Río Negro'],
+  'AU|Victoria': ['AU', 'VIC'],
+  'CL|Araucania': ['CL', 'Araucanía'],
+  'CL|Aysen': ['CL', 'Aysén'],
+  'CL|Valparaiso': ['CL', 'Valparaíso'],
+  'CU|Guantanamo': ['CU', 'Guantánamo'],
+  'CZ|Usti nad Labem': ['CZ', 'Ústí nad Labem'],
+  'DK|Faroe Islands': ['FO', 'Vágar'],
+  'ES|Castile and Leon': ['ES', 'Castile and León'],
+  'GT|Peten': ['GT', 'Petén'],
+  'HN|Atlantida': ['HN', 'Atlántida'],
+  'HU|Veszprem': ['HU', 'Veszprém'],
+  'IE|Antrim': ['GB', 'Northern Ireland'],
+  'NZ|Manawatu-Whanganui': ['NZ', 'Manawatū-Whanganui'],
+  'PA|Chiriqui': ['PA', 'Chiriquí'],
+  'PY|Boqueron': ['PY', 'Boquerón'],
+  'SK|Banska Bystrica': ['SK', 'Banská Bystrica'],
+  'SK|Zilina': ['SK', 'Žilina'],
+});
+
+function countryUsesSubdivisionStep(code) {
+  const counts = typeof COUNTRY_SUBDIVISION_COUNT === 'object'
+    ? COUNTRY_SUBDIVISION_COUNT : {};
+  return (counts[code] || 0) >= SUBDIVISION_NAV_MIN;
+}
+
+function countryDestination(continent, country) {
+  return countryUsesSubdivisionStep(country)
+    ? { level: 'country', continent, country, admin1: null }
+    : { level: 'adventures', continent, country, admin1: null };
+}
+
+function placeholderAdmin1(country, admin1) {
+  if (!countryUsesSubdivisionStep(country) || !admin1) return false;
+  if ((COUNTRY_WIDE_ADMIN1[country] || []).includes(admin1)) return true;
+  const normalized = value => foldSearch(value).replace(/[^a-z0-9]/g, '');
+  return normalized(admin1) === normalized(countryName(country));
+}
+
+function resolveAdmin1NavigationAlias(continent, country, admin1) {
+  if (!admin1) return { continent, country, admin1 };
+  if (ADV.some(a => a.continent === continent && a.country === country && a.admin1 === admin1)) {
+    return { continent, country, admin1 };
+  }
+  const target = ADMIN1_NAV_ALIASES[`${country}|${admin1}`];
+  if (!target) return null;
+  const [targetCountry, targetAdmin1] = target;
+  const targetContinent = COUNTRY_CONT[targetCountry] || continent;
+  return ADV.some(a => a.continent === targetContinent && a.country === targetCountry && a.admin1 === targetAdmin1)
+    ? { continent: targetContinent, country: targetCountry, admin1: targetAdmin1 }
+    : null;
+}
+
 function safeNavigationState(value) {
   if (!value || typeof value !== 'object') return null;
   const level = value.level;
   if (level === 'world') return { level, continent: null, country: null, admin1: null };
   if (!['continent', 'islands', 'country', 'adventures'].includes(level)) return null;
-  const continent = typeof value.continent === 'string' ? value.continent : null;
+  let continent = typeof value.continent === 'string' ? value.continent : null;
   if (!continent || !CONTINENT_ORDER.includes(continent)) return null;
   if (level === 'continent' || level === 'islands') {
     return { level, continent, country: null, admin1: null };
   }
-  const country = typeof value.country === 'string' ? value.country : null;
+  let country = typeof value.country === 'string' ? value.country : null;
   if (!country || !ADV.some(a => a.continent === continent && a.country === country)) return null;
-  if (level === 'country') return { level, continent, country, admin1: null };
-  const admin1 = typeof value.admin1 === 'string' && value.admin1 ? value.admin1 : null;
-  if (admin1 && !ADV.some(a => a.continent === continent && a.country === country && a.admin1 === admin1)) {
-    return null;
+  if (level === 'country') return countryDestination(continent, country);
+  let admin1 = typeof value.admin1 === 'string' && value.admin1 ? value.admin1 : null;
+  if (placeholderAdmin1(country, admin1)) {
+    return { level, continent, country, admin1: null };
+  }
+  if (admin1) {
+    const resolved = resolveAdmin1NavigationAlias(continent, country, admin1);
+    if (!resolved) return null;
+    ({ continent, country, admin1 } = resolved);
   }
   return { level, continent, country, admin1 };
 }
@@ -2324,7 +2578,26 @@ function renderAdvisory(code) {
  */
 function safeTitle(a) {
   if (!a) return '';
+  // A paused operational listing is public status information, not paid teaser
+  // content. Keep the real title visible in explicit history and detail views.
+  if (isUnavailable(a)) return a.title;
   return isLocked(a) ? lockedTitle(a) : a.title;
+}
+
+function availabilityPanelHTML(a) {
+  if (!isUnavailable(a)) return '';
+  const info = a.availability;
+  const source = info.source || {};
+  const replacement = Number.isInteger(info.replacement_id)
+    ? ADV.find(item => item.id === info.replacement_id && !isUnavailable(item)) : null;
+  return `<div class="advisory-box care availability-box">
+    <div class="advisory-head">Listing paused</div>
+    <p>${esc(info.reason)}</p>
+    <p class="fineprint">Status reviewed ${esc(fmtDate(info.reviewed_at) || info.reviewed_at)}.
+      <a href="${esc(source.url)}" target="_blank" rel="noopener">Read the source from ${esc(source.publisher)}</a>
+      before making plans.</p>
+    ${replacement ? `<button type="button" class="btn-ghost" data-open="${replacement.id}">Open current listing</button>` : ''}
+  </div>`;
 }
 
 function lockedTitle(a) {
@@ -2337,7 +2610,7 @@ function lockNote(a) {
   return `Locked. Part of ${pack.name} — ${pack.price}.`;
 }
 
-function placeRow({ label, sub, count, total = count, done, flag, swatch, advisory, onClick }) {
+function placeRow({ label, sub, count, total = count, unavailable = 0, done, flag, swatch, advisory, onClick }) {
   const pct = count ? Math.round((done / count) * 100) : 0;
   const interactive = !!onClick;
   const mark = advisory === 'avoid' ? '<span class="advisory avoid">Do not travel</span>'
@@ -2349,7 +2622,9 @@ function placeRow({ label, sub, count, total = count, done, flag, swatch, adviso
     <div class="placerow-main">
       <div class="placerow-top">
         <span class="placerow-label">${swatch ? `<i class="swatch" style="background:${esc(swatch)}"></i>` : ''}${flag ? flag + ' ' : ''}${esc(label)}</span>
-        <span class="placerow-count">${count ? `${done} / ${count}` : (total ? 'Locked adventures' : (advisory ? '' : 'Coming soon'))}</span>
+        <span class="placerow-count">${count ? `${done} / ${count}` : (total
+          ? (unavailable === total ? 'Paused listings' : (unavailable ? 'Paused or locked listings' : 'Locked adventures'))
+          : (advisory ? '' : 'Coming soon'))}</span>
       </div>
       ${mark}
       ${sub ? `<div class="placerow-sub">${esc(sub)}</div>` : ''}
@@ -2367,7 +2642,7 @@ function crumbHTML() {
   }
   if (nav.country) parts.push({ label: countryName(nav.country), go: { level: 'country', continent: nav.continent, country: nav.country } });
   if (nav.admin1) {
-    const a = ADV.find(x => x.admin1 === nav.admin1);
+    const a = ADV.find(x => x.country === nav.country && x.admin1 === nav.admin1);
     parts.push({ label: a ? regionName(a) : nav.admin1, go: null });
   }
   return parts.map((p, i) => {
@@ -2396,9 +2671,15 @@ function renderPlaces() {
   }
 
   if (nav.level === 'world') {
-    const counts = {};
-    for (const name of CONTINENT_ORDER) counts[name] = countOf(a => a.continent === name);
-    drawWorldMap($('#worldMap'), counts, null, null);
+    const counts = {}, mapPresence = {};
+    for (const name of CONTINENT_ORDER) {
+      counts[name] = countOf(a => a.continent === name);
+      // Map colour means the catalogue contains somewhere to explore. Access
+      // still controls the row count, completion target and detail paywall.
+      // Otherwise bundle-only Antarctica looks like an empty continent.
+      mapPresence[name] = ADV.some(a => a.continent === name) ? 1 : 0;
+    }
+    drawWorldMap($('#worldMap'), mapPresence, null, null);
 
     // Most content first, so the list reorders itself as regions fill in.
     // Empty continents fall to the bottom in their declared order.
@@ -2414,7 +2695,8 @@ function renderPlaces() {
         sub: entries.length ? (name === 'Antarctica' && !count ? 'Included with All Continents'
                      : `${countries} ${countries === 1 ? 'country' : 'countries'}`)
                    : `${countriesIn(name, () => 0).length} countries, none mapped yet`,
-        count, total: entries.length, done: doneOf(a => a.continent === name),
+        count, total: entries.length, unavailable: entries.filter(isUnavailable).length,
+        done: doneOf(a => a.continent === name),
         // Openable either way: an empty continent still lists its countries,
         // which is more use than a dead row.
         onClick: { level: 'continent', continent: name },
@@ -2437,10 +2719,13 @@ function renderPlaces() {
     for (const a of ADV) {
       if (a.continent !== nav.continent) continue;
       let t = tally.get(a.country);
-      if (!t) tally.set(a.country, t = { n: 0, total: 0, done: 0, regions: new Set() });
+      if (!t) tally.set(a.country, t = { n: 0, total: 0, unavailable: 0, done: 0, regions: new Set() });
       t.total++;
-      t.regions.add(a.admin1);
-      if (isLocked(a)) continue;
+      if (countryUsesSubdivisionStep(a.country) && a.admin1 && !placeholderAdmin1(a.country, a.admin1)) {
+        t.regions.add(a.admin1);
+      }
+      if (isUnavailable(a)) t.unavailable++;
+      if (!countable(a)) continue;
       t.n++;
       if (isDone(a.id)) t.done++;
     }
@@ -2455,7 +2740,7 @@ function renderPlaces() {
     const codes = islandsOnly ? islands : mainland;
 
     const countryRow = code => {
-      const t = tally.get(code) || { n: 0, total: 0, done: 0, regions: new Set() };
+      const t = tally.get(code) || { n: 0, total: 0, unavailable: 0, done: 0, regions: new Set() };
       const n = t.n;
       const regions = t.regions.size;
       const adv = advisoryFor(code);
@@ -2466,8 +2751,9 @@ function renderPlaces() {
                            : 'Not mapped yet');
       return placeRow({
         label: countryName(code), flag: countryFlag(code),
-        sub, count: n, total: t.total, done: t.done, advisory: adv ? adv.level : null,
-        onClick: t.total ? { level: 'country', continent: nav.continent, country: code } : null,
+        sub, count: n, total: t.total, unavailable: t.unavailable,
+        done: t.done, advisory: adv ? adv.level : null,
+        onClick: t.total ? countryDestination(nav.continent, code) : null,
       });
     };
 
@@ -2497,7 +2783,8 @@ function renderPlaces() {
         label: 'Island nations', flag: '🏝️',
         sub: islands.map(countryName).slice(0, 4).join(', ') +
              (islands.length > 4 ? ` and ${islands.length - 4} more` : ''),
-        count: islandCount, total: ADV.filter(inIslands).length, done: doneOf(inIslands),
+        count: islandCount, total: ADV.filter(inIslands).length,
+        unavailable: unavailableOf(inIslands), done: doneOf(inIslands),
         onClick: { level: 'islands', continent: nav.continent },
       }) : islands.map(countryRow).join(''));
     return;
@@ -2505,11 +2792,21 @@ function renderPlaces() {
 
   if (nav.level === 'country') {
     const inC = a => a.country === nav.country;
-    const regions = [...new Set(ADV.filter(inC).map(a => a.admin1))];
+    // A country-name placeholder means the row's first-level subdivision has
+    // not been researched. It stays under Everything, but must not masquerade
+    // as a state/parish tile beside real first-level areas.
+    const regions = [...new Set(ADV.filter(inC)
+      .map(a => a.admin1)
+      .filter(admin1 => !placeholderAdmin1(nav.country, admin1)))];
     $('#crumb').innerHTML = crumbHTML();
     $('#placeTitle').textContent = countryFlag(nav.country) + ' ' + countryName(nav.country);
-    $('#placeSub').textContent = countOf(inC) ? `${countOf(inC)} adventures`
-      : `${ADV.filter(inC).length} locked adventures`;
+    const countryCount = countOf(inC);
+    const countryTotal = ADV.filter(inC).length;
+    const countryUnavailable = unavailableOf(inC);
+    $('#placeSub').textContent = countryCount ? `${countryCount} adventures`
+      : (countryUnavailable === countryTotal
+        ? `${countryUnavailable} unavailable ${countryUnavailable === 1 ? 'experience' : 'experiences'}`
+        : `${countryTotal} locked adventures`);
     renderAdvisory(nav.country);
 
     const rows = regions.map(code => {
@@ -2517,7 +2814,8 @@ function renderPlaces() {
       const sample = ADV.find(inR);
       return {
         label: regionName(sample), code,
-        count: countOf(inR), total: ADV.filter(inR).length, done: doneOf(inR),
+        count: countOf(inR), total: ADV.filter(inR).length,
+        unavailable: unavailableOf(inR), done: doneOf(inR),
       };
     }).sort((a, b) => a.label.localeCompare(b.label));
 
@@ -2525,11 +2823,12 @@ function renderPlaces() {
       placeRow({
         label: `Everything in ${countryName(nav.country)}`,
         sub: 'Skip the regions and see the lot',
-        count: countOf(inC), total: ADV.filter(inC).length, done: doneOf(inC),
+        count: countOf(inC), total: ADV.filter(inC).length,
+        unavailable: unavailableOf(inC), done: doneOf(inC),
         onClick: { level: 'adventures', continent: nav.continent, country: nav.country },
       }) +
       rows.map(r => placeRow({
-        label: r.label, count: r.count, total: r.total, done: r.done,
+        label: r.label, count: r.count, total: r.total, unavailable: r.unavailable, done: r.done,
         onClick: { level: 'adventures', continent: nav.continent, country: nav.country, admin1: r.code },
       })).join('');
     return;
@@ -2564,13 +2863,15 @@ function filtered() {
     if (filters.cat !== 'All' && a.category !== filters.cat) return false;
     if (filters.dog !== 'All' && a.dog_friendly !== filters.dog) return false;
     if (a.difficulty > filters.diff) return false;
-    if (a.cost > filters.cost) return false;
+    // Unknown prices belong in the default catalogue, but cannot honestly
+    // satisfy a user-selected maximum-price filter.
+    if (filters.cost !== 'All' && (!Number.isInteger(a.cost) || a.cost > filters.cost)) return false;
     if (q) {
       // A locked gem is searchable only on what is actually visible on its
       // card. Matching the blurred title meant you could confirm a guess at
       // paid content, and worse, it was inconsistent: a card would appear for
       // a word the reader had no way of knowing was there.
-      const hay = (isLocked(a)
+      const hay = (isLocked(a) && !isUnavailable(a)
         ? `${a.region} ${regionName(a)} ${countryName(a.country)} ${a.category}`
         : `${a.title} ${a.place} ${a.region} ${regionName(a)} ${countryName(a.country)} ${a.category} ${a.description}`
       );
@@ -2583,21 +2884,29 @@ function filtered() {
 
 function cardHTML(a) {
   const r = row(a.id);
+  const personal = progressView === 'group'
+    ? (personalProgress.get(a.id) || { completed: false }) : r;
   const locked = isLocked(a);
-  return `<article class="card ${r.completed ? 'done' : ''}${locked ? ' locked' : ''}">
+  const unavailable = isUnavailable(a);
+  const canUntick = unavailable && !!personal.completed;
+  const blocked = unavailable ? !canUntick : locked;
+  const title = unavailable ? a.title : (locked ? lockedTitle(a) : a.title);
+  const meta = unavailable ? metaLine(a) : (locked ? lockNote(a) : metaLine(a));
+  return `<article class="card ${r.completed ? 'done' : ''}${locked && !unavailable ? ' locked' : ''}${unavailable ? ' unavailable' : ''}">
     <button class="tick ${r.completed ? 'on' : ''}" data-toggle="${a.id}"
-            aria-label="${r.completed ? 'Mark not done' : 'Mark done'}"${locked ? ' disabled' : ''}>✓</button>
+            aria-label="${canUntick || (!unavailable && r.completed) ? 'Mark not done' : (unavailable ? 'Paused listing' : 'Mark done')}"${blocked ? ' disabled' : ''}>✓</button>
     <button type="button" class="card-body card-detail" data-open="${a.id}"
-            aria-label="Open details for ${esc(locked ? lockedTitle(a) : a.title)}">
-      <div class="card-title">${esc(locked ? lockedTitle(a) : a.title)}</div>
-      <div class="card-meta">${esc(locked ? lockNote(a) : metaLine(a))}</div>
+            aria-label="Open details for ${esc(title)}">
+      <div class="card-title">${esc(title)}</div>
+      <div class="card-meta">${esc(meta)}</div>
       <div class="badges">
         <span class="badge">${esc(a.category)}</span>
         <span class="badge">${'●'.repeat(a.difficulty)}${'○'.repeat(5 - a.difficulty)}</span>
-        <span class="badge">${a.cost === 0 ? 'Free' : '$'.repeat(a.cost)}</span>
+        <span class="badge">${a.cost === null ? 'Check pricing' : (a.cost === 0 ? 'Free' : '$'.repeat(a.cost))}</span>
         ${a.dog_friendly === 'yes' ? '<span class="badge dog">🐾 Dogs</span>' : ''}
-        ${a.hidden_gem ? `<span class="badge gem">💎 Hidden gem${isLocked(a) ? ' · locked' : ''}</span>` : ''}
-        ${a.bundle_only ? `<span class="badge">🔒 Bundle exclusive${isLocked(a) ? ' · locked' : ''}</span>` : ''}
+        ${a.hidden_gem ? `<span class="badge gem">💎 Hidden gem${locked && !unavailable ? ' · locked' : ''}</span>` : ''}
+        ${a.bundle_only ? `<span class="badge">🔒 Bundle exclusive${locked && !unavailable ? ' · locked' : ''}</span>` : ''}
+        ${unavailable ? '<span class="badge">Listing paused</span>' : ''}
         ${r.shortlisted ? '<span class="badge star">⭐ Shortlist</span>' : ''}
       </div>
       <span class="card-open" aria-hidden="true">›</span>
@@ -2616,11 +2925,13 @@ function renderList() {
   // This line counts rows on screen, which includes locked gems - they are
   // visible, just blurred. The completion target in the header is a different
   // number on purpose, so say how many of these do not count towards it.
-  const locked = arr.reduce((n, a) => n + (isLocked(a) ? 1 : 0), 0);
+  const unavailable = arr.reduce((n, a) => n + (isUnavailable(a) ? 1 : 0), 0);
+  const locked = arr.reduce((n, a) => n + (isLocked(a) && !isUnavailable(a) ? 1 : 0), 0);
   $('#resultCount').textContent =
     `${arr.length} adventure${arr.length === 1 ? '' : 's'}` +
     (arr.length !== scopedTotal ? ` of ${scopedTotal}` : '') +
-    (locked ? ` · ${locked} locked` : '');
+    (locked ? ` · ${locked} locked` : '') +
+    (unavailable ? ` · ${unavailable} paused` : '');
   $('#list').innerHTML = arr.length
     ? arr.map(cardHTML).join('')
     : `<div class="empty">Nothing matches that.<br>Try clearing a filter.</div>`;
@@ -2895,6 +3206,10 @@ function toggleTripMember(tripId, adventureId) {
   // Planning around something you cannot read would put a blurred line in the
   // itinerary. Removing one that is already there stays allowed.
   const already = (trip.adventure_ids || []).includes(adventureId);
+  if (!already && isUnavailable(ADV.find(a => a.id === adventureId))) {
+    toast('That listing is paused');
+    return;
+  }
   if (!already && isLocked(ADV.find(a => a.id === adventureId))) {
     toast('That one is locked');
     return;
@@ -3328,7 +3643,7 @@ function closeLightbox() {
 // How many gems this person could find at all. Twenty-five is the intent,
 // but there is no point asking for more than they own.
 function gemTarget() {
-  const reachable = ADV.reduce((n, a) => n + (a.hidden_gem && !isLocked(a) ? 1 : 0), 0);
+  const reachable = ADV.reduce((n, a) => n + (a.hidden_gem && countable(a) ? 1 : 0), 0);
   return Math.min(25, reachable);
 }
 
@@ -3494,6 +3809,45 @@ function renderSheet(id) {
   // anybody books. See partners.js.
   const book = bookingLink(a);
 
+  // Site-specific operational holds remain explicitly browseable so an old tick,
+  // memory or photo never disappears. The current status appears before any
+  // purchase gate, and stale operational/booking actions are not offered.
+  if (isUnavailable(a)) {
+    const personal = progressView === 'group'
+      ? (personalProgress.get(id) || { completed: false }) : r;
+    const hasHistory = !!(personal.completed || personal.rating || personal.memory || ph.length);
+    $('#sheetBody').innerHTML = `
+      <h2>${esc(a.title)}</h2>
+      <div class="sheet-place">${esc([a.place, a.region, regionName(a)].filter((v, i, arr) => v && arr.indexOf(v) === i).join(' · '))} · ${countryFlag(a.country)} ${esc(countryName(a.country))}</div>
+      <span class="badge">Listing paused</span>
+      ${availabilityPanelHTML(a)}
+      ${advisoryPanelHTML(a.country)}
+      ${hasHistory ? `
+        ${personal.completed ? `<div class="donenote">Your past completion is preserved${personal.completed_at ? ' from ' + fmtDate(personal.completed_at) : ''}.</div>
+        <div class="sheet-actions"><button class="btn-ghost" data-act="toggle">Remove mistaken completion tick</button></div>` : ''}
+        <h3>Your rating</h3>
+        <div class="stars">
+          ${[1, 2, 3, 4, 5].map(n => `<button data-rate="${n}" aria-label="${n} star${n > 1 ? 's' : ''}">${n <= (personal.rating || 0) ? '★' : '☆'}</button>`).join('')}
+        </div>
+        <h3>Your memory</h3>
+        <textarea id="memoryBox" placeholder="What actually happened…">${esc(personal.memory || '')}</textarea>
+        <div class="sheet-actions"><button class="btn-primary" data-act="saveMemory">Save memory</button></div>
+        <h3>Photos${ph.length ? ` <span class="count">${ph.length}</span>` : ''}</h3>
+        <div class="strip sheet-strip" data-group-key="adv-${a.id}">
+          ${ph.map(p => thumbHTML(p)).join('')}
+          <button class="thumb add" data-act="takePhoto" aria-label="Take a photo">
+            <span>📷</span><small>Camera</small>
+          </button>
+          <button class="thumb add" data-act="addPhoto" aria-label="Add from library">
+            <span>+</span><small>Library</small>
+          </button>
+        </div>
+        <p class="photohint">${photoHint}</p>`
+        : '<p>This listing is paused and cannot be marked complete or added to a trip.</p>'}`;
+    hydrateThumbs();
+    return;
+  }
+
   // A locked gem gets its own sheet: what it is, roughly where, and the one
   // button that changes that. No teaser copy pretending to be a description.
   if (isLocked(a)) {
@@ -3527,7 +3881,7 @@ function renderSheet(id) {
     <div class="factgrid">
       <div class="fact"><b>Category</b><span>${esc(a.category)}</span></div>
       <div class="fact"><b>Effort</b><span>${esc(DIFF_LABEL[a.difficulty])}</span></div>
-      <div class="fact"><b>Rough cost</b><span>${esc(COST_LABEL[a.cost])}</span></div>
+      <div class="fact"><b>Rough cost</b><span>${esc(costLabel(a.cost))}</span></div>
       <div class="fact"><b>Time needed</b><span>${esc(a.duration)}</span></div>
       <div class="fact"><b>Best time</b><span>${esc(a.season)}</span></div>
       <div class="fact"><b>Dogs</b><span>${esc(DOG_LABEL[a.dog_friendly])}</span></div>
@@ -3587,7 +3941,9 @@ function openSheet(id) {
 }
 function closeSheet() {
   const box = $('#memoryBox');                 // don't lose an unsaved memory
-  if (box && openId !== null && box.value !== (row(openId).memory || '')) {
+  const editable = progressView === 'group'
+    ? (personalProgress.get(openId) || { memory: null }) : row(openId);
+  if (box && openId !== null && box.value !== (editable.memory || '')) {
     applyPatch(openId, { memory: box.value.trim() || null });
   }
   openId = null;
@@ -3595,9 +3951,11 @@ function closeSheet() {
 }
 
 function toggleDone(id) {
+  const adventure = ADV.find(a => a.id === id);
   const r = progressView === 'group'
     ? (personalProgress.get(id) || { completed: false })
     : row(id);
+  if (isUnavailable(adventure) && !r.completed) return toast('That listing is paused');
   const nowDone = !r.completed;
   applyPatch(id, {
     completed: nowDone,
@@ -3606,8 +3964,7 @@ function toggleDone(id) {
     completed_by_id: nowDone ? userId : null,
   });
   if (nowDone) {
-    const a = ADV.find(x => x.id === id);
-    toast(`✓ ${a ? safeTitle(a) : 'Done'}`);
+    toast(`✓ ${adventure ? safeTitle(adventure) : 'Done'}`);
   }
 }
 
@@ -3634,7 +3991,8 @@ function buildFilterOptions() {
   $('#fCat').innerHTML = opt('All', 'All categories') +
     [...new Set(ADV.map(a => a.category))].sort().map(c => opt(c, c)).join('');
   $('#fDiff').innerHTML = [5, 4, 3, 2, 1].map(n => opt(n, DIFF_LABEL[n] + ' or less', n === 5)).join('');
-  $('#fCost').innerHTML = [4, 3, 2, 1, 0].map(n => opt(n, COST_LABEL[n] + (n ? ' or less' : ' only'), n === 4)).join('');
+  $('#fCost').innerHTML = opt('All', 'Any price', true) +
+    [4, 3, 2, 1, 0].map(n => opt(n, COST_LABEL[n] + (n ? ' or less' : ' only'))).join('');
 }
 
 /* Android's back button and its incoming links.
@@ -3671,7 +4029,13 @@ function wireNative() {
     }
 
     // Then back up the map, one level at a time.
-    if (nav.level === 'adventures') return goTo('country', { continent: nav.continent, country: nav.country });
+    if (nav.level === 'adventures' && nav.admin1) {
+      return goTo('country', { continent: nav.continent, country: nav.country });
+    }
+    if (nav.level === 'adventures' && ISLAND_GROUP.has(nav.country)) {
+      return goTo('islands', { continent: nav.continent });
+    }
+    if (nav.level === 'adventures') return goTo('continent', { continent: nav.continent });
     if (nav.level === 'country' && ISLAND_GROUP.has(nav.country)) {
       return goTo('islands', { continent: nav.continent });
     }
@@ -3690,6 +4054,9 @@ function wireNative() {
   App.addListener('appUrlOpen', ({ url }) => {
     try { openDeepLink(new URL(url).search); }
     catch { /* a URL we cannot parse is not a link we can act on */ }
+  });
+  App.addListener('appStateChange', ({ isActive }) => {
+    if (isActive) void refreshPendingEmailVerification();
   });
 
   /* Light icons in the status bar, because the header behind it is rust.
@@ -3713,7 +4080,7 @@ function openRandomAdventure() {
   const pool = remaining.filter(a => automaticDiscoveryAllowed(a) && !isLocked(a));
   if (!pool.length) {
     if (remaining.some(a => !isLocked(a) && !automaticDiscoveryAllowed(a))) {
-      return toast('No automatic picks are available here. Check current travel advice or adjust your filters.');
+      return toast('No automatic picks are available here. Check current notices or travel advice, or adjust your filters.');
     }
     return toast(remaining.some(isLocked)
       ? 'Only locked adventures are left here'
@@ -3766,12 +4133,12 @@ function wireUI() {
   $('#fState').onchange = e => { filters.st = e.target.value; renderList(); };
   $('#fCat').onchange   = e => { filters.cat = e.target.value; renderList(); };
   $('#fDiff').onchange  = e => { filters.diff = +e.target.value; renderList(); };
-  $('#fCost').onchange  = e => { filters.cost = +e.target.value; renderList(); };
+  $('#fCost').onchange  = e => { filters.cost = e.target.value === 'All' ? 'All' : +e.target.value; renderList(); };
   $('#fDog').onchange   = e => { filters.dog = e.target.value; renderList(); };
   $('#clearFilters').onclick = () => {
-    Object.assign(filters, { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 4, dog: 'All' });
+    Object.assign(filters, { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 'All', dog: 'All' });
     $('#search').value = ''; $('#fState').value = 'All'; $('#fCat').value = 'All';
-    $('#fDiff').value = '5'; $('#fCost').value = '4'; $('#fDog').value = 'All';
+    $('#fDiff').value = '5'; $('#fCost').value = 'All'; $('#fDog').value = 'All';
     $$('#quickChips .chip').forEach((x, i) => x.classList.toggle('on', i === 0));
     setPressedSelection($$('#quickChips .chip'), $('#quickChips .chip'));
     renderList();
@@ -4042,7 +4409,7 @@ function wireUI() {
     if (!b) return;
     if (b.dataset.groupact === 'invite') {
       const g = myGroups.find(x => x.id === activeGroupId);
-      if (!g) return;
+      if (!g || !g.invite_enabled) return toast('Invitations are paused');
       const url = linkTo({ join: g.join_code });
       const text = `Join "${g.name}" on Wayfinder. Open this and it will ask you to confirm.`;
       return share({ title: 'Wayfinder', text, url }, `${text}
@@ -4075,6 +4442,11 @@ ${url}`);
       renderAll();
       toast(enabled ? 'Your progress is shared with this group' : 'Your progress is private again');
     }
+    if (b.dataset.groupact === 'rotate-invite') await rotateGroupInvite(activeGroupId);
+    if (b.dataset.groupact === 'revoke-invite') await revokeGroupInvite(activeGroupId);
+    if (b.dataset.groupact === 'remove-member') await removeGroupMember(activeGroupId, b.dataset.member);
+    if (b.dataset.groupact === 'transfer-owner') await transferGroupOwnership(activeGroupId, b.dataset.member);
+    if (b.dataset.groupact === 'delete-group') await deleteOwnedGroup(activeGroupId);
     if (b.dataset.groupact === 'leave') await leaveGroup(b.dataset.id);
   });
 
@@ -4494,6 +4866,88 @@ function authRedirectUrl() {
   return configured || `${location.origin}${location.pathname}`;
 }
 
+// Expired links must reach a usable screen without displaying arbitrary URL text.
+function consumeAuthLinkError() {
+  const query = new URLSearchParams(location.search || '');
+  const fragment = new URLSearchParams(String(location.hash || '').replace(/^#/, ''));
+  if (!query.has('error') && !query.has('error_code')
+      && !fragment.has('error') && !fragment.has('error_code')) return '';
+  for (const key of ['error', 'error_code', 'error_description', 'error_uri']) {
+    query.delete(key); fragment.delete(key);
+  }
+  const search = query.toString(), hash = fragment.toString();
+  history.replaceState(history.state || null, '', location.pathname
+    + (search ? '?' + search : '') + (hash ? '#' + hash : ''));
+  return 'That email link is invalid, expired or already used. Sign in if you have verified your email, or request a fresh verification or recovery email below.';
+}
+
+async function resendVerificationEmail(email) {
+  if (!sb || signOutHandling || accountDeletionInProgress || verificationResendBusy) return false;
+  const clean = String(email || '').trim();
+  if (!clean || !clean.includes('@')) { setAuthMessage('Enter your email first.'); return false; }
+  const generation = authGeneration, owner = userId;
+  const button = $('#resendVerificationBtn');
+  verificationResendBusy = true;
+  if (button) button.disabled = true;
+  try {
+    const { error } = await sb.auth.resend({ type: 'signup', email: clean,
+      options: { emailRedirectTo: authRedirectUrl() } });
+    if (generation !== authGeneration || owner !== userId) return false;
+    setAuthMessage(error ? (error.message || 'Could not resend verification. Try again shortly.')
+      : 'If this account is waiting for verification, a new email is on its way. Use the newest link.', !error);
+    return !error;
+  } catch {
+    if (generation === authGeneration && owner === userId) {
+      setAuthMessage('Could not resend verification. Check your connection and try again.');
+    }
+    return false;
+  } finally {
+    verificationResendBusy = false;
+    if (generation === authGeneration && owner === userId && button) button.disabled = false;
+  }
+}
+
+async function refreshPendingEmailVerification() {
+  const marker = readAccountUpgrade();
+  if (!sb || !accountUiReady || !marker || marker.stage !== 'awaiting-email'
+      || marker.owner_id !== userId || verificationRefreshBusy || accountUpgradeBusy
+      || signOutHandling || accountDeletionInProgress || passwordRecoveryMode) return false;
+  const owner = userId, generation = authGeneration;
+  const button = $('#checkVerificationBtn');
+  verificationRefreshBusy = true;
+  if (button) button.disabled = true;
+  try {
+    // Safari and the native WebView have separate storage. Verify the original
+    // session on the server; never import another browser's account or photos.
+    const { data, error } = await sb.auth.getUser();
+    if (generation !== authGeneration || owner !== userId || signOutHandling
+        || accountDeletionInProgress || passwordRecoveryMode) return false;
+    const currentMarker = readAccountUpgrade();
+    if (!currentMarker || currentMarker.owner_id !== owner || currentMarker.stage !== 'awaiting-email') return false;
+    if (error || !data || !data.user || data.user.id !== owner) {
+      setAuthMessage('Could not check verification. Reconnect and try again. Your progress stays on this account.');
+      return false;
+    }
+    if (isAnonymousUser(data.user) || !hasVerifiedEmail(data.user)) {
+      setAuthMessage('Email is not verified yet. Open the latest link, then check again.');
+      return false;
+    }
+    accountUser = data.user;
+    accountIsAnonymous = false;
+    writeAccountUpgrade(owner, 'set-password');
+    showAnonymousUpgradeScreen('set-password');
+    return true;
+  } catch {
+    if (generation === authGeneration && owner === userId) {
+      setAuthMessage('Could not check verification. Reconnect and try again.');
+    }
+    return false;
+  } finally {
+    verificationRefreshBusy = false;
+    if (generation === authGeneration && owner === userId && button) button.disabled = false;
+  }
+}
+
 function setAuthMessage(text, ok = false) {
   const msg = $('#lockMsg');
   msg.className = 'lock-msg' + (ok ? ' ok' : '');
@@ -4563,6 +5017,8 @@ function configureAccountLock({ email, password, form = true }) {
   $('#accountPasswordLabel').classList.toggle('hidden', !password);
   $('#accountPassword').classList.toggle('hidden', !password);
   $('#accountPassword').required = !!password;
+  $('#resendVerificationBtn').classList.toggle('hidden', !email || !password);
+  $('#checkVerificationBtn').classList.add('hidden');
 }
 
 async function trySignIn(email, password) {
@@ -4591,6 +5047,8 @@ function wireAccountLock() {
     $('#accountEmail').value, $('#accountPassword').value);
   $('#forgotPasswordBtn').onclick = () => sendPasswordReset(
     $('#accountEmail').value, 'lock', $('#forgotPasswordBtn'));
+  $('#resendVerificationBtn').onclick = () => resendVerificationEmail($('#accountEmail').value);
+  $('#checkVerificationBtn').onclick = () => refreshPendingEmailVerification();
 }
 
 function showAccountLock(message = '') {
@@ -4603,6 +5061,7 @@ function showAccountLock(message = '') {
   $('#createAccountBtn').disabled = false;
   $('#forgotPasswordBtn').classList.remove('hidden');
   $('#forgotPasswordBtn').disabled = false;
+  $('#resendVerificationBtn').disabled = false;
   configureAccountLock({ email: true, password: true });
   $('#accountPassword').autocomplete = 'current-password';
   wireAccountLock();
@@ -4964,6 +5423,8 @@ function showAnonymousUpgradeScreen(requestedStage = null) {
   if (stage === 'awaiting-email') {
     $('.lock-sub').textContent = 'Open the verification link we sent. Your existing progress stays on this account.';
     configureAccountLock({ email: false, password: false, form: false });
+    $('#checkVerificationBtn').classList.remove('hidden');
+    $('#checkVerificationBtn').disabled = verificationRefreshBusy;
     setAuthMessage('Waiting for email verification. Return here after opening the link.', true);
     return;
   }
@@ -5143,7 +5604,7 @@ function openDeepLink(search = location.search) {
   if (join) {
     (async () => {
       const clean = join.trim().toUpperCase();
-      if (!/^[A-Z0-9]{6,12}$/.test(clean)) return toast('That invite link is not valid');
+      if (!/^[A-Z0-9]{6,32}$/.test(clean)) return toast('That invite link is not valid');
       if (confirm('Join the Wayfinder group from this invite?\n\nYour personal list stays yours. You will choose whether to share past completions.')) {
         await joinGroup(clean);
       }
@@ -5178,6 +5639,7 @@ function openDeepLink(search = location.search) {
 // ══════════════════════════════════════════════════════════════════════
 async function boot() {
   try {
+    const authLinkMessage = consumeAuthLinkError();
     $('#lock').classList.add('hidden');
     const cfg = window.OAA_CONFIG || {};
     const configured = cfg.supabaseUrl && !/YOUR_/.test(cfg.supabaseUrl) &&
@@ -5278,7 +5740,7 @@ async function boot() {
       else console.info('anonymous sign-in unavailable; showing account sign-in:', error.message);
     }
 
-    showAccountLock();
+    showAccountLock(authLinkMessage);
   } catch (error) {
     console.warn('Wayfinder startup failed:', error);
     showStartupError();

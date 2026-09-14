@@ -329,6 +329,7 @@ input, select, textarea { font: inherit; color: inherit; }
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 15px; font-weight: 700; letter-spacing: .18em;
   background: var(--sand-2); padding: 3px 8px; border-radius: 6px; color: var(--ink);
+  overflow-wrap: anywhere; word-break: break-word;
 }
 .mapwrap {
   background: var(--card); border: 1px solid var(--line);

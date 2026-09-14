@@ -1,0 +1,2869 @@
+{
+  "format": "wayfinder-geographic-correction-overlay-v1",
+  "created": "2026-09-14",
+  "status": "final_proposal_only_no_canonical_mutation",
+  "snapshot": {
+    "registry_countries": 231,
+    "catalogue_rows": 5183,
+    "catalogue_countries": 228
+  },
+  "source_registry": {
+    "cldr48_names": {
+      "url": "https://github.com/unicode-org/cldr/blob/release-48/common/subdivisions/en.xml",
+      "kind": "official_standard",
+      "sha256": "997a14da1144bb66f36a829db1783afe41f7529e33070afbe964bdd8e387b1d2"
+    },
+    "cldr48_containment": {
+      "url": "https://github.com/unicode-org/cldr/blob/release-48/common/supplemental/subdivisions.xml",
+      "kind": "official_standard",
+      "sha256": "63095a3b5bd4e0a00d9e1cf96853808cacd0ec7c826dbcbfd31755c6cb9b6c55"
+    },
+    "ireland_cso": {
+      "url": "https://www.cso.ie/en/methods/classifications/csodatastandardsandclassifications/csostatisticalclassifications/csogeographicalclassifications-nationallevel/",
+      "kind": "official_primary"
+    },
+    "tourism_ni": {
+      "url": "https://www.tourismni.com/news/taoiseach-minister-burke-and-minister-archibald-announce-13-successful-projects-under-the-shared-island-coast-to-coast-capital-investment-scheme/",
+      "kind": "official_primary"
+    },
+    "statistics_denmark": {
+      "url": "https://www.dst.dk/da/Statistik/dokumentation/nomenklaturer/nuts",
+      "kind": "official_primary"
+    },
+    "denmark_faroe": {
+      "url": "https://denmark.dk/people-and-culture/the-faroe-islands",
+      "kind": "official_primary"
+    },
+    "statistics_faroe": {
+      "url": "https://www.hagstova.fo/en/population/population/population",
+      "kind": "official_primary"
+    },
+    "barbados_parishes": {
+      "url": "https://labour.gov.bb/wp-content/uploads/2023/06/Appendix-I-LMIS-Data-Sets-amended-May-30-2023.pdf",
+      "kind": "official_primary"
+    },
+    "bb_landscapes": {
+      "url": "https://www.visitbarbados.org/things-to-do/itineraries/discover-barbados%E2%80%99-landscapes-and-enchanting-array-of-flora-and-fauna",
+      "kind": "official_tourism"
+    },
+    "bb_oistins": {
+      "url": "https://www.visitbarbados.org/oistins-bay-gardens",
+      "kind": "official_tourism"
+    },
+    "bb_harrison": {
+      "url": "https://www.visitbarbados.org/fr/%C3%A0-faire-%C3%A0-voir/paroisses/saint-thomas",
+      "kind": "official_tourism"
+    },
+    "bb_carlisle": {
+      "url": "https://www.visitbarbados.org/a-haven-for-turtle-watching",
+      "kind": "official_tourism"
+    },
+    "bb_wildlife": {
+      "url": "https://www.visitbarbados.org/barbados-wildlife-reserve",
+      "kind": "official_tourism"
+    },
+    "albania_instat": {
+      "url": "https://www.instat.gov.al/media/vurntwyn/regional-statistical-yearbook-2024-fin.pdf",
+      "kind": "official_primary"
+    },
+    "national_trust_giants_causeway": {
+      "url": "https://www.nationaltrust.org.uk/visit/northern-ireland/giants-causeway",
+      "kind": "official_primary"
+    },
+    "wayfinder_au_state_code_mapping": {
+      "path": "app.js",
+      "kind": "application_contract",
+      "mapping": {
+        "ACT": "Australian Capital Territory",
+        "NSW": "New South Wales",
+        "NT": "Northern Territory",
+        "QLD": "Queensland",
+        "SA": "South Australia",
+        "TAS": "Tasmania",
+        "VIC": "Victoria",
+        "WA": "Western Australia"
+      }
+    }
+  },
+  "row_overrides": [
+    {
+      "id": 576,
+      "old": {
+        "country": "NZ",
+        "place": "Tongariro Alpine Crossing",
+        "admin1": "Manawatu-Whanganui"
+      },
+      "new": {
+        "country": "NZ",
+        "place": "Tongariro Alpine Crossing",
+        "admin1": "Manawatū-Whanganui"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 577,
+      "old": {
+        "country": "NZ",
+        "place": "Whakapapa",
+        "admin1": "Manawatu-Whanganui"
+      },
+      "new": {
+        "country": "NZ",
+        "place": "Whakapapa",
+        "admin1": "Manawatū-Whanganui"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 578,
+      "old": {
+        "country": "NZ",
+        "place": "Ohakune Old Coach Road",
+        "admin1": "Manawatu-Whanganui"
+      },
+      "new": {
+        "country": "NZ",
+        "place": "Ohakune Old Coach Road",
+        "admin1": "Manawatū-Whanganui"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 579,
+      "old": {
+        "country": "NZ",
+        "place": "Whanganui River",
+        "admin1": "Manawatu-Whanganui"
+      },
+      "new": {
+        "country": "NZ",
+        "place": "Whanganui River",
+        "admin1": "Manawatū-Whanganui"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 580,
+      "old": {
+        "country": "NZ",
+        "place": "Durie Hill Elevator",
+        "admin1": "Manawatu-Whanganui"
+      },
+      "new": {
+        "country": "NZ",
+        "place": "Durie Hill Elevator",
+        "admin1": "Manawatū-Whanganui"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 581,
+      "old": {
+        "country": "NZ",
+        "place": "Manawatu Gorge",
+        "admin1": "Manawatu-Whanganui"
+      },
+      "new": {
+        "country": "NZ",
+        "place": "Manawatu Gorge",
+        "admin1": "Manawatū-Whanganui"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 753,
+      "old": {
+        "country": "CZ",
+        "place": "Bohemian Switzerland",
+        "admin1": "Usti nad Labem"
+      },
+      "new": {
+        "country": "CZ",
+        "place": "Bohemian Switzerland",
+        "admin1": "Ústí nad Labem"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 917,
+      "old": {
+        "country": "ES",
+        "place": "Acueducto de Segovia",
+        "admin1": "Castile and Leon"
+      },
+      "new": {
+        "country": "ES",
+        "place": "Acueducto de Segovia",
+        "admin1": "Castile and León"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 918,
+      "old": {
+        "country": "ES",
+        "place": "Universidad de Salamanca",
+        "admin1": "Castile and Leon"
+      },
+      "new": {
+        "country": "ES",
+        "place": "Universidad de Salamanca",
+        "admin1": "Castile and León"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 919,
+      "old": {
+        "country": "ES",
+        "place": "Atapuerca",
+        "admin1": "Castile and Leon"
+      },
+      "new": {
+        "country": "ES",
+        "place": "Atapuerca",
+        "admin1": "Castile and León"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 1103,
+      "old": {
+        "country": "IE",
+        "place": "The Gobbins",
+        "admin1": "Antrim"
+      },
+      "new": {
+        "country": "GB",
+        "place": "The Gobbins",
+        "admin1": "Northern Ireland"
+      },
+      "sources": [
+        "ireland_cso",
+        "tourism_ni"
+      ],
+      "id_alias_intent": {
+        "mode": "country_key_alias",
+        "add": "GB|The Gobbins",
+        "retain": [
+          "IE|The Gobbins"
+        ]
+      }
+    },
+    {
+      "id": 1169,
+      "old": {
+        "country": "DK",
+        "place": "Sorvagsvatn",
+        "admin1": "Faroe Islands"
+      },
+      "new": {
+        "country": "FO",
+        "place": "Sorvagsvatn",
+        "admin1": "Vágar"
+      },
+      "sources": [
+        "statistics_denmark",
+        "denmark_faroe",
+        "statistics_faroe"
+      ],
+      "id_alias_intent": {
+        "mode": "country_key_alias",
+        "add": "FO|Sorvagsvatn",
+        "retain": [
+          "DK|Sorvagsvatn"
+        ]
+      }
+    },
+    {
+      "id": 1219,
+      "old": {
+        "country": "HU",
+        "place": "Heviz",
+        "admin1": "Veszprem"
+      },
+      "new": {
+        "country": "HU",
+        "place": "Heviz",
+        "admin1": "Veszprém"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 1223,
+      "old": {
+        "country": "SK",
+        "place": "Slovensky raj",
+        "admin1": "Zilina"
+      },
+      "new": {
+        "country": "SK",
+        "place": "Slovensky raj",
+        "admin1": "Žilina"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 1247,
+      "old": {
+        "country": "AL",
+        "place": "Llogara Pass",
+        "admin1": "Vlore"
+      },
+      "new": {
+        "country": "AL",
+        "place": "Llogara Pass",
+        "admin1": "Vlorë"
+      },
+      "sources": [
+        "albania_instat",
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 1248,
+      "old": {
+        "country": "AL",
+        "place": "Gjirokaster",
+        "admin1": "Gjirokaster"
+      },
+      "new": {
+        "country": "AL",
+        "place": "Gjirokaster",
+        "admin1": "Gjirokastër"
+      },
+      "sources": [
+        "albania_instat",
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 1250,
+      "old": {
+        "country": "AL",
+        "place": "Lake Koman",
+        "admin1": "Kukes"
+      },
+      "new": {
+        "country": "AL",
+        "place": "Lake Koman",
+        "admin1": "Kukës"
+      },
+      "sources": [
+        "albania_instat",
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 1543,
+      "old": {
+        "country": "GT",
+        "place": "Tikal",
+        "admin1": "Peten"
+      },
+      "new": {
+        "country": "GT",
+        "place": "Tikal",
+        "admin1": "Petén"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 1578,
+      "old": {
+        "country": "BB",
+        "place": "Carlisle Bay",
+        "admin1": "Barbados"
+      },
+      "new": {
+        "country": "BB",
+        "place": "Carlisle Bay",
+        "admin1": "Saint Michael"
+      },
+      "sources": [
+        "barbados_parishes",
+        "bb_carlisle"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 1579,
+      "old": {
+        "country": "BB",
+        "place": "Harrison's Cave",
+        "admin1": "Barbados"
+      },
+      "new": {
+        "country": "BB",
+        "place": "Harrison's Cave",
+        "admin1": "Saint Thomas"
+      },
+      "sources": [
+        "barbados_parishes",
+        "bb_harrison"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 2476,
+      "old": {
+        "country": "IE",
+        "place": "Giant's Causeway",
+        "admin1": "Antrim"
+      },
+      "new": {
+        "country": "GB",
+        "place": "Giant's Causeway (earlier listing)",
+        "admin1": "Northern Ireland"
+      },
+      "sources": [
+        "ireland_cso",
+        "tourism_ni",
+        "national_trust_giants_causeway"
+      ],
+      "id_alias_intent": {
+        "mode": "distinct_legacy_key",
+        "add": "GB|Giant's Causeway (earlier listing)",
+        "retain": [
+          "IE|Giant's Causeway"
+        ],
+        "reserved_other_key": {
+          "GB|Giant's Causeway": 714
+        }
+      },
+      "compatibility": {
+        "availability_status": "unavailable",
+        "replacement_id": 714,
+        "discovery": "exclude_from_active_values_counts_and_search",
+        "history": "numeric_id_2476_remains_browseable_read_only",
+        "title": "unchanged"
+      }
+    },
+    {
+      "id": 2481,
+      "old": {
+        "country": "IE",
+        "place": "Titanic Belfast",
+        "admin1": "Antrim"
+      },
+      "new": {
+        "country": "GB",
+        "place": "Titanic Belfast",
+        "admin1": "Northern Ireland"
+      },
+      "sources": [
+        "ireland_cso",
+        "tourism_ni"
+      ],
+      "id_alias_intent": {
+        "mode": "country_key_alias",
+        "add": "GB|Titanic Belfast",
+        "retain": [
+          "IE|Titanic Belfast"
+        ]
+      }
+    },
+    {
+      "id": 2527,
+      "old": {
+        "country": "CZ",
+        "place": "Terezin",
+        "admin1": "Usti nad Labem"
+      },
+      "new": {
+        "country": "CZ",
+        "place": "Terezin",
+        "admin1": "Ústí nad Labem"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 2548,
+      "old": {
+        "country": "HU",
+        "place": "Lake Balaton",
+        "admin1": "Veszprem"
+      },
+      "new": {
+        "country": "HU",
+        "place": "Lake Balaton",
+        "admin1": "Veszprém"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3407,
+      "old": {
+        "country": "PA",
+        "place": "Boquete",
+        "admin1": "Chiriqui"
+      },
+      "new": {
+        "country": "PA",
+        "place": "Boquete",
+        "admin1": "Chiriquí"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3408,
+      "old": {
+        "country": "PA",
+        "place": "Volcan Baru",
+        "admin1": "Chiriqui"
+      },
+      "new": {
+        "country": "PA",
+        "place": "Volcan Baru",
+        "admin1": "Chiriquí"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3422,
+      "old": {
+        "country": "GT",
+        "place": "El Mirador",
+        "admin1": "Peten"
+      },
+      "new": {
+        "country": "GT",
+        "place": "El Mirador",
+        "admin1": "Petén"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3423,
+      "old": {
+        "country": "GT",
+        "place": "Yaxha",
+        "admin1": "Peten"
+      },
+      "new": {
+        "country": "GT",
+        "place": "Yaxha",
+        "admin1": "Petén"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3460,
+      "old": {
+        "country": "HN",
+        "place": "Tela",
+        "admin1": "Atlantida"
+      },
+      "new": {
+        "country": "HN",
+        "place": "Tela",
+        "admin1": "Atlántida"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3477,
+      "old": {
+        "country": "CU",
+        "place": "Baracoa",
+        "admin1": "Guantanamo"
+      },
+      "new": {
+        "country": "CU",
+        "place": "Baracoa",
+        "admin1": "Guantánamo"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3531,
+      "old": {
+        "country": "BB",
+        "place": "Bathsheba",
+        "admin1": "Barbados"
+      },
+      "new": {
+        "country": "BB",
+        "place": "Bathsheba",
+        "admin1": "Saint Joseph"
+      },
+      "sources": [
+        "barbados_parishes",
+        "bb_landscapes"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3533,
+      "old": {
+        "country": "BB",
+        "place": "Animal Flower Cave",
+        "admin1": "Barbados"
+      },
+      "new": {
+        "country": "BB",
+        "place": "Animal Flower Cave",
+        "admin1": "Saint Lucy"
+      },
+      "sources": [
+        "barbados_parishes",
+        "bb_landscapes"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3534,
+      "old": {
+        "country": "BB",
+        "place": "Oistins Fish Fry",
+        "admin1": "Barbados"
+      },
+      "new": {
+        "country": "BB",
+        "place": "Oistins Fish Fry",
+        "admin1": "Christ Church"
+      },
+      "sources": [
+        "barbados_parishes",
+        "bb_oistins"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3535,
+      "old": {
+        "country": "BB",
+        "place": "Barbados Wildlife Reserve",
+        "admin1": "Barbados"
+      },
+      "new": {
+        "country": "BB",
+        "place": "Barbados Wildlife Reserve",
+        "admin1": "Saint Peter"
+      },
+      "sources": [
+        "barbados_parishes",
+        "bb_wildlife"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3664,
+      "old": {
+        "country": "AL",
+        "place": "Ksamil",
+        "admin1": "Sarande"
+      },
+      "new": {
+        "country": "AL",
+        "place": "Ksamil",
+        "admin1": "Vlorë"
+      },
+      "sources": [
+        "albania_instat"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3665,
+      "old": {
+        "country": "AL",
+        "place": "Butrint",
+        "admin1": "Sarande"
+      },
+      "new": {
+        "country": "AL",
+        "place": "Butrint",
+        "admin1": "Vlorë"
+      },
+      "sources": [
+        "albania_instat"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3666,
+      "old": {
+        "country": "AL",
+        "place": "Blue Eye",
+        "admin1": "Sarande"
+      },
+      "new": {
+        "country": "AL",
+        "place": "Blue Eye",
+        "admin1": "Vlorë"
+      },
+      "sources": [
+        "albania_instat"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3667,
+      "old": {
+        "country": "AL",
+        "place": "Valbona to Theth",
+        "admin1": "Shkoder"
+      },
+      "new": {
+        "country": "AL",
+        "place": "Valbona to Theth",
+        "admin1": "Shkodër"
+      },
+      "sources": [
+        "albania_instat",
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3668,
+      "old": {
+        "country": "AL",
+        "place": "BunkArt",
+        "admin1": "Tirane"
+      },
+      "new": {
+        "country": "AL",
+        "place": "BunkArt",
+        "admin1": "Tirana"
+      },
+      "sources": [
+        "albania_instat",
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3669,
+      "old": {
+        "country": "AL",
+        "place": "Skanderbeg Square",
+        "admin1": "Tirane"
+      },
+      "new": {
+        "country": "AL",
+        "place": "Skanderbeg Square",
+        "admin1": "Tirana"
+      },
+      "sources": [
+        "albania_instat",
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3670,
+      "old": {
+        "country": "AL",
+        "place": "Lekuresi Castle",
+        "admin1": "Sarande"
+      },
+      "new": {
+        "country": "AL",
+        "place": "Lekuresi Castle",
+        "admin1": "Vlorë"
+      },
+      "sources": [
+        "albania_instat"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3672,
+      "old": {
+        "country": "AL",
+        "place": "Rozafa Castle",
+        "admin1": "Shkoder"
+      },
+      "new": {
+        "country": "AL",
+        "place": "Rozafa Castle",
+        "admin1": "Shkodër"
+      },
+      "sources": [
+        "albania_instat",
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3701,
+      "old": {
+        "country": "SK",
+        "place": "Demanovska Cave",
+        "admin1": "Zilina"
+      },
+      "new": {
+        "country": "SK",
+        "place": "Demanovska Cave",
+        "admin1": "Žilina"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3703,
+      "old": {
+        "country": "SK",
+        "place": "Orava Castle",
+        "admin1": "Zilina"
+      },
+      "new": {
+        "country": "SK",
+        "place": "Orava Castle",
+        "admin1": "Žilina"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3704,
+      "old": {
+        "country": "SK",
+        "place": "Banska Stiavnica",
+        "admin1": "Banska Bystrica"
+      },
+      "new": {
+        "country": "SK",
+        "place": "Banska Stiavnica",
+        "admin1": "Banská Bystrica"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 3705,
+      "old": {
+        "country": "SK",
+        "place": "Vratna Valley",
+        "admin1": "Zilina"
+      },
+      "new": {
+        "country": "SK",
+        "place": "Vratna Valley",
+        "admin1": "Žilina"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4119,
+      "old": {
+        "country": "AR",
+        "place": "Bariloche Circuito Chico",
+        "admin1": "Rio Negro"
+      },
+      "new": {
+        "country": "AR",
+        "place": "Bariloche Circuito Chico",
+        "admin1": "Río Negro"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4120,
+      "old": {
+        "country": "AR",
+        "place": "Cerro Catedral",
+        "admin1": "Rio Negro"
+      },
+      "new": {
+        "country": "AR",
+        "place": "Cerro Catedral",
+        "admin1": "Río Negro"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4125,
+      "old": {
+        "country": "CL",
+        "place": "Valparaiso Street Art",
+        "admin1": "Valparaiso"
+      },
+      "new": {
+        "country": "CL",
+        "place": "Valparaiso Street Art",
+        "admin1": "Valparaíso"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4126,
+      "old": {
+        "country": "CL",
+        "place": "Vina del Mar Beach",
+        "admin1": "Valparaiso"
+      },
+      "new": {
+        "country": "CL",
+        "place": "Vina del Mar Beach",
+        "admin1": "Valparaíso"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4127,
+      "old": {
+        "country": "CL",
+        "place": "Casablanca Valley",
+        "admin1": "Valparaiso"
+      },
+      "new": {
+        "country": "CL",
+        "place": "Casablanca Valley",
+        "admin1": "Valparaíso"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4128,
+      "old": {
+        "country": "CL",
+        "place": "Isla Negra",
+        "admin1": "Valparaiso"
+      },
+      "new": {
+        "country": "CL",
+        "place": "Isla Negra",
+        "admin1": "Valparaíso"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4150,
+      "old": {
+        "country": "CL",
+        "place": "Villarrica Volcano",
+        "admin1": "Araucania"
+      },
+      "new": {
+        "country": "CL",
+        "place": "Villarrica Volcano",
+        "admin1": "Araucanía"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4151,
+      "old": {
+        "country": "CL",
+        "place": "Pucon Hot Springs",
+        "admin1": "Araucania"
+      },
+      "new": {
+        "country": "CL",
+        "place": "Pucon Hot Springs",
+        "admin1": "Araucanía"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4152,
+      "old": {
+        "country": "CL",
+        "place": "Carretera Austral",
+        "admin1": "Aysen"
+      },
+      "new": {
+        "country": "CL",
+        "place": "Carretera Austral",
+        "admin1": "Aysén"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4153,
+      "old": {
+        "country": "CL",
+        "place": "Marble Caves",
+        "admin1": "Aysen"
+      },
+      "new": {
+        "country": "CL",
+        "place": "Marble Caves",
+        "admin1": "Aysén"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4154,
+      "old": {
+        "country": "CL",
+        "place": "Queulat Hanging Glacier",
+        "admin1": "Aysen"
+      },
+      "new": {
+        "country": "CL",
+        "place": "Queulat Hanging Glacier",
+        "admin1": "Aysén"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4242,
+      "old": {
+        "country": "PY",
+        "place": "Filadelfia, Chaco",
+        "admin1": "Boqueron"
+      },
+      "new": {
+        "country": "PY",
+        "place": "Filadelfia, Chaco",
+        "admin1": "Boquerón"
+      },
+      "sources": [
+        "cldr48_names"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4445,
+      "old": {
+        "country": "AU",
+        "place": "Childers Cove",
+        "admin1": "Victoria"
+      },
+      "new": {
+        "country": "AU",
+        "place": "Childers Cove",
+        "admin1": "VIC"
+      },
+      "sources": [
+        "cldr48_names",
+        "wayfinder_au_state_code_mapping"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    },
+    {
+      "id": 4446,
+      "old": {
+        "country": "AU",
+        "place": "Murray-Sunset Pink Lakes",
+        "admin1": "Victoria"
+      },
+      "new": {
+        "country": "AU",
+        "place": "Murray-Sunset Pink Lakes",
+        "admin1": "VIC"
+      },
+      "sources": [
+        "cldr48_names",
+        "wayfinder_au_state_code_mapping"
+      ],
+      "id_alias_intent": {
+        "mode": "unchanged",
+        "add": null,
+        "retain": []
+      }
+    }
+  ],
+  "admin1_navigation_aliases": [
+    {
+      "old": {
+        "country": "AL",
+        "admin1": "Kukes"
+      },
+      "new": {
+        "country": "AL",
+        "admin1": "Kukës"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "AR",
+        "admin1": "Rio Negro"
+      },
+      "new": {
+        "country": "AR",
+        "admin1": "Río Negro"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "CL",
+        "admin1": "Aysen"
+      },
+      "new": {
+        "country": "CL",
+        "admin1": "Aysén"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "CL",
+        "admin1": "Araucania"
+      },
+      "new": {
+        "country": "CL",
+        "admin1": "Araucanía"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "CL",
+        "admin1": "Valparaiso"
+      },
+      "new": {
+        "country": "CL",
+        "admin1": "Valparaíso"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "CU",
+        "admin1": "Guantanamo"
+      },
+      "new": {
+        "country": "CU",
+        "admin1": "Guantánamo"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "CZ",
+        "admin1": "Usti nad Labem"
+      },
+      "new": {
+        "country": "CZ",
+        "admin1": "Ústí nad Labem"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "ES",
+        "admin1": "Castile and Leon"
+      },
+      "new": {
+        "country": "ES",
+        "admin1": "Castile and León"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "GT",
+        "admin1": "Peten"
+      },
+      "new": {
+        "country": "GT",
+        "admin1": "Petén"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "HN",
+        "admin1": "Atlantida"
+      },
+      "new": {
+        "country": "HN",
+        "admin1": "Atlántida"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "HU",
+        "admin1": "Veszprem"
+      },
+      "new": {
+        "country": "HU",
+        "admin1": "Veszprém"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "NZ",
+        "admin1": "Manawatu-Whanganui"
+      },
+      "new": {
+        "country": "NZ",
+        "admin1": "Manawatū-Whanganui"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "PA",
+        "admin1": "Chiriqui"
+      },
+      "new": {
+        "country": "PA",
+        "admin1": "Chiriquí"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "PY",
+        "admin1": "Boqueron"
+      },
+      "new": {
+        "country": "PY",
+        "admin1": "Boquerón"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "SK",
+        "admin1": "Zilina"
+      },
+      "new": {
+        "country": "SK",
+        "admin1": "Žilina"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "SK",
+        "admin1": "Banska Bystrica"
+      },
+      "new": {
+        "country": "SK",
+        "admin1": "Banská Bystrica"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "AL",
+        "admin1": "Vlore"
+      },
+      "new": {
+        "country": "AL",
+        "admin1": "Vlorë"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "AL",
+        "admin1": "Gjirokaster"
+      },
+      "new": {
+        "country": "AL",
+        "admin1": "Gjirokastër"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "AL",
+        "admin1": "Sarande"
+      },
+      "new": {
+        "country": "AL",
+        "admin1": "Vlorë"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "AL",
+        "admin1": "Shkoder"
+      },
+      "new": {
+        "country": "AL",
+        "admin1": "Shkodër"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "AL",
+        "admin1": "Tirane"
+      },
+      "new": {
+        "country": "AL",
+        "admin1": "Tirana"
+      },
+      "scope": "saved_navigation_and_deep_links"
+    },
+    {
+      "old": {
+        "country": "IE",
+        "admin1": "Antrim"
+      },
+      "new": {
+        "country": "GB",
+        "admin1": "Northern Ireland"
+      },
+      "scope": "saved_navigation_and_deep_links",
+      "ids": [
+        1103,
+        2476,
+        2481
+      ]
+    },
+    {
+      "old": {
+        "country": "DK",
+        "admin1": "Faroe Islands"
+      },
+      "new": {
+        "country": "FO",
+        "admin1": "Vágar"
+      },
+      "scope": "saved_navigation_and_deep_links",
+      "ids": [
+        1169
+      ]
+    },
+    {
+      "old": {
+        "country": "AU",
+        "admin1": "Victoria"
+      },
+      "new": {
+        "country": "AU",
+        "admin1": "VIC"
+      },
+      "scope": "saved_navigation_and_deep_links",
+      "ids": [
+        4445,
+        4446
+      ]
+    }
+  ],
+  "held": [
+    {
+      "id": 3532,
+      "old": {
+        "country": "BB",
+        "place": "Mount Gay Rum",
+        "admin1": "Barbados"
+      },
+      "reason": "Confirm which visitor venue before assigning a parish.",
+      "sources": [
+        "barbados_parishes"
+      ]
+    },
+    {
+      "id": 3536,
+      "old": {
+        "country": "BB",
+        "place": "Crop Over Festival",
+        "admin1": "Barbados"
+      },
+      "reason": "Country-wide festival as written; do not invent a parish.",
+      "sources": [
+        "barbados_parishes"
+      ]
+    }
+  ],
+  "country_name_placeholders": {
+    "predicate": "admin1 equals registered country display name and reviewed subdivision count >= 6",
+    "country_count": 23,
+    "current_row_count": 145,
+    "remaining_after_verified_overlay_count": 139,
+    "countries": {
+      "NR": {
+        "label": "Nauru",
+        "current_ids": [
+          711,
+          2603,
+          2604
+        ],
+        "current_count": 3,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          711,
+          2603,
+          2604
+        ],
+        "remaining_flags": [
+          {
+            "id": 711,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 2603,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 2604,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "GU": {
+        "label": "Guam",
+        "current_ids": [
+          2611,
+          2612,
+          2613,
+          2614,
+          2615
+        ],
+        "current_count": 5,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          2611,
+          2612,
+          2613,
+          2614,
+          2615
+        ],
+        "remaining_flags": [
+          {
+            "id": 2611,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 2612,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 2613,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 2614,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 2615,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "HK": {
+        "label": "Hong Kong",
+        "current_ids": [
+          1833,
+          1834,
+          1835,
+          1836
+        ],
+        "current_count": 4,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          1833,
+          1834,
+          1835,
+          1836
+        ],
+        "remaining_flags": [
+          {
+            "id": 1833,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1834,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1835,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1836,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "MV": {
+        "label": "Maldives",
+        "current_ids": [
+          3277,
+          3278,
+          3279,
+          3280,
+          3281,
+          3282,
+          1800,
+          1801,
+          1802
+        ],
+        "current_count": 9,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          3277,
+          3278,
+          3279,
+          3280,
+          3281,
+          3282,
+          1800,
+          1801,
+          1802
+        ],
+        "remaining_flags": [
+          {
+            "id": 3277,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3278,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3279,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3280,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3281,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3282,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1800,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1801,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1802,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "LU": {
+        "label": "Luxembourg",
+        "current_ids": [
+          2501,
+          2502,
+          2503,
+          2504,
+          1141,
+          1142,
+          1143,
+          4898,
+          4899
+        ],
+        "current_count": 9,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          2501,
+          2502,
+          2503,
+          2504,
+          1141,
+          1142,
+          1143,
+          4898,
+          4899
+        ],
+        "remaining_flags": [
+          {
+            "id": 2501,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 2502,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 2503,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 2504,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1141,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1142,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1143,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4898,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4899,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "MT": {
+        "label": "Malta",
+        "current_ids": [
+          1264,
+          1265,
+          1267,
+          3707,
+          3708,
+          3711,
+          3713,
+          5026
+        ],
+        "current_count": 8,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          1264,
+          1265,
+          1267,
+          3707,
+          3708,
+          3711,
+          3713,
+          5026
+        ],
+        "remaining_flags": [
+          {
+            "id": 1264,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1265,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1267,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3707,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3708,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3711,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3713,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 5026,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "AD": {
+        "label": "Andorra",
+        "current_ids": [
+          1268,
+          1269,
+          3726,
+          3727,
+          3728,
+          3729
+        ],
+        "current_count": 6,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          1268,
+          1269,
+          3726,
+          3727,
+          3728,
+          3729
+        ],
+        "remaining_flags": [
+          {
+            "id": 1268,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1269,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3726,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3727,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3728,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3729,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "MC": {
+        "label": "Monaco",
+        "current_ids": [
+          1270,
+          1271,
+          3730,
+          3731,
+          3732,
+          3733,
+          5031,
+          5032
+        ],
+        "current_count": 8,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          1270,
+          1271,
+          3730,
+          3731,
+          3732,
+          3733,
+          5031,
+          5032
+        ],
+        "remaining_flags": [
+          {
+            "id": 1270,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1271,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3730,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3731,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3732,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3733,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 5031,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 5032,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "SM": {
+        "label": "San Marino",
+        "current_ids": [
+          1272,
+          3734,
+          3735,
+          3736,
+          3737
+        ],
+        "current_count": 5,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          1272,
+          3734,
+          3735,
+          3736,
+          3737
+        ],
+        "remaining_flags": [
+          {
+            "id": 1272,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3734,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3735,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3736,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3737,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "LI": {
+        "label": "Liechtenstein",
+        "current_ids": [
+          1273,
+          3738,
+          3739,
+          3740,
+          3741,
+          4939,
+          4940
+        ],
+        "current_count": 7,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          1273,
+          3738,
+          3739,
+          3740,
+          3741,
+          4939,
+          4940
+        ],
+        "remaining_flags": [
+          {
+            "id": 1273,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3738,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3739,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3740,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3741,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4939,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4940,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "JE": {
+        "label": "Jersey",
+        "current_ids": [
+          4425,
+          4426,
+          4427,
+          4428,
+          4429,
+          4430,
+          4431,
+          4432,
+          4433,
+          4434
+        ],
+        "current_count": 10,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          4425,
+          4426,
+          4427,
+          4428,
+          4429,
+          4430,
+          4431,
+          4432,
+          4433,
+          4434
+        ],
+        "remaining_flags": [
+          {
+            "id": 4425,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4426,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4427,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4428,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4429,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4430,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4431,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4432,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4433,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4434,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "IM": {
+        "label": "Isle of Man",
+        "current_ids": [
+          4435,
+          4436,
+          4437,
+          4438,
+          4439,
+          4440,
+          4441,
+          4442,
+          4443,
+          4444
+        ],
+        "current_count": 10,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          4435,
+          4436,
+          4437,
+          4438,
+          4439,
+          4440,
+          4441,
+          4442,
+          4443,
+          4444
+        ],
+        "remaining_flags": [
+          {
+            "id": 4435,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4436,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4437,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4438,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4439,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4440,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4441,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4442,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4443,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4444,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "GT": {
+        "label": "Guatemala",
+        "current_ids": [
+          4524
+        ],
+        "current_count": 1,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          4524
+        ],
+        "remaining_flags": [
+          {
+            "id": 4524,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "BZ": {
+        "label": "Belize",
+        "current_ids": [
+          4525
+        ],
+        "current_count": 1,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          4525
+        ],
+        "remaining_flags": [
+          {
+            "id": 4525,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "PA": {
+        "label": "Panama",
+        "current_ids": [
+          3406,
+          3409,
+          3413,
+          3417,
+          1555
+        ],
+        "current_count": 5,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          3406,
+          3409,
+          3413,
+          3417,
+          1555
+        ],
+        "remaining_flags": [
+          {
+            "id": 3406,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3409,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3413,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3417,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1555,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "PR": {
+        "label": "Puerto Rico",
+        "current_ids": [
+          1575,
+          1576,
+          1577,
+          3499,
+          3500,
+          3501,
+          3502,
+          3503,
+          3504,
+          3505,
+          3506,
+          3507,
+          3508
+        ],
+        "current_count": 13,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          1575,
+          1576,
+          1577,
+          3499,
+          3500,
+          3501,
+          3502,
+          3503,
+          3504,
+          3505,
+          3506,
+          3507,
+          3508
+        ],
+        "remaining_flags": [
+          {
+            "id": 1575,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1576,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1577,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3499,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3500,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3501,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3502,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3503,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3504,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3505,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3506,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3507,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3508,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "BB": {
+        "label": "Barbados",
+        "current_ids": [
+          1578,
+          1579,
+          3531,
+          3532,
+          3533,
+          3534,
+          3535,
+          3536
+        ],
+        "current_count": 8,
+        "resolved_by_verified_overlay": [
+          1578,
+          1579,
+          3531,
+          3533,
+          3534,
+          3535
+        ],
+        "remaining_ids": [
+          3532,
+          3536
+        ],
+        "remaining_flags": [
+          {
+            "id": 3532,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3536,
+            "classification": "country_wide"
+          }
+        ]
+      },
+      "LC": {
+        "label": "Saint Lucia",
+        "current_ids": [
+          1582,
+          1583,
+          3543,
+          3544,
+          3545,
+          3546,
+          3547
+        ],
+        "current_count": 7,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          1582,
+          1583,
+          3543,
+          3544,
+          3545,
+          3546,
+          3547
+        ],
+        "remaining_flags": [
+          {
+            "id": 1582,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1583,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3543,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3544,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3545,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3546,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3547,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "GD": {
+        "label": "Grenada",
+        "current_ids": [
+          1590,
+          3553,
+          3554,
+          3555,
+          3556
+        ],
+        "current_count": 5,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          1590,
+          3553,
+          3554,
+          3555,
+          3556
+        ],
+        "remaining_flags": [
+          {
+            "id": 1590,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3553,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3554,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3555,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3556,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "DM": {
+        "label": "Dominica",
+        "current_ids": [
+          1584,
+          1585,
+          3548,
+          3549,
+          3550,
+          3551,
+          3552
+        ],
+        "current_count": 7,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          1584,
+          1585,
+          3548,
+          3549,
+          3550,
+          3551,
+          3552
+        ],
+        "remaining_flags": [
+          {
+            "id": 1584,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 1585,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3548,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3549,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3550,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3551,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 3552,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "GF": {
+        "label": "French Guiana",
+        "current_ids": [
+          4263,
+          4264,
+          4265,
+          4266,
+          4267
+        ],
+        "current_count": 5,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          4263,
+          4264,
+          4265,
+          4266,
+          4267
+        ],
+        "remaining_flags": [
+          {
+            "id": 4263,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4264,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4265,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4266,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4267,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "DJ": {
+        "label": "Djibouti",
+        "current_ids": [
+          4488
+        ],
+        "current_count": 1,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          4488
+        ],
+        "remaining_flags": [
+          {
+            "id": 4488,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      },
+      "YT": {
+        "label": "Mayotte",
+        "current_ids": [
+          4339,
+          4340,
+          4341,
+          4342,
+          4343,
+          4344,
+          4345,
+          4346
+        ],
+        "current_count": 8,
+        "resolved_by_verified_overlay": [],
+        "remaining_ids": [
+          4339,
+          4340,
+          4341,
+          4342,
+          4343,
+          4344,
+          4345,
+          4346
+        ],
+        "remaining_flags": [
+          {
+            "id": 4339,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4340,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4341,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4342,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4343,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4344,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4345,
+            "classification": "subdivision_unknown"
+          },
+          {
+            "id": 4346,
+            "classification": "subdivision_unknown"
+          }
+        ]
+      }
+    },
+    "ui_rule": "Never render the country name as a first-level subdivision. Put country_wide rows in an explicitly labelled Country-wide section and subdivision_unknown rows in a neutral Subdivision not set section within the country route; neither label is an administrative division. Do not invent a parish, state or district."
+  },
+  "intermediate_geographies": [
+    {
+      "country": "HK",
+      "labels": {
+        "Hong Kong Island": [
+          3354,
+          3355,
+          4790,
+          1922
+        ],
+        "New Territories": [
+          3353,
+          3356,
+          4788,
+          4789
+        ],
+        "Lantau Island": [
+          3350,
+          3351,
+          1921
+        ],
+        "Kowloon": [
+          3352
+        ]
+      },
+      "note": "Real geographies, not the 18-district first level used by the threshold."
+    },
+    {
+      "country": "MT",
+      "labels": {
+        "Gozo": [
+          1266,
+          3709,
+          3712,
+          5027,
+          5028
+        ],
+        "Comino": [
+          3710
+        ]
+      },
+      "note": "Real islands, not the local-council level represented by the threshold."
+    }
+  ],
+  "validation": {
+    "expected_verified_counts": {
+      "BB": 6,
+      "AL": 11,
+      "IE_to_GB": 2,
+      "DK_to_FO": 1,
+      "IE_compatibility_case": 1,
+      "AU_Victoria_to_VIC": 2
+    },
+    "accent_alias_groups": 16,
+    "accent_alias_countries": 13,
+    "requirements": [
+      "Old fields must exactly match the pinned snapshot.",
+      "No conflicting overrides per ID.",
+      "Country/place changes add the new data/ids.json key and retain the old key before rebuild.",
+      "Admin1 aliases must resolve saved navigation/deep links.",
+      "Held rows must not be applied automatically.",
+      "ID 714 must remain on GB|Giant's Causeway and ID 2476 must remain on the distinct earlier-listing key.",
+      "Availability draft must pause only ID 2476 and must not mutate progress or merge IDs.",
+      "Australian rows use Wayfinder's established state/territory codes; AU|Victoria navigation restores to AU|VIC without changing IDs or places."
+    ]
+  },
+  "derived_from": "qa-2026-09-14/geographic-correction-overlay.json (58-row frozen proposal)"
+}

@@ -8,8 +8,9 @@
  *
  *   land.js          real coastlines, rasterised from Natural Earth polygons.
  *                    This is what you SEE.
- *   CONTINENT_BOXES  crude rectangles used only by continentAt(). This is
- *                    what decides where a TAP landed.
+ *   CONTINENT_BOXES  crude rectangles used only by continentAt(). Named
+ *                    country polygons use COUNTRY_CONT; the boxes classify
+ *                    unnamed land and the offline location fallback.
  *
  * They used to be the same thing, and the comment here still said so long
  * after they were split. Adding a box does not draw anything - which is why a
@@ -22,6 +23,8 @@
 const CONTINENT_BOXES = {
   'Antarctica': [
     [-90, -60, -180, 180], // Antarctic mainland and surrounding islands
+    [-51, -48, 67, 71],    // Kerguelen: visible in the Natural Earth outline,
+                            // but unnamed at this scale and otherwise unclassified
   ],
   'North America': [
     [55, 71, -168, -141],   // Alaska
@@ -214,10 +217,9 @@ function continentAt(lat, lon) {
  * The grid is rasterised at the resolution the view needs, so zooming in
  * resolves more coastline instead of magnifying the same dots.
  */
-// Which continent a dot belongs to. LAND.cont only names countries we hold
-// adventures for, so land we have nothing in - most of Africa and South
-// America - falls back to the boxes, which cover the whole world. Without this
-// a tap on Brazil resolves to nothing at all.
+// Which product geography a dot belongs to. A named country follows the same
+// grouping as the country list (including the app's separate Middle East
+// group); unnamed Natural Earth land falls back to the geographic boxes.
 function contOf(code, lat, lon) {
   return (code && LAND.cont[code]) || continentAt(lat, lon);
 }
@@ -283,6 +285,7 @@ function drawWorldMap(canvas, counts, selected, view) {
 
   const cw = w / cols, ch = h / rows;
   const r = Math.max(Math.min(cw, ch) * 0.40, 0.6);
+  let selectedCountryDots = 0;
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -298,6 +301,7 @@ function drawWorldMap(canvas, counts, selected, view) {
       let lit, colour;
       if (view && view.country) {
         lit = code === view.country;
+        if (lit) selectedCountryDots++;
         colour = lit ? (CONTINENT_COLOUR[cont] || land) : empty;
       } else if (view && view.continent) {
         lit = cont === view.continent;
@@ -315,6 +319,24 @@ function drawWorldMap(canvas, counts, selected, view) {
     }
   }
   ctx.globalAlpha = 1;
+
+  // Natural Earth 110m omits microstates and many small islands. Their country
+  // window still comes from a real registry centroid; draw one location dot so
+  // zooming into such a country never produces an empty, misleading canvas.
+  lastMap.countryDots = selectedCountryDots;
+  lastMap.fallbackMarker = null;
+  if (view && view.country && !selectedCountryDots && LAND.box[view.country]) {
+    const cont = (LAND.cont && LAND.cont[view.country])
+      || (typeof COUNTRY_CONT !== 'undefined' && COUNTRY_CONT[view.country]);
+    const markerRadius = Math.max(r * 1.8, 3);
+    ctx.fillStyle = CONTINENT_COLOUR[cont] || land;
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, markerRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    lastMap.fallbackMarker = { country: view.country, x: w / 2, y: h / 2 };
+  }
 }
 
 // Turn a tap on the canvas into whatever that dot belongs to. Returns

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://ajyuozqoukigeeyhvuqc.supabase.co; connect-src 'self' https://ajyuozqoukigeeyhvuqc.supabase.co wss://ajyuozqoukigeeyhvuqc.supabase.co https://api.bigdatacloud.net; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'">
+<script src="frame-guard.js"></script>
 <!-- No maximum-scale: locking zoom breaks pinch-to-enlarge for anyone who needs it.
      iOS only auto-zooms on focus when an input is under 16px, and ours are 17px. -->
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -46,8 +47,10 @@
       <button id="lockBtn" type="submit" class="btn-primary">Sign in</button>
       <button id="createAccountBtn" type="button" class="btn-ghost wide">Create account</button>
       <button id="forgotPasswordBtn" type="button" class="text-button">Forgot password?</button>
+      <button id="resendVerificationBtn" type="button" class="text-button">Resend verification email</button>
     </form>
     <p id="lockMsg" class="lock-msg" role="status" aria-live="polite"></p>
+    <button id="checkVerificationBtn" type="button" class="btn-ghost wide hidden">I’ve verified my email</button>
     <p class="fineprint">We send a verification email when you create an account.
        Wayfinder can still open offline after this device has signed in once.</p>
   </div>

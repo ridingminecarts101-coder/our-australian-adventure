@@ -38,8 +38,8 @@
   <p>Wayfinder is a travel checklist. It keeps the places you want to go, the ones
      you have been to, and the photos you attach to them. This page says exactly
      what that means for your data, in plain terms.</p>
-  <p class="note"><strong>Testing status:</strong> Account email and recovery may be
-     unreliable. Group sharing is currently unavailable, Community protections are
+  <p class="note"><strong>Testing status:</strong> Email verification and password
+     recovery are available. Group sharing is currently unavailable, Community protections are
      still being tested, and purchases are not active in the web review build. Avoid
      posting sensitive material and keep another copy of important photos and trip
      notes. See the
@@ -58,8 +58,11 @@
     <tr><td>A display name, if you set one</td><td>So a shared list can say who ticked what</td>
         <td>Our database</td></tr>
     <tr><td>Your email address, account identifier and authentication information</td>
-        <td>To sign in, verify your email, recover your account and sync between devices</td>
+        <td>To sign in and sync between devices</td>
         <td>Supabase authentication; a sign-in session is also kept on your device</td></tr>
+    <tr><td>Your account-email recipient address, confirmation or recovery message and link or code, and delivery metadata</td>
+        <td>To verify your email, recover your account and troubleshoot delivery</td>
+        <td>Resend transactional email</td></tr>
     <tr><td>Group membership and your completion-sharing choice</td>
         <td>To show the completion ticks you choose to share with your group</td>
         <td>Our database</td></tr>
@@ -173,10 +176,17 @@
      Contact <a href="mailto:rambodog555@gmail.com">rambodog555@gmail.com</a>
      about privacy, access, corrections or deletion.</p>
   <p>Supabase hosts account authentication, the database and older cloud-photo storage. GitHub
-     Pages serves the web review build. Production delivery of account verification
-     and recovery email is not yet configured and verified. Google's email
-     infrastructure carries and stores messages sent to the current public support
-     address. RevenueCat and the app stores are planned to support future native
+     Pages serves the web review build. Supabase sends account confirmation and
+     recovery messages through Resend using the sending-only
+     <code>auth.rlapplications.com</code> domain. Resend receives the recipient email
+     address, the authentication message and link or code, and delivery metadata
+     needed to send and troubleshoot that message. Its configured sending region is
+     Tokyo (<code>ap-northeast-1</code>); this setting does not mean all processing or
+     storage stays in Japan. Open and click tracking are disabled. This account-email
+     path does not receive Wayfinder photos. <a href="https://resend.com/legal/privacy-policy">Resend privacy policy</a>.</p>
+  <p>Google's email infrastructure carries and stores messages sent to the current
+     public support address. The no-reply Resend sender is not a monitored support
+     mailbox. RevenueCat and the app stores are planned to support future native
      purchases; BigDataCloud handles optional location lookups. These services receive
      the information needed for their role, including normal network request
      information, and may process it outside Australia.</p>

@@ -97,6 +97,11 @@ still use the former cloud-upload path.
 
 ## Licence / credit
 
-Private project. Data compiled from general knowledge of Australian
-destinations, cross-referenced against the official state tourism bodies linked
-throughout the app.
+Wayfinder is maintained by Riley Nicholas Lawler, an Australian sole trader
+operating as **RL Applications** (ABN 92 363 169 656). Project-specific material
+is proprietary; see [LICENSE](LICENSE) and [OWNERSHIP.md](OWNERSHIP.md).
+
+Open-source libraries, Natural Earth map data and other third-party material
+remain under their own terms. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
+and the dependency lockfiles. Research citations establish factual provenance;
+they do not transfer ownership of source websites or their protected content.

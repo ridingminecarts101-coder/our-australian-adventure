@@ -23,13 +23,16 @@ import json
 import os
 import re
 import sys
+import unicodedata
 
-from countries import COUNTRIES
+from countries import ADVISORIES, COUNTRIES
+from subdivisions import NAVIGATION_SUBDIVISION_COUNTS
 
 DATA = os.path.join('data', 'adventures.json')
 VERBOSE = '--verbose' in sys.argv or '-v' in sys.argv
 
 findings = []          # (severity, check, message, examples)
+COUNTRY_WIDE_ADMIN1 = {'AU': frozenset({'AUS'})}
 
 
 def report(sev, check, msg, examples=()):
@@ -43,6 +46,48 @@ def load():
 
 def label(a):
     return f'{a["country"]}/{a.get("admin1", "?")}: {a["title"]}'
+
+
+def is_active(a):
+    """Whether a row contributes to the current catalogue and paid value."""
+    return (a.get('availability') or {}).get('status') != 'unavailable'
+
+
+def normalized(value):
+    folded = unicodedata.normalize('NFD', str(value or ''))
+    return re.sub(r'[^a-z0-9]', '', ''.join(
+        char for char in folded if not unicodedata.combining(char)).lower())
+
+
+def uses_subdivision_navigation(country):
+    return NAVIGATION_SUBDIVISION_COUNTS.get(country, 0) >= 6
+
+
+def is_country_placeholder(country, admin1):
+    return (uses_subdivision_navigation(country) and bool(admin1)
+            and (admin1 in COUNTRY_WIDE_ADMIN1.get(country, ())
+                 or normalized(admin1) == normalized(COUNTRIES[country][0])))
+
+
+def quality_scope(a):
+    """Return the route users can actually select for per-place checks.
+
+    Countries below the six-subdivision navigation threshold have one direct
+    country catalogue, so their internal admin1 labels are not separate user
+    choices. Country-name placeholders in larger countries appear only inside
+    Everything and must not masquerade as a reviewed subdivision.
+    """
+    country, admin1 = a['country'], a.get('admin1')
+    if not uses_subdivision_navigation(country):
+        return country, None
+    if not admin1 or is_country_placeholder(country, admin1):
+        return None
+    return country, admin1
+
+
+def route_label(scope):
+    country, admin1 = scope
+    return f'{country}/{admin1}' if admin1 else f'{country}/Everything'
 
 
 # ── 1. Filler titles ─────────────────────────────────────────────────
@@ -105,14 +150,18 @@ def check_descriptions(rows):
     if echo:
         report('problem', 'descriptions that only restate the title',
                f'{len(echo)} add little the title did not already say',
-               [f'{label(a)}  «{a[chr(34)]}»' for a in echo[:6]])
+               [f'{label(a)}  «{a["description"]}»' for a in echo[:6]])
 
 
-# ── 3. Depth parity between regions ──────────────────────────────────
-# The point of the app. A region with three entries is a stub next to one with
-# forty, and whoever lives there is badly served.
+# ── 3. Editorial depth in visible subdivision routes ─────────────────
+# A historical release gate demanded three rows for every literal admin1 value.
+# The product now uses official subdivision counts only to decide navigation
+# depth and explicitly rejects filler. Thin visible routes are still useful
+# planning evidence, but a numeric quota is not by itself a release defect.
 def check_region_parity(rows):
-    by_region = collections.Counter((a['country'], a.get('admin1')) for a in rows)
+    by_region = collections.Counter(quality_scope(a) for a in rows
+                                    if quality_scope(a) is not None
+                                    and quality_scope(a)[1] is not None)
     by_country = collections.Counter(a['country'] for a in rows)
 
     # Only judge regions inside countries we have actually built out, or every
@@ -121,14 +170,16 @@ def check_region_parity(rows):
     thin = sorted((n, c, r) for (c, r), n in by_region.items()
                   if c in built and n <= 2)
     if thin:
-        report('problem', 'thin regions',
-               f'{len(thin)} regions inside well-covered countries have 2 or fewer',
+        report('note', 'thin visible subdivisions',
+               f'{len(thin)} selectable subdivisions inside well-covered countries have 2 or fewer; review for depth, not filler',
                [f'{c}/{r}: {n}' for n, c, r in thin[:12]])
 
     # Spread within a country: one region hogging everything.
     for country in sorted(built):
-        regions = collections.Counter(a.get('admin1') for a in rows
-                                      if a['country'] == country)
+        regions = collections.Counter(scope[1] for a in rows
+                                      if a['country'] == country
+                                      and (scope := quality_scope(a)) is not None
+                                      and scope[1] is not None)
         if len(regions) < 3:
             continue
         top, n = regions.most_common(1)[0]
@@ -143,7 +194,9 @@ def check_region_parity(rows):
 def check_category_spread(rows):
     by_region = collections.defaultdict(list)
     for a in rows:
-        by_region[(a['country'], a.get('admin1'))].append(a)
+        scope = quality_scope(a)
+        if scope is not None:
+            by_region[scope].append(a)
 
     narrow = []
     for (c, r), items in by_region.items():
@@ -152,7 +205,7 @@ def check_category_spread(rows):
         cats = collections.Counter(a['category'] for a in items)
         top, n = cats.most_common(1)[0]
         if n > len(items) * 0.55:
-            narrow.append(f'{c}/{r}: {n}/{len(items)} are {top}')
+            narrow.append(f'{route_label((c, r))}: {n}/{len(items)} are {top}')
     if narrow:
         report('note', 'narrow categories',
                f'{len(narrow)} sizeable regions lean heavily on one category',
@@ -165,22 +218,40 @@ def check_category_spread(rows):
 def check_accessibility(rows):
     by_region = collections.defaultdict(list)
     for a in rows:
-        by_region[(a['country'], a.get('admin1'))].append(a)
+        scope = quality_scope(a)
+        if scope is not None:
+            by_region[scope].append(a)
 
-    no_easy, no_cheap = [], []
+    no_easy, no_cheap, constrained, unknown_cost = [], [], [], []
     for (c, r), items in by_region.items():
         if len(items) < 6:
             continue
         if not any(a['difficulty'] <= 2 for a in items):
-            no_easy.append(f'{c}/{r} ({len(items)})')
-        if not any(a['cost'] <= 1 for a in items):
-            no_cheap.append(f'{c}/{r} ({len(items)})')
+            no_easy.append(f'{route_label((c, r))} ({len(items)})')
+        known_costs = [a.get('cost') for a in items if isinstance(a.get('cost'), int)]
+        if not any(cost <= 1 for cost in known_costs) and len(known_costs) < len(items):
+            unknown_cost.append(
+                f'{route_label((c, r))}: {len(items) - len(known_costs)}/{len(items)} prices unknown')
+        elif not any(cost <= 1 for cost in known_costs):
+            if c == 'AQ':
+                constrained.append(
+                    f'{route_label((c, r))} ({len(items)}): no independent low-cost access; do not add filler')
+            else:
+                no_cheap.append(f'{route_label((c, r))} ({len(items)})')
     if no_easy:
-        report('problem', 'nothing easy', f'{len(no_easy)} regions have nothing '
+        report('problem', 'nothing easy', f'{len(no_easy)} selectable routes have nothing '
                'at difficulty 1-2', no_easy[:10])
     if no_cheap:
-        report('problem', 'nothing cheap', f'{len(no_cheap)} regions have nothing '
+        report('problem', 'nothing cheap', f'{len(no_cheap)} selectable routes have nothing '
                'free or nearly free', no_cheap[:10])
+    if constrained:
+        report('note', 'inherent access cost',
+               f'{len(constrained)} route has a documented structural cost exception',
+               constrained)
+    if unknown_cost:
+        report('note', 'unknown access cost',
+               f'{len(unknown_cost)} routes cannot yet be classified as having a low-cost option',
+               unknown_cost[:10])
 
 
 # ── 6. Seasons that make sense for the hemisphere ────────────────────
@@ -311,16 +382,18 @@ def check_claims(rows):
 def check_field_health(rows):
     by_region = collections.defaultdict(list)
     for a in rows:
-        by_region[(a['country'], a.get('admin1'))].append(a)
+        scope = quality_scope(a)
+        if scope is not None:
+            by_region[scope].append(a)
 
     flat = []
     for (c, r), items in by_region.items():
         if len(items) < 8:
             continue
         if len({a['difficulty'] for a in items}) == 1:
-            flat.append(f'{c}/{r}: every entry is difficulty {items[0]["difficulty"]}')
+            flat.append(f'{route_label((c, r))}: every entry is difficulty {items[0]["difficulty"]}')
         if len({a['duration'] for a in items}) == 1:
-            flat.append(f'{c}/{r}: every entry is {items[0]["duration"]}')
+            flat.append(f'{route_label((c, r))}: every entry is {items[0]["duration"]}')
     if flat:
         report('problem', 'unconsidered fields',
                f'{len(flat)} regions have a field with no variation', flat[:8])
@@ -358,6 +431,7 @@ def check_gem_coverage(rows):
     by reclassifying famous sights or adding filler; any evidence-based quality
     exception belongs in the research record and remains visible here.
     """
+    rows = [a for a in rows if is_active(a)]
     by_country = collections.defaultdict(list)
     by_continent = collections.defaultdict(list)
     for adventure in rows:
@@ -370,17 +444,25 @@ def check_gem_coverage(rows):
                f'{len(missing)} registry countries or territories have no adventures',
                missing[:12])
 
-    low_countries = []
+    low_countries, safety_held = [], []
     for country, items in sorted(by_country.items()):
         gems = sum(a['hidden_gem'] for a in items)
         if gems * 5 < len(items):
             needed = max(0, -((gems * 5 - len(items)) // 4))
-            low_countries.append(
-                f'{country}: {gems}/{len(items)}; at least {needed} new gem-only rows needed')
+            line = (f'{country}: {gems}/{len(items)}; mathematical shortfall '
+                    f'{needed} genuine gem-only row{("s" if needed != 1 else "")}')
+            if ADVISORIES.get(country, ('', ''))[0] == 'avoid':
+                safety_held.append(line + '; do not fill while countrywide advice is do not travel')
+            else:
+                low_countries.append(line)
     if low_countries:
         report('problem', 'country gem coverage',
-               f'{len(low_countries)} countries are below 20% genuine hidden gems',
+               f'{len(low_countries)} {"country is" if len(low_countries) == 1 else "countries are"} below 20% genuine hidden gems',
                low_countries[:12])
+    if safety_held:
+        report('note', 'safety-held country gem coverage',
+               f'{len(safety_held)} do-not-travel countries are below 20%; the shortfall remains visible without unsafe filler',
+               safety_held[:12])
 
     low_continents = []
     for continent, items in sorted(by_continent.items()):
@@ -388,7 +470,7 @@ def check_gem_coverage(rows):
         if gems * 5 < len(items):
             needed = max(0, -((gems * 5 - len(items)) // 4))
             low_continents.append(
-                f'{continent}: {gems}/{len(items)}; at least {needed} new gem-only rows needed')
+                f'{continent}: {gems}/{len(items)}; mathematical shortfall {needed} genuine gem-only rows')
     if low_continents:
         report('problem', 'continent-pack gem coverage',
                f'{len(low_continents)} continent packs are below 20% genuine hidden gems',
@@ -396,9 +478,19 @@ def check_gem_coverage(rows):
 
 
 def main():
-    rows = load()
-    print(f'{len(rows)} adventures · {len({a["country"] for a in rows})} countries · '
-          f'{len({(a["country"], a.get("admin1")) for a in rows})} regions\n')
+    stored = load()
+    rows = [a for a in stored if is_active(a)]
+    visible_scopes = {quality_scope(a) for a in rows if quality_scope(a) is not None}
+    excluded_bins = {(a['country'], a.get('admin1')) for a in rows
+                     if uses_subdivision_navigation(a['country'])
+                     and quality_scope(a) is None}
+    direct_bins = {(a['country'], a.get('admin1')) for a in rows
+                   if not uses_subdivision_navigation(a['country'])}
+    print(f'{len(rows)} active adventures ({len(stored) - len(rows)} paused) · '
+          f'{len({a["country"] for a in rows})} countries · '
+          f'{len(visible_scopes)} selectable country/subdivision routes')
+    print(f'{len(excluded_bins)} country-wide placeholder bins are measured only inside Everything\n')
+    print(f'{len(direct_bins)} internal admin1 bins belong to direct-country routes and are not treated as separate destinations\n')
 
     for fn in (check_titles, check_descriptions, check_region_parity,
                check_category_spread, check_accessibility, check_seasons,

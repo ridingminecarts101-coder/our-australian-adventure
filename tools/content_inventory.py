@@ -15,6 +15,9 @@ import io
 import json
 import os
 import sys
+import unicodedata
+
+from subdivisions import NAVIGATION_SUBDIVISION_COUNTS
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -22,6 +25,7 @@ DATA = os.path.join(ROOT, "data", "adventures.json")
 COUNTRIES_FILE = os.path.join(ROOT, "tools", "countries.py")
 CONTINENTS = ("Oceania", "Asia", "Middle East", "Europe",
               "North America", "South America", "Africa", "Antarctica")
+COUNTRY_WIDE_ADMIN1 = {"AU": frozenset({"AUS"})}
 
 # 193 UN members plus the Holy See (VA) and State of Palestine (PS), the two
 # non-member observer states. This is deliberately separate from the product
@@ -56,14 +60,33 @@ def additions_needed(entries, gems):
     return max(0, (entries - 5 * gems + 3) // 4)
 
 
-def rows():
-    countries, advisories = load_countries()
-    adventures = json.load(io.open(DATA, encoding="utf-8"))
-    counts = collections.Counter(a["country"] for a in adventures)
-    gems = collections.Counter(a["country"] for a in adventures if a["hidden_gem"])
-    regions = collections.defaultdict(set)
+def is_active(adventure):
+    return (adventure.get("availability") or {}).get("status") != "unavailable"
+
+
+def normalized(value):
+    folded = unicodedata.normalize("NFD", str(value or ""))
+    return "".join(char for char in folded if not unicodedata.combining(char) and char.isalnum()).casefold()
+
+
+def inventory_for(adventures, countries, advisories):
+    active = [a for a in adventures if is_active(a)]
+    counts = collections.Counter(a["country"] for a in active)
+    stored = collections.Counter(a["country"] for a in adventures)
+    paused = collections.Counter(a["country"] for a in adventures if not is_active(a))
+    gems = collections.Counter(a["country"] for a in active if a["hidden_gem"])
+    visible_regions = collections.defaultdict(set)
+    raw_regions = collections.defaultdict(set)
     for adventure in adventures:
-        regions[adventure["country"]].add(adventure.get("admin1"))
+        raw_regions[adventure["country"]].add(adventure.get("admin1"))
+    for adventure in active:
+        code = adventure["country"]
+        if NAVIGATION_SUBDIVISION_COUNTS.get(code, 0) >= 6:
+            admin1 = adventure.get("admin1")
+            country_name = countries[code][0]
+            if (admin1 and admin1 not in COUNTRY_WIDE_ADMIN1.get(code, ())
+                    and normalized(admin1) != normalized(country_name)):
+                visible_regions[code].add(admin1)
 
     out = []
     for code, (name, continent, _lat, _lon) in countries.items():
@@ -74,7 +97,10 @@ def rows():
             "country_or_territory": name,
             "un_member_or_observer_state": code in UN_STATE_CODES,
             "entries": n,
-            "regions": len(regions[code]),
+            "stored_entries": stored[code],
+            "paused_entries": paused[code],
+            "regions": len(visible_regions[code]),
+            "raw_admin1_bins": len(raw_regions[code]),
             "gems": g,
             "gem_percent": round(100 * g / n, 2) if n else 0,
             "minimum_gem_additions": additions_needed(n, g),
@@ -82,6 +108,12 @@ def rows():
             "coverage": "missing" if not n else "thin" if n < 5 else "present",
         })
     return out
+
+
+def rows():
+    countries, advisories = load_countries()
+    adventures = json.load(io.open(DATA, encoding="utf-8"))
+    return inventory_for(adventures, countries, advisories)
 
 
 def print_summary(inventory):
@@ -92,6 +124,7 @@ def print_summary(inventory):
     print(f"populated codes: {sum(r['entries'] > 0 for r in inventory)}")
     print(f"missing codes: {sum(r['entries'] == 0 for r in inventory)}")
     print(f"entries: {sum(r['entries'] for r in inventory)}")
+    print(f"paused historical entries: {sum(r['paused_entries'] for r in inventory)}")
     print(f"gems: {sum(r['gems'] for r in inventory)}")
     print(f"UN member/observer states represented in registry: "
           f"{len(UN_STATE_CODES & registry_codes)}/{len(UN_STATE_CODES)}")
@@ -100,7 +133,12 @@ def print_summary(inventory):
     print("UN member/observer states absent from registry: " +
           " ".join(sorted(UN_STATE_CODES - registry_codes)))
     print("minimum new gem-only rows for populated countries to reach 20%: "
-          f"{sum(r['minimum_gem_additions'] for r in inventory if r['entries'])}")
+          f"{sum(r['minimum_gem_additions'] for r in inventory if r['entries'] and r['advisory'] != 'avoid')} "
+          "outside countrywide do-not-travel holds")
+    held = [r for r in inventory
+            if r['entries'] and r['advisory'] == 'avoid' and r['minimum_gem_additions']]
+    print("safety-held mathematical gem shortfall: "
+          f"{sum(r['minimum_gem_additions'] for r in held)} rows across {len(held)} countries; do not fill for quota")
     print()
     for continent in CONTINENTS:
         subset = [r for r in inventory if r["continent"] == continent]

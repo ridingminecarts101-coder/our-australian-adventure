@@ -70,15 +70,21 @@
   async function testData() {
     chk('data loads', ADV.length > 1000, `${ADV.length} adventures`);
     R.metric.adventures = ADV.length;
+    R.metric.activeAdventures = ADV.filter(a => !isUnavailable(a)).length;
+    R.metric.pausedListings = ADV.filter(isUnavailable).length;
     R.metric.countries = new Set(ADV.map(a => a.country)).size;
     R.metric.continents = new Set(ADV.map(a => a.continent)).size;
-    R.metric.regions = new Set(ADV.map(a => a.country + '/' + a.admin1)).size;
+    R.metric.regions = new Set(ADV.filter(a => countryUsesSubdivisionStep(a.country)
+      && !placeholderAdmin1(a.country, a.admin1)).map(a => a.country + '/' + a.admin1)).size;
 
     const fields = ['id','title','place','continent','country','admin1','region','category',
-                    'difficulty','cost','duration','season','dog_friendly','hidden_gem','description'];
+                    'difficulty','duration','season','dog_friendly','hidden_gem','description'];
     const missing = ADV.filter(a => fields.some(f => a[f] === undefined || a[f] === null || a[f] === ''));
     chk('every entry has every field', missing.length === 0,
         missing.length ? `${missing.length} incomplete, first id ${missing[0].id}` : '');
+    const badCost = ADV.filter(a => a.cost !== null && (!Number.isInteger(a.cost) || a.cost < 0 || a.cost > 4));
+    chk('cost is a band or explicitly unknown', badCost.length === 0,
+        badCost.length ? `${badCost.length} invalid, first id ${badCost[0].id}` : '');
 
     const ids = new Set(ADV.map(a => a.id));
     chk('ids unique', ids.size === ADV.length);
@@ -93,6 +99,7 @@
     chk('paid entries all carry a pack', paidMismatch.length === 0, `${paidMismatch.length} mismatched`);
 
     R.metric.hiddenGems = ADV.filter(a => a.hidden_gem).length;
+    R.metric.activeHiddenGems = ADV.filter(a => a.hidden_gem && !isUnavailable(a)).length;
     R.metric.dogYes = ADV.filter(a => a.dog_friendly === 'yes').length;
     R.metric.withCoords = ADV.filter(a => a.lat !== null && a.lon !== null).length;
     if (!R.metric.withCoords) warn('no coordinates', 'distance sorting and a pin map are impossible until these exist');
@@ -118,14 +125,17 @@
         if (!$$$('#list .card').length) deadEnds.push(`${cont}/${code} list`);
         drilled++;
 
-        for (const r of [...new Set(ADV.filter(a => a.country === code).map(a => a.admin1))]) {
+        const visibleRegions = countryUsesSubdivisionStep(code)
+          ? [...new Set(ADV.filter(a => a.country === code && !placeholderAdmin1(code, a.admin1)).map(a => a.admin1))]
+          : [];
+        for (const r of visibleRegions) {
           goTo('adventures', { continent: cont, country: code, admin1: r });
           if (!$$$('#list .card').length) deadEnds.push(`${cont}/${code}/${r}`);
           regionsChecked++;
         }
       }
     }
-    chk('every country and region reaches a list', deadEnds.length === 0, deadEnds.slice(0, 6).join(', '));
+    chk('every country and visible subdivision reaches a list', deadEnds.length === 0, deadEnds.slice(0, 6).join(', '));
     R.metric.countriesDrilled = drilled;
     R.metric.regionsDrilled = regionsChecked;
 
@@ -207,6 +217,16 @@
     }
     $('#clearFilters').click(); await wait(30);
     chk('clear filters restores', +$('#resultCount').textContent.match(/^(\d+)/)[1] === total);
+
+    const unknownCost = ADV.find(a => a.cost === null);
+    if (unknownCost) {
+      goTo('adventures', { continent: unknownCost.continent, country: unknownCost.country });
+      filters.cost = 'All';
+      chk('Any price includes an unknown-price listing', filtered().some(a => a.id === unknownCost.id));
+      filters.cost = 4;
+      chk('a priced filter does not claim an unknown price', !filtered().some(a => a.id === unknownCost.id));
+      filters.cost = 'All';
+    }
 
     // dice
     $('#randomBtn').click(); await wait(120);
@@ -443,9 +463,10 @@
     chk('the store offers exactly the bundle and populated continent packs',
         sell.map(p => p.slug).sort().join(',') === expectedSell.join(','),
         sell.map(p => p.slug).join(', '));
-    chk('the bundle counts every gem',
-        counts.all === ADV.filter(a => a.hidden_gem).length,
-        `${counts.all} vs ${ADV.filter(a => a.hidden_gem).length}`);
+    const activeGems = ADV.filter(a => a.hidden_gem && !isUnavailable(a));
+    chk('the bundle counts every active gem',
+        counts.all === activeGems.length,
+        `${counts.all} vs ${activeGems.length}`);
     chk('every gem belongs to a pack',
         ADV.filter(a => a.hidden_gem && !a.pack).length === 0);
     chk('every pack slug is one we sell',
@@ -488,7 +509,7 @@
 
     // The point of the whole design: paying for nothing must still let you
     // finish. A region's target is what you can actually reach.
-    const gemCount = ADV.filter(a => a.hidden_gem).length;
+    const gemCount = activeGems.length;
     const bundleOnlyClassics = ADV.filter(a => a.bundle_only && !a.hidden_gem);
     chk('bundle-only classics are the six standard Antarctica entries',
         bundleOnlyClassics.length === 6 && bundleOnlyClassics.every(a => a.continent === 'Antarctica'),
@@ -497,14 +518,14 @@
     chk('Antarctica remains entirely bundle-exclusive',
         antarctica.length === 10 && antarctica.every(a => a.bundle_only),
         `${antarctica.filter(a => a.bundle_only).length} of ${antarctica.length} bundle-only`);
-    const lockedWithoutEntitlements = ADV.filter(a => a.hidden_gem || a.bundle_only).length;
+    const lockedWithoutEntitlements = ADV.filter(a => isUnavailable(a) || a.hidden_gem || a.bundle_only).length;
     chk('all initially locked adventures are excluded from the total',
         countableTotal() === ADV.length - lockedWithoutEntitlements,
         `${countableTotal()} countable of ${ADV.length}, ${gemCount} gems and ${bundleOnlyClassics.length} bundle-only classics`);
 
-    const inSA = a => a.country === 'AU' && a.admin1 === 'sa';
-    const saAll = ADV.filter(inSA).length;
-    const saGems = ADV.filter(a => inSA(a) && a.hidden_gem).length;
+    const inSA = a => a.country === 'AU' && a.admin1 === 'SA';
+    const saAll = ADV.filter(a => inSA(a) && !isUnavailable(a)).length;
+    const saGems = ADV.filter(a => inSA(a) && a.hidden_gem && !isUnavailable(a)).length;
     chk('a region asks only for what is unlocked',
         countOf(inSA) === saAll - saGems,
         `South Australia asks ${countOf(inSA)} of ${saAll} (${saGems} gems locked)`);
@@ -552,7 +573,7 @@
     chk('recommendations never enter the adventure list',
         ADV.length === before && !ADV.some(a => a.title === 'Walk the old jetty at dusk'));
     chk('and never count towards completion',
-        countableTotal() === ADV.filter(a => !isLocked(a)).length);
+        countableTotal() === ADV.filter(countable).length);
 
     // Ranking
     recSort = 'top';
@@ -655,11 +676,16 @@
     chk('and it appears, reachable, once unlocked', gemTarget() > 0 && gemTarget() <= 25);
     setPreview(false);
 
-    // Outside bundle-exclusive Antarctica, the 1-in-5 rule means no region
-    // can be entirely paid.
+    // Outside bundle-exclusive Antarctica, no route the catalogue actually
+    // exposes should be completable only by paying. Direct countries are one
+    // route; larger countries expose reviewed non-placeholder subdivisions.
     const byRegion = new Map();
     for (const a of ADV.filter(x => x.continent !== 'Antarctica')) {
-      const k = a.country + '/' + a.admin1;
+      if (isUnavailable(a)) continue;
+      const k = countryUsesSubdivisionStep(a.country)
+        ? (placeholderAdmin1(a.country, a.admin1) ? null : a.country + '/' + a.admin1)
+        : a.country + '/Everything';
+      if (!k) continue;
       if (!byRegion.has(k)) byRegion.set(k, []);
       byRegion.get(k).push(a);
     }
@@ -693,6 +719,7 @@
       ['Nov-Mar', 0, true], ['Nov-Mar', 5, false],
       ['Year-round', 3, true], ['Jun-Jul', 5, true], ['Jun-Jul', 7, false],
       ['Dec-Feb', 11, true], ['Oct', 9, true], ['Oct', 2, false],
+      ['Check dates', 0, false], ['Check dates', 6, false],
     ];
     const wrong = seasonCases.filter(([sn, m, want]) => inSeason(sn, m) !== want);
     chk('season ranges are read as ranges', wrong.length === 0,
@@ -700,10 +727,14 @@
     chk('a wrapping range covers the new year', inSeason('Nov-Mar', 0));
     chk('every month has things in season',
         [...Array(12).keys()].every(m => ADV.some(a => inSeason(a.season, m))));
-    chk('every season parses as a month or a range',
-        ADV.every(a => /^(Year-round|[A-Z][a-z]{2}(-[A-Z][a-z]{2})?)$/.test(a.season)),
-        ADV.filter(a => !/^(Year-round|[A-Z][a-z]{2}(-[A-Z][a-z]{2})?)$/.test(a.season))
+    const validSeason = /^(Check dates|Year-round|[A-Z][a-z]{2}(-[A-Z][a-z]{2})?)$/;
+    chk('every season is explicit unknown, a month or a range',
+        ADV.every(a => validSeason.test(a.season)),
+        ADV.filter(a => !validSeason.test(a.season))
            .slice(0, 3).map(a => a.season).join(', '));
+    chk('unknown schedules never match a seasonal filter',
+        ADV.filter(a => a.season === 'Check dates')
+           .every(a => [...Array(12).keys()].every(m => !inSeason(a.season, m))));
 
     // A group of three people all showing as "Someone" is useless, so a name
     // is required before joining or creating one - and only then, because a

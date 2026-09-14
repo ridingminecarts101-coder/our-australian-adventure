@@ -43,7 +43,7 @@ PACKS = {'oceania', 'europe', 'north-america', 'south-america',
          'asia', 'middle-east', 'africa', 'all'}
 DOG = {'yes', 'no', 'check'}
 M = '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)'
-SEASON = re.compile(r'Year-round|%s|%s-%s' % (M, M, M))
+SEASON = re.compile(r'Check dates|Year-round|%s|%s-%s' % (M, M, M))
 
 # Which pack a continent's gems belong in. A gem filed under the wrong pack is
 # content somebody paid for and cannot see.
@@ -126,12 +126,14 @@ def check(path, all_places):
         if r.get('category') not in CATEGORIES:
             problems.append('%s: category %r' % (where, r.get('category')))
         if not SEASON.fullmatch(str(r.get('season', ''))):
-            problems.append('%s: season %r is not a month or range' % (where, r.get('season')))
+            problems.append('%s: season %r is not Check dates, a month range or Year-round'
+                            % (where, r.get('season')))
         if r.get('dog_friendly') not in DOG:
             problems.append('%s: dog_friendly %r' % (where, r.get('dog_friendly')))
         if not isinstance(r.get('difficulty'), int) or not 1 <= r['difficulty'] <= 5:
             problems.append('%s: difficulty %r' % (where, r.get('difficulty')))
-        if not isinstance(r.get('cost'), int) or not 0 <= r['cost'] <= 4:
+        if r.get('cost') is not None and (not isinstance(r.get('cost'), int)
+                                          or not 0 <= r['cost'] <= 4):
             problems.append('%s: cost %r' % (where, r.get('cost')))
         if not isinstance(r.get('hidden_gem'), bool):
             problems.append('%s: hidden_gem %r' % (where, r.get('hidden_gem')))
