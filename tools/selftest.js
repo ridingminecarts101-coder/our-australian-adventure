@@ -279,17 +279,21 @@
   async function testPhotos() {
     const a = ADV.find(x => x.country === 'NZ');
     const blob = await fakePhotoBlob();
+    const before = new Set(photos.map(p => p.id));
 
     const t0 = performance.now();
     await addPhotos(a.id, [new File([blob], 'IMG.JPG', { type: 'image/jpeg' })]);
     await wait(300);
     R.metric.photoProcessMs = Math.round(performance.now() - t0);
 
-    chk('photo queued', pendingPhotos.length === 1);
-    chk('photo resized under the cap', pendingPhotos[0] && Math.max(pendingPhotos[0].width, pendingPhotos[0].height) <= 1600,
-        pendingPhotos[0] ? `${pendingPhotos[0].width}x${pendingPhotos[0].height}` : '');
-    chk('photo shrunk', pendingPhotos[0] && pendingPhotos[0].bytes < blob.size,
-        pendingPhotos[0] ? `${Math.round(pendingPhotos[0].bytes / 1024)}KB from ${Math.round(blob.size / 1024)}KB` : '');
+    const saved = photos.find(p => !before.has(p.id) && p.adventure_id === a.id);
+    chk('photo saved locally', !!saved && saved.local === true && saved.owner_id === userId
+        && !saved.storage_path && pendingPhotos.length === 0,
+        saved ? `${saved.owner_id} / ${saved.local ? 'local' : 'remote'}` : 'no new local record');
+    chk('photo resized under the cap', saved && Math.max(saved.width, saved.height) <= 1600,
+        saved ? `${saved.width}x${saved.height}` : '');
+    chk('photo shrunk', saved && saved.bytes < blob.size,
+        saved ? `${Math.round(saved.bytes / 1024)}KB from ${Math.round(blob.size / 1024)}KB` : '');
 
     openSheet(a.id); await wait(150);
     chk('photo shows on the adventure', $$$('#sheetBody .thumb:not(.add)').length === 1);
@@ -305,6 +309,16 @@
     // EXIF date extraction
     const exifDate = await readExifDate(new File([blob], 'p.jpg', { type: 'image/jpeg' }));
     chk('no-EXIF photo returns null rather than throwing', exifDate === null);
+
+    if (saved) {
+      await idbLocalDelete(userId, saved.id);
+      photos = photos.filter(p => p.id !== saved.id);
+      const url = objectUrls.get(saved.id);
+      if (url) URL.revokeObjectURL(url);
+      objectUrls.delete(saved.id);
+      const retained = await idbLocalAll(userId);
+      chk('photo fixture cleanup stays owner-scoped', !retained.some(p => p.id === saved.id));
+    }
   }
 
   async function testMemoriesTab() {
@@ -316,11 +330,14 @@
     }
     $('#groupChips .chip[data-group="adventure"]').click(); await wait(60);
 
-    if (!pendingPhotos.length) {
+    let memoryFixture = null;
+    if (!photos.some(p => p.local && p.owner_id === userId)) {
       const blob = await fakePhotoBlob();
+      const before = new Set(photos.map(p => p.id));
       await addPhotos(ADV.find(x => x.country === 'NZ').id,
                       [new File([blob], 'IMG.JPG', { type: 'image/jpeg' })]);
       await wait(300);
+      memoryFixture = photos.find(p => !before.has(p.id) && p.local && p.owner_id === userId) || null;
       $('.tab[data-tab="tab-memories"]').click(); await wait(120);
     }
 
@@ -333,6 +350,14 @@
       $('[data-lbclose]').click(); await wait(80);
       chk('lightbox closes', $('#lightbox').classList.contains('hidden'));
     } else warn('lightbox untested', 'no photo present');
+
+    if (memoryFixture) {
+      await idbLocalDelete(userId, memoryFixture.id);
+      photos = photos.filter(p => p.id !== memoryFixture.id);
+      const url = objectUrls.get(memoryFixture.id);
+      if (url) URL.revokeObjectURL(url);
+      objectUrls.delete(memoryFixture.id);
+    }
   }
 
   async function testPassport() {

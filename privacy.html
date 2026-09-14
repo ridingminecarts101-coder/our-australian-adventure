@@ -41,7 +41,7 @@
   <p class="note"><strong>Testing status:</strong> Account email and recovery may be
      unreliable. Group sharing is currently unavailable, Community protections are
      still being tested, and purchases are not active in the web review build. Avoid
-     uploading sensitive material and keep another copy of important photos and trip
+     posting sensitive material and keep another copy of important photos and trip
      notes. See the
      <a href="https://rlapplications.com/wayfinder/privacy/">current Wayfinder privacy supplement</a>
      for testing updates.</p>
@@ -52,7 +52,7 @@
     <tr><td>Which adventures you have ticked, shortlisted, rated or written a note on</td>
         <td>It is the point of the app</td><td>Your device, and our database if you are online</td></tr>
     <tr><td>Photos you attach, and the date taken read from the photo</td>
-        <td>To show them against the adventure</td><td>Your device, and our file storage</td></tr>
+        <td>To show them against the adventure</td><td>New photos stay on the device where you add them; older cloud photos remain in our private file storage</td></tr>
     <tr><td>Trips you plan</td><td>To group adventures together</td>
         <td>Your device, and our database</td></tr>
     <tr><td>A display name, if you set one</td><td>So a shared list can say who ticked what</td>
@@ -86,12 +86,29 @@
      <a href="https://www.bigdatacloud.com/docs/article/why-is-reverse-geocoding-api-free">How BigDataCloud uses this request</a>.</p>
 
   <h2>Photos</h2>
-  <p>Photos are read only when you choose them. They are resized on your device before
-     upload, and stored in a private bucket that is not publicly listable — the app
-     fetches them through short-lived signed links. Group membership alone does not
-     share newly added photos. Photos previously shared with a group may remain
-     visible to its members until you leave that group. Stopping completion sharing
-     affects ticks; it does not withdraw previously shared photos or trip plans.</p>
+  <p>Photos are read only when you choose them. In the current device-local build,
+     a new photo is resized and kept only on the device where you add it. In the native app it is stored in Wayfinder's
+     private app files, not copied to the phone's photo gallery. In the PWA it is
+     stored in that browser's IndexedDB storage. Wayfinder does not upload the new
+     image or its related photo record to the RL Applications backend or GitHub.
+     New photos do not sync, so signing in on another device will not show them.
+     Until the matching server boundary is deployed, an older client may still use
+     Wayfinder's former cloud-upload path.</p>
+  <p>Signing out keeps new device-local photos for the same account and hides them
+     from other signed-in accounts. Uninstalling the native app, clearing its app
+     data, or clearing the PWA's browser/site storage can permanently remove them.
+     Wayfinder does not currently provide a photo export or device-backup feature,
+     so keep an independent copy of anything important. Native releases exclude
+     Wayfinder's persistent app data, including new photos, from Android and iOS
+     device or cloud backups. The PWA cannot control
+     copies a browser, operating system or user-configured device backup may retain
+     outside its site storage.</p>
+  <p>Photos uploaded by an earlier version remain readable from Wayfinder's private,
+     non-publicly-listable cloud bucket through short-lived signed links. Group
+     membership alone does not share new photos. An older photo previously shared
+     with a group may remain visible to its members until you leave that group.
+     Stopping completion sharing affects ticks; it does not withdraw previously
+     shared photos or trip plans.</p>
 
   <h2>Traveller recommendations</h2>
   <p>Anything you post to the Community list is <strong>public</strong> to everyone
@@ -141,16 +158,21 @@
      to request deletion without the app. We verify that the request comes from the
      account owner and confirm completion only after the relevant data and
      service-provider steps have been checked. The request is intended to cover the
-     account, personal progress, uploaded photos, trips, group memberships and
+     account, personal progress, older uploaded cloud photos, trips, group memberships and
      Community contributions. Store transaction records and copies another person
      independently saved are separate; account deletion does not itself issue a refund.</p>
+  <p>The in-app deletion flow removes the account's new device-local photos from the
+     device where it runs. An emailed or server-side deletion request cannot remotely
+     erase local photos on another device or browser profile. Clear that app's data,
+     clear the PWA's browser/site storage, or uninstall the native app to remove any
+     remaining local copies. Signing out alone preserves them.</p>
 
   <h2>Who runs it</h2>
   <p>Wayfinder is developed and operated by Riley Nicholas Lawler, a sole trader
      operating RL Applications in Australia (ABN 92 363 169 656).
      Contact <a href="mailto:rambodog555@gmail.com">rambodog555@gmail.com</a>
      about privacy, access, corrections or deletion.</p>
-  <p>Supabase hosts account authentication, the database and photo storage. GitHub
+  <p>Supabase hosts account authentication, the database and older cloud-photo storage. GitHub
      Pages serves the web review build. Production delivery of account verification
      and recovery email is not yet configured and verified. Google's email
      infrastructure carries and stores messages sent to the current public support
@@ -160,10 +182,11 @@
      information, and may process it outside Australia.</p>
 
   <h2>Retention and device copies</h2>
-  <p>Your saved travel records remain until you remove them or delete your account.
+  <p>Your hosted travel records remain until you remove them or delete your account.
      Local caches let a previously signed-in device work offline. Signing out clears
-     that device's account cache; other offline devices may still hold earlier copies
-     until they reconnect or their app data is cleared. Service-provider backup and
+     the account-data cache but preserves account-scoped device-local photos; other
+     offline devices may still hold earlier records until they reconnect or their app
+     data is cleared. Service-provider backup and
      operational records may persist beyond removal from the active app. Contact us
      for the applicable retention details or a privacy request.</p>
 

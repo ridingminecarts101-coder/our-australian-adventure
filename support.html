@@ -52,8 +52,9 @@
     <summary>How do I use the same progress on another phone?</summary>
     <p>Signed-in progress is designed to sync across devices, but account conversion,
        email verification, recovery and conflict handling are still being tested.
-       First confirm that changes have synced on the original device, and do not clear
-       its storage while important changes remain unsynced. Email support if you need help.</p>
+       First confirm that changes have synced on the original device. Photos added in
+       current versions stay on that device and do not sync to another phone, even
+       when you use the same account. Email support if you need help.</p>
   </details>
 
   <details>
@@ -88,10 +89,25 @@
 
   <details>
     <summary>A photo will not attach</summary>
-    <p>iPhone photos in HEIC format are handled, but a very large photo on a slow
-       connection can take a moment. It is queued on the device and uploads by itself —
-       keep or reopen the app with a connection so the upload can finish. Photos are
-       resized before upload, but uploads still use mobile data when connected that way.</p>
+    <p>Wayfinder reads a photo only after you choose it and resizes a copy on the
+       device. A large photo can take a moment to process. If attaching it fails,
+       keep the original and try again with free storage available.</p>
+  </details>
+
+  <details>
+    <summary>Where is an attached photo stored?</summary>
+    <p>In the current device-local build, new photos stay only inside Wayfinder on the device where you add them. The
+       native app uses private app files and does not copy the Wayfinder version to
+       your gallery; the PWA uses that browser's IndexedDB storage. Wayfinder does
+       not upload the new image or its related photo record to the RL Applications
+       backend or GitHub, and it does not sync to another device. Until the matching
+       server boundary is deployed, an older client may still use the former cloud-upload path. Signing out preserves them for the same account, while
+       uninstalling, clearing app data, or clearing browser/site storage can remove
+       them permanently. There is no Wayfinder photo export or device-backup feature,
+       so keep an independent copy. Native releases exclude Wayfinder's persistent
+       app data from Android and iOS device or cloud backups. A PWA cannot control copies retained by browser,
+       operating-system or user-configured device backups. Older cloud photos remain
+       available read-only.</p>
   </details>
 
   <details>
@@ -99,7 +115,7 @@
     <p>After signing in on that device and loading the list, you can browse and save
        progress without signal. Changes queue until you reconnect. First sign-in,
        account recovery, group changes, purchases and account deletion need a connection.
-       Previously unseen photos may also need a connection to load.</p>
+       Older cloud photos that have not loaded before may also need a connection.</p>
   </details>
 
   <details>
@@ -167,11 +183,15 @@
      password or identity documents.</p>
   <p>RL Applications will verify ownership and confirm completion only after the
      relevant data and service-provider steps have been checked. The request is
-     intended to cover your account, progress, photos, trips, group memberships and
+     intended to cover your account, progress, older cloud photos, trips, group memberships and
      Community contributions. Store transaction records and independently saved copies
      are separate; deleting an account does not issue a refund. See the
      <a href="https://rlapplications.com/wayfinder/privacy/">Wayfinder privacy supplement</a>
      for current data and retention information.</p>
+  <p>The in-app deletion flow also removes the account's device-local photos from the
+     device where it runs. An emailed request cannot remotely erase local photos on
+     another phone or browser profile. Clear its app data or browser/site storage, or
+     uninstall the native app, to remove those copies; signing out alone preserves them.</p>
 
   <details>
     <summary>Why does a country say “do not travel”?</summary>

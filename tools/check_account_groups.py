@@ -50,7 +50,10 @@ def main() -> int:
     require("anonymous upgrade persists no credentials", "{ owner_id: ownerId, stage }" in APP and
             "LS.accountUpgrade" in APP, passed)
 
-    require("new records are personal", APP.count("user_id: runOwner, group_id: null") == 3, passed)
+    local_photo = body("localPhotoRecord")
+    require("new records are personal", APP.count("user_id: runOwner, group_id: null") == 2 and
+            all(token in local_photo for token in
+                ("owner_id: owner", "user_id: owner", "group_id: null")), passed)
     require("group lifecycle uses server RPCs", all(f".rpc('{name}'" in APP for name in
             ("create_group", "join_group_by_code", "leave_group")), passed)
     require("client cannot directly enrol a member", ".from('group_members')\n    .insert" not in APP, passed)

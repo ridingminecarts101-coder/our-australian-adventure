@@ -211,13 +211,28 @@ async function bindLocalDataToUser() {
     for (const key of privateKeys) localStorage.removeItem(key);
     progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
     trips = []; who = null; activeGroupId = null; progressView = 'personal';
-    try {
+    // Keep queued photos for their account across a direct A -> B session
+    // replacement. Old queue rows predate owner_id, so attach them to the
+    // previous account when that stored Supabase owner is valid.
+    const validPrevious = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(previous)
+      ? previous : null;
+    if (validPrevious) {
       const db = await idb();
       await new Promise((resolve, reject) => {
-        const req = db.transaction('queue', 'readwrite').objectStore('queue').clear();
-        req.onsuccess = () => resolve(); req.onerror = () => reject(req.error);
+        const tx = db.transaction('queue', 'readwrite');
+        const request = tx.objectStore('queue').openCursor();
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (!cursor) return;
+          if (!cursor.value.owner_id) cursor.update({ ...cursor.value, owner_id: validPrevious });
+          cursor.continue();
+        };
+        request.onerror = () => tx.abort();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || request.error);
+        tx.onabort = () => reject(tx.error || request.error || new Error('Could not scope queued photos.'));
       });
-    } catch { /* no queued photos */ }
+    }
   } else {
     const outbox = readLS(LS.outbox, []).map(x => ({ ...x, owner_id: x.owner_id || userId,
       queue_rev: x.queue_rev || nextQueueRevision() }));
@@ -676,71 +691,221 @@ function wirePullToRefresh() {
 // ══════════════════════════════════════════════════════════════════════
 //  Pipeline for each picked photo:
 //    1. read the real "date taken" out of the file's EXIF before we touch it
-//    2. resize to something sane (phone originals are 3-5 MB; the free tier
-//       gives us 1 GB, so full-size uploads would fill it in ~250 photos)
-//    3. upload to private Storage, then record the row
-//  If there's no signal, steps 2-3 go into an IndexedDB queue and run later.
+//    2. resize to something sane for the phone's app-private storage
+//    3. persist the blob and metadata in IndexedDB under the signed-in account
+//  New photos never leave this device. Existing cloud photos remain readable.
 
 const BUCKET = 'memories';
 const MAX_EDGE = 1600;
 const JPEG_QUALITY = 0.82;
 const SIGNED_TTL = 7200;                       // 2 hours
 
-let photos = [];                               // rows from public.photos
-let pendingPhotos = [];                        // queued locally, not yet uploaded
+let photos = [];                               // device-local records + legacy cloud rows
+let pendingPhotos = [];                        // old upload queue, converted locally on sight
 const signedUrls = new Map();                  // storage_path -> { url, expires }
 let uploading = 0;
 let photoTargetId = null;                      // which adventure the picker is for
 let lightbox = { list: [], index: 0 };
 
-// ── Tiny IndexedDB wrapper for the upload queue ──────────────────────
+// ── App-private photo storage ────────────────────────────────────────
+const LOCAL_PHOTO_STORE = 'local-photos';
 function idb() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('oaa-photos', 1);
+    const req = indexedDB.open('oaa-photos', 2);
     req.onupgradeneeded = () => {
       if (!req.result.objectStoreNames.contains('queue')) {
         req.result.createObjectStore('queue', { keyPath: 'id' });
       }
+      if (!req.result.objectStoreNames.contains(LOCAL_PHOTO_STORE)) {
+        req.result.createObjectStore(LOCAL_PHOTO_STORE, { keyPath: 'local_key' });
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error('Close other Wayfinder tabs before saving photos.'));
   });
 }
 async function idbAll() {
   try {
     const db = await idb();
-    return await new Promise((res, rej) => {
+    const queued = await new Promise((res, rej) => {
       const r = db.transaction('queue').objectStore('queue').getAll();
       r.onsuccess = () => res(r.result || []);
       r.onerror = () => rej(r.error);
     });
+    const mine = [], remaining = [];
+    for (const item of queued) {
+      if (item.owner_id && item.owner_id !== userId) continue;
+      const owned = { ...item, owner_id: item.owner_id || userId };
+      try {
+        await saveLocalPhoto(owned);
+        await idbDelete(item.id);
+      } catch {
+        try { await idbPut(owned); } catch { /* original queue row remains */ }
+        remaining.push(owned);
+      }
+    }
+    photos = await idbLocalAll(userId);
+    return remaining;
   } catch { return []; }
 }
 async function idbPut(item) {
-  try {
-    const db = await idb();
-    await new Promise((res, rej) => {
-      const r = db.transaction('queue', 'readwrite').objectStore('queue').put(item);
-      r.onsuccess = res; r.onerror = () => rej(r.error);
-    });
-  } catch { /* storage unavailable — the photo stays in memory only */ }
+  await idbWrite('queue', store => store.put(item));
 }
 async function idbDelete(id) {
-  try {
-    const db = await idb();
-    await new Promise((res, rej) => {
-      const r = db.transaction('queue', 'readwrite').objectStore('queue').delete(id);
-      r.onsuccess = res; r.onerror = () => rej(r.error);
-    });
-  } catch { /* nothing to do */ }
+  await idbWrite('queue', store => store.delete(id));
+}
+
+async function idbWrite(storeName, operation) {
+  const db = await idb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    let request;
+    const failed = () => reject(tx.error || (request && request.error)
+      || new Error('Local photo storage transaction failed.'));
+    tx.oncomplete = () => resolve();
+    tx.onerror = failed;
+    tx.onabort = failed;
+    try {
+      request = operation(tx.objectStore(storeName));
+      request.onerror = failed;
+    } catch (error) {
+      try { tx.abort(); } catch { /* transaction may already be inactive */ }
+      reject(error);
+    }
+  });
 }
 
 async function idbClear() {
+  // Sign-out calls this legacy helper. Account-scoped photos and old queued
+  // items must survive sign-out so their owner gets them back after sign-in.
+}
+
+function localPhotoRecord(item) {
+  const owner = item.owner_id || item.user_id;
+  if (!owner) throw new Error('A signed-in account is required to save this photo.');
+  return {
+    ...item,
+    owner_id: owner,
+    user_id: owner,
+    group_id: null,
+    local: true,
+    local_key: `${owner}:${item.id}`,
+  };
+}
+
+async function idbLocalPut(item) {
+  const record = localPhotoRecord(item);
+  await idbWrite(LOCAL_PHOTO_STORE, store => store.put(record));
+  return record;
+}
+
+async function idbLocalRows() {
   const db = await idb();
-  await new Promise((resolve, reject) => {
-    const req = db.transaction('queue', 'readwrite').objectStore('queue').clear();
-    req.onsuccess = () => resolve(); req.onerror = () => reject(req.error);
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(LOCAL_PHOTO_STORE).objectStore(LOCAL_PHOTO_STORE).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
   });
+}
+
+async function idbLocalAll(ownerId) {
+  if (!ownerId) return [];
+  const rows = (await idbLocalRows()).filter(row => row.owner_id === ownerId);
+  const visible = [];
+  for (const row of rows) {
+    if (!row.deleting) { visible.push(localPhotoRecord(row)); continue; }
+    try {
+      const files = nativePhotoFiles();
+      if (files && row.native_path) await files.remove(ownerId, row.native_path);
+      await idbLocalDelete(ownerId, row.id);
+    } catch { /* keep the deletion marker and retry after the next sign-in */ }
+  }
+  return visible;
+}
+
+async function idbLocalDelete(ownerId, id) {
+  if (!ownerId || !id) return;
+  await idbWrite(LOCAL_PHOTO_STORE, store => store.delete(`${ownerId}:${id}`));
+}
+
+async function idbDeleteQueueOwner(ownerId) {
+  const db = await idb();
+  const includeUnowned = localStorage.getItem(LS.owner) === ownerId;
+  const queued = await new Promise((resolve, reject) => {
+    const req = db.transaction('queue').objectStore('queue').getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+  for (const item of queued) {
+    if (item.owner_id === ownerId || (includeUnowned && !item.owner_id)) {
+      await idbWrite('queue', store => store.delete(item.id));
+    }
+  }
+}
+
+async function idbDeleteLocalOwner(ownerId) {
+  const rows = (await idbLocalRows()).filter(row => row.owner_id === ownerId);
+  const files = nativePhotoFiles();
+  if (files) {
+    for (const file of await files.list(ownerId)) await files.remove(ownerId, file.path);
+  }
+  for (const row of rows) await idbLocalDelete(ownerId, row.id);
+  const db = await idb();
+  const queued = await new Promise((resolve, reject) => {
+    const req = db.transaction('queue').objectStore('queue').getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+  for (const item of queued) {
+    if (item.owner_id === ownerId) await idbDelete(item.id);
+  }
+}
+
+function nativePhotoFiles() {
+  const files = window.WayfinderPhotoFiles;
+  return files && files.isNative() ? files : null;
+}
+
+async function saveLocalPhoto(item) {
+  const record = localPhotoRecord(item);
+  const files = nativePhotoFiles();
+  if (!files) return idbLocalPut(record);
+
+  const stored = await files.save(record.owner_id, record.id, record.blob);
+  const { blob, ...metadata } = record;
+  const nativeRecord = {
+    ...metadata,
+    native_path: stored.path,
+    bytes: stored.bytes == null ? record.bytes : stored.bytes,
+  };
+  try {
+    return await idbLocalPut(nativeRecord);
+  } catch (error) {
+    try { await files.remove(record.owner_id, stored.path); } catch { /* durable queue retries */ }
+    throw error;
+  }
+}
+
+async function discardSavedLocalPhoto(record) {
+  const files = nativePhotoFiles();
+  if (files && record.native_path) {
+    await idbLocalPut({ ...record, deleting: true });
+    await files.remove(record.owner_id, record.native_path);
+  }
+  await idbLocalDelete(record.owner_id, record.id);
+}
+
+let localPersistenceRequested = false;
+async function requestLocalPhotoPersistence() {
+  if (localPersistenceRequested || nativePhotoFiles()) return;
+  localPersistenceRequested = true;
+  try { await navigator.storage?.persist?.(); } catch { /* browser decides */ }
+}
+
+function releaseLocalPhotoUrls() {
+  for (const url of objectUrls.values()) URL.revokeObjectURL(url);
+  objectUrls.clear();
 }
 
 // ── EXIF: the camera's own timestamp ─────────────────────────────────
@@ -847,15 +1012,22 @@ async function downscale(file) {
 // ── Adding photos ────────────────────────────────────────────────────
 async function addPhotos(adventureId, files) {
   if (accountDeletionInProgress) return;
+  const runOwner = userId, runGeneration = authGeneration;
+  const stillCurrent = () => !accountDeletionInProgress
+    && runOwner === userId && runGeneration === authGeneration;
   const list = [...files].filter(f => f.type.startsWith('image/'));
   if (!list.length) { toast('No images in that selection'); return; }
 
   uploading += list.length;
   renderPhotoStatus();
+  await requestLocalPhotoPersistence();
+  let accepted = 0;
 
   for (const file of list) {
     try {
+      if (!stillCurrent()) continue;
       const exif = await readExifDate(file);
+      if (!stillCurrent()) continue;
       const r = row(adventureId);
       let takenAt, source;
       if (exif)                       { takenAt = exif;                          source = 'exif'; }
@@ -864,19 +1036,33 @@ async function addPhotos(adventureId, files) {
       else                            { takenAt = new Date();                    source = 'upload'; }
 
       const { blob, width, height } = await downscale(file);
+      if (!stillCurrent()) continue;
       const item = {
-        id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
+        id: (crypto.randomUUID ? crypto.randomUUID()
+          : `photo_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`),
         adventure_id: adventureId,
         blob, width, height, bytes: blob.size,
         taken_at: takenAt.toISOString(),
         taken_at_source: source,
         uploaded_by: who,
-        owner_id: userId,
+        owner_id: runOwner,
       };
-      pendingPhotos.push(item);
-      await idbPut(item);
+      if (nativePhotoFiles()) {
+        const saved = await saveLocalPhoto(item);
+        if (!stillCurrent()) {
+          await discardSavedLocalPhoto(saved);
+          continue;
+        }
+        if (!photos.some(photo => photo.local_key === saved.local_key)) photos.push(saved);
+      } else {
+        await idbPut(item);
+        if (!stillCurrent()) { await idbDelete(item.id); continue; }
+        pendingPhotos.push(item);
+      }
+      accepted++;
       renderAll();
     } catch (err) {
+      if (!stillCurrent()) continue;
       console.warn('photo failed', file.name, file.type, err);
       toast(err && err.message ? err.message : 'Could not read that photo');
     } finally {
@@ -884,7 +1070,10 @@ async function addPhotos(adventureId, files) {
       renderPhotoStatus();
     }
   }
-  flushPhotoQueue();
+  if (stillCurrent()) await flushPhotoQueue();
+  if (stillCurrent() && accepted && !pendingPhotos.length) {
+    toast('Saved inside Wayfinder on this phone. Clearing app data or uninstalling removes it.');
+  }
 }
 
 /* Keep photo objects uploaded before paths carried a scope where they are.
@@ -900,7 +1089,7 @@ async function migrateLegacyPhotos() {
 }
 
 async function flushPhotoQueue() {
-  if (!sb || !online || accountDeletionInProgress) { renderPhotoStatus(); return; }
+  if (accountDeletionInProgress) { renderPhotoStatus(); return; }
   if (flushPhotoQueue.busy) { flushPhotoQueue.requested = true; renderPhotoStatus(); return; }
   if (!pendingPhotos.length) { renderPhotoStatus(); return; }
   flushPhotoQueue.busy = true;
@@ -910,35 +1099,15 @@ async function flushPhotoQueue() {
     for (const item of [...pendingPhotos]) {
       if (runGeneration !== authGeneration || runOwner !== userId || item.owner_id !== runOwner) break;
       try {
-      // <scope>/<adventure>/<id>.jpg — the first segment is what the storage
-      // policy checks, so a stranger cannot read someone else's memories by
-      // guessing a path. Legacy objects remain at their existing paths and
-      // the hardened policy checks ownership through their photo metadata.
-      const path = `${runOwner}/${item.adventure_id}/${item.id}.jpg`;
-      const up = await sb.storage.from(BUCKET)
-        .upload(path, item.blob, { contentType: 'image/jpeg', upsert: true });
+      const saved = await saveLocalPhoto(item);
       if (runGeneration !== authGeneration || runOwner !== userId) break;
-      if (up.error) throw up.error;
-
-      const ins = await sb.from('photos').insert({
-        adventure_id: item.adventure_id,
-        storage_path: path,
-        taken_at: item.taken_at,
-        taken_at_source: item.taken_at_source,
-        width: item.width, height: item.height, bytes: item.bytes,
-        uploaded_by: item.uploaded_by || who,
-        user_id: runOwner, group_id: null,
-      }).select().single();
-      if (runGeneration !== authGeneration || runOwner !== userId) break;
-      if (ins.error) throw ins.error;
-
-      photos.push(ins.data);
+      if (!photos.some(photo => photo.local_key === saved.local_key)) photos.push(saved);
       pendingPhotos = pendingPhotos.filter(p => p.id !== item.id);
       await idbDelete(item.id);
       if (runGeneration !== authGeneration || runOwner !== userId) break;
       renderAll();
       } catch (err) {
-        console.warn('upload failed, will retry', err.message || err);
+        console.warn('local photo save failed, will retry', err.message || err);
         break;                                  // stop on first failure; try again later
       }
     }
@@ -953,25 +1122,35 @@ async function flushPhotoQueue() {
 }
 
 async function pullPhotos() {
-  if (!sb || !online) return;
   const runOwner = userId, runGeneration = authGeneration;
+  const local = await idbLocalAll(runOwner);
+  if (runGeneration !== authGeneration || runOwner !== userId) return;
+  if (!sb || !online) { photos = local; return; }
   const { data, error } = await sb.from('photos').select('*').order('taken_at', { ascending: false });
   if (runGeneration !== authGeneration || runOwner !== userId) return;
-  if (error) { console.warn('photo pull failed', error.message); return; }
-  photos = data || [];
+  if (error) { console.warn('photo pull failed', error.message); photos = local; return; }
+  photos = [...local, ...(data || []).map(row => ({ ...row, local: false }))];
 }
 
 async function deletePhoto(photoId) {
   const p = photos.find(x => x.id === photoId);
   if (!p) return;
-  if (!confirm('Delete this photo? It will disappear from both phones.')) return;
+  if (!p.local) {
+    toast('This existing cloud photo is read-only.');
+    return;
+  }
+  if (!confirm('Delete this photo from Wayfinder on this phone?')) return;
   try {
-    const removed = await sb.storage.from(BUCKET).remove([p.storage_path]);
-    if (removed.error) throw removed.error;
-    const { error } = await sb.from('photos').delete().eq('id', photoId);
-    if (error) throw error;
+    const files = nativePhotoFiles();
+    if (files && p.native_path) {
+      await idbLocalPut({ ...p, deleting: true });
+      await files.remove(p.owner_id, p.native_path);
+    }
+    await idbLocalDelete(p.owner_id, p.id);
     photos = photos.filter(x => x.id !== photoId);
-    signedUrls.delete(p.storage_path);
+    const objectUrl = objectUrls.get(p.id);
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrls.delete(p.id);
     closeLightbox();
     renderAll();
     toast('Photo deleted');
@@ -984,6 +1163,7 @@ async function deletePhoto(photoId) {
 // ── Signed URLs (the bucket is private, so links are minted on demand) ─
 async function ensureSignedUrls(paths) {
   if (!sb || !online) return;
+  const runOwner = userId, runGeneration = authGeneration;
   const now = Date.now();
   const needed = [...new Set(paths)].filter(p => {
     const hit = signedUrls.get(p);
@@ -992,6 +1172,7 @@ async function ensureSignedUrls(paths) {
   if (!needed.length) return;
 
   const { data, error } = await sb.storage.from(BUCKET).createSignedUrls(needed, SIGNED_TTL);
+  if (runOwner !== userId || runGeneration !== authGeneration) return;
   if (error) { console.warn('signing failed', error.message); return; }
   for (const d of data || []) {
     if (d.signedUrl) signedUrls.set(d.path, { url: d.signedUrl, expires: now + SIGNED_TTL * 1000 });
@@ -999,6 +1180,7 @@ async function ensureSignedUrls(paths) {
 }
 
 function photoSrc(p) {
+  if (p.local) return p.blob ? objectUrlFor(p) : (objectUrls.get(p.id) || '');
   if (p.pending) return p.objectUrl;
   const hit = signedUrls.get(p.storage_path);
   // Expiry matters here, not just presence. Returning a stale link made
@@ -1019,8 +1201,25 @@ function photosFor(adventureId) {
 
 const objectUrls = new Map();
 function objectUrlFor(item) {
+  if (!item.blob) return objectUrls.get(item.id) || '';
   if (!objectUrls.has(item.id)) objectUrls.set(item.id, URL.createObjectURL(item.blob));
   return objectUrls.get(item.id);
+}
+
+async function ensureLocalPhotoUrls(items) {
+  const files = nativePhotoFiles();
+  if (!files) return;
+  const runOwner = userId, runGeneration = authGeneration;
+  for (const item of items) {
+    if (item.owner_id !== runOwner || !item.native_path || objectUrls.has(item.id)) continue;
+    try {
+      const blob = await files.read(item.owner_id, item.native_path);
+      if (runGeneration !== authGeneration || runOwner !== userId || item.owner_id !== userId) return;
+      objectUrls.set(item.id, URL.createObjectURL(blob));
+    } catch (error) {
+      console.warn('local photo read', error.message || error);
+    }
+  }
 }
 
 function renderPhotoStatus() {
@@ -1030,9 +1229,7 @@ function renderPhotoStatus() {
   const s = queued === 1 ? '' : 's';
   let msg = '';
   if (uploading)              msg = `Processing ${uploading} photo${uploading === 1 ? '' : 's'}…`;
-  else if (queued && !sb)     msg = `${queued} photo${s} saved on this phone — not connected to the shared album.`;
-  else if (queued && !online) msg = `${queued} photo${s} saved on this phone — they'll upload when you have signal.`;
-  else if (queued)            msg = `Uploading ${queued} photo${s}…`;
+  else if (queued)            msg = `Saving ${queued} earlier photo${s} on this phone…`;
   el.textContent = msg;
   el.classList.toggle('show', !!msg);
 }
@@ -1847,9 +2044,13 @@ async function deleteAccount() {
     // Let an upload already inside the Storage request observe the generation
     // change, then enumerate. That ordering catches an object created at the
     // same moment deletion began.
-    while (flushPhotoQueue.busy) await new Promise(resolve => setTimeout(resolve, 25));
+    while (uploading || flushPhotoQueue.busy) await new Promise(resolve => setTimeout(resolve, 25));
     if (userId !== deletingOwner) throw new Error('account changed during deletion');
     await removeOwnedStorage(deletingOwner);
+    if (userId !== deletingOwner) throw new Error('account changed during deletion');
+    await idbDeleteLocalOwner(deletingOwner);
+    if (userId !== deletingOwner) throw new Error('account changed during deletion');
+    await idbDeleteQueueOwner(deletingOwner);
     if (userId !== deletingOwner) throw new Error('account changed during deletion');
 
     const { error } = await sb.rpc('delete_my_account');
@@ -2615,7 +2816,7 @@ function renderMemories() {
     ...pendingPhotos.map(p => ({ ...p, pending: true, objectUrl: objectUrlFor(p) })),
   ];
   if (!all.length) {
-    el.innerHTML = `<div class="empty">No photos yet.<br>Open an adventure and add some under <b>Our memory of it</b>.</div>`;
+    el.innerHTML = `<div class="empty">No photos yet.<br>Open an adventure and add some under <b>Your memory</b>.</div>`;
     return;
   }
 
@@ -2669,12 +2870,15 @@ function renderMemories() {
 // so scroll position and any open sheet survive.
 async function hydrateThumbs() {
   const missing = [];
+  const localMissing = [];
   $$('.thumb').forEach(btn => {
     const p = findPhoto(btn.dataset.photo);
-    if (p && !p.pending && !photoSrc(p)) missing.push(p.storage_path);
+    if (p && p.local && !photoSrc(p)) localMissing.push(p);
+    else if (p && !p.pending && !photoSrc(p)) missing.push(p.storage_path);
   });
-  if (!missing.length) return;
-  await ensureSignedUrls(missing);
+  if (!missing.length && !localMissing.length) return;
+  await ensureLocalPhotoUrls(localMissing);
+  if (missing.length) await ensureSignedUrls(missing);
   $$('.thumb').forEach(btn => {
     const p = findPhoto(btn.dataset.photo);
     if (!p) return;
@@ -2724,7 +2928,7 @@ async function showLightbox() {
     exif: '',
     file: ' (from the file date)',
     completed: ' (the date you ticked it off)',
-    upload: ' (upload date)',
+    upload: ' (date added)',
   };
 
   $('#lbImg').src = photoSrc(p) || '';
@@ -2733,7 +2937,7 @@ async function showLightbox() {
     `${when}${SOURCE_NOTE[p.taken_at_source] || ''}` +
     (a ? ` · ${a.place}` : '') +
     (p.uploaded_by ? ` · added by ${p.uploaded_by}` : '') +
-    (p.pending ? ' · waiting to upload' : '');
+    (p.pending ? ' · waiting to save on this device' : '');
   $('#lbDelete').classList.toggle('hidden', !!p.pending);
   $('#lbDelete').dataset.photo = p.id;
   const many = lightbox.list.length > 1;
@@ -2970,12 +3174,12 @@ function renderSheet(id) {
     <h3>Add to a trip</h3>
     ${renderTripPicker(a.id)}
 
-    <h3>Our rating</h3>
+    <h3>Your rating</h3>
     <div class="stars">
       ${[1, 2, 3, 4, 5].map(n => `<button data-rate="${n}" aria-label="${n} star${n > 1 ? 's' : ''}">${n <= (r.rating || 0) ? '★' : '☆'}</button>`).join('')}
     </div>
 
-    <h3>Our memory of it</h3>
+    <h3>Your memory</h3>
     <textarea id="memoryBox" placeholder="What actually happened…">${esc(r.memory || '')}</textarea>
     <div class="sheet-actions"><button class="btn-primary" data-act="saveMemory">Save memory</button></div>
 
@@ -2990,8 +3194,8 @@ function renderSheet(id) {
       </button>
     </div>
     <p class="photohint">${ph.length
-      ? 'Tap a photo to see it full size.'
-      : 'Photos are resized before uploading, and dated from the camera’s own timestamp.'}</p>`;
+      ? 'Tap a photo to see it full size. New photos stay inside Wayfinder on this device.'
+      : 'Photos are resized and saved inside Wayfinder on this device. They are not copied to your Photos gallery or synced to other devices.'}</p>`;
 
   hydrateThumbs();
 }
@@ -3327,7 +3531,7 @@ function wireUI() {
 
   // Photo picker
   $('#photoInput').addEventListener('change', async e => {
-    const files = e.target.files;
+    const files = Array.from(e.target.files || []);
     const target = photoTargetId;
     e.target.value = '';                        // so re-picking the same file fires again
     if (target != null && files && files.length) await addPhotos(target, files);
@@ -3416,7 +3620,7 @@ function wireUI() {
   });
 
   $('#cameraInput').addEventListener('change', async e => {
-    const files = e.target.files, target = photoTargetId;
+    const files = Array.from(e.target.files || []), target = photoTargetId;
     e.target.value = '';
     if (target != null && files && files.length) await addPhotos(target, files);
   });
@@ -3876,6 +4080,7 @@ async function handleSignedOut(message = 'Signed out. Sign in to continue.') {
   authGeneration++;
   userId = null; accountUser = null; accountIsAnonymous = false;
   progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
+  releaseLocalPhotoUrls();
   photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
   activeGroupId = null; signedUrls.clear();
   flushOutbox.requested = false; flushPhotoQueue.requested = false; flushTrips.requested = false;
