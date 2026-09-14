@@ -17,7 +17,7 @@ from urllib.parse import unquote, urljoin, urlparse
 
 ROOT = Path(__file__).resolve().parent / "public"
 APP_ROOT = ROOT.parent.parent
-CONTACT = "rambodog555@gmail.com"
+CONTACT_PLACEHOLDER = "TO BE ASSIGNED"
 ABN = "RL Applications · ABN 92 363 169 656"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36"
 
@@ -45,6 +45,14 @@ REDIRECTS = {
     "/wayfinder/support.html": "/wayfinder/support/",
     "/wayfinder/delete-account.html": "/wayfinder/delete-account/",
 }
+CONTACT_STATUS_ROUTES = {
+    "/support/",
+    "/privacy/",
+    "/wayfinder/support/",
+    "/wayfinder/privacy/",
+    "/wayfinder/delete-account/",
+}
+CONTACT_STATUS_FILES = {ROUTES[route] for route in CONTACT_STATUS_ROUTES}
 LIVE_HOSTS = (
     "https://rlapplications.com",
     "https://www.rlapplications.com",
@@ -228,8 +236,12 @@ def local_checks() -> tuple[list[str], set[str]]:
             errors.append(f"{rel}: duplicate id present")
         if ABN not in text:
             errors.append(f"{rel}: ABN footer missing")
-        if "help@rlapplications.com" in text:
-            errors.append(f"{rel}: uncreated support address published")
+        if re.search(r"[\w.+-]+@gmail\.com", text, flags=re.I) or "help@rlapplications.com" in text.lower():
+            errors.append(f"{rel}: unavailable support address published")
+        if "mailto:" in text.lower():
+            errors.append(f"{rel}: mailto link published while support mailbox is unavailable")
+        if rel in CONTACT_STATUS_FILES and CONTACT_PLACEHOLDER not in text:
+            errors.append(f"{rel}: support mailbox placeholder missing")
         if "/cdn-cgi/l/email-protection" in text or "data-cfemail" in text:
             errors.append(f"{rel}: Cloudflare email rewriting markup present")
         for image in doc.images:
@@ -240,8 +252,7 @@ def local_checks() -> tuple[list[str], set[str]]:
             if parsed.scheme in {"http", "https"}:
                 external.add(link)
             elif parsed.scheme == "mailto":
-                if parsed.path != CONTACT:
-                    errors.append(f"{rel}: unexpected mail recipient {parsed.path}")
+                continue
             elif parsed.scheme or link.startswith("//"):
                 errors.append(f"{rel}: unsupported link scheme {link}")
             elif link.startswith("/"):
@@ -395,8 +406,12 @@ def live_checks() -> list[str]:
                 if "no-transform" not in headers.get("cache-control", ""):
                     errors.append(f"{label}: cache-control missing no-transform")
                 text = body.decode("utf-8", errors="replace")
-                if CONTACT not in text and route in {"/", "/support/", "/privacy/", "/wayfinder/support/", "/wayfinder/privacy/", "/wayfinder/delete-account/"}:
-                    errors.append(f"{label}: expected contact address missing")
+                if route in CONTACT_STATUS_ROUTES and CONTACT_PLACEHOLDER not in text:
+                    errors.append(f"{label}: support mailbox placeholder missing")
+                if "mailto:" in text.lower():
+                    errors.append(f"{label}: mailto link published while support mailbox is unavailable")
+                if re.search(r"[\w.+-]+@gmail\.com", text, flags=re.I) or "help@rlapplications.com" in text.lower():
+                    errors.append(f"{label}: unavailable support address published")
                 if "data-cfemail" in text or "/cdn-cgi/l/email-protection" in text:
                     errors.append(f"{label}: email rewriting detected")
                 if "<script" in text.lower():

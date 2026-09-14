@@ -26,10 +26,11 @@ Use English (Australia) as the primary locale.
 | iOS keywords | `adventure,bucket list,trip planner,hidden gems,travel journal,passport,memories` |
 | Copyright | `2026 Riley Nicholas Lawler trading as RL Applications` |
 
-The current temporary support contact is `rambodog555@gmail.com`. Change store
-contact fields to the dedicated RL Applications mailbox only after it can send,
-receive and recover access. Keep the public pages and both store consoles in
-sync with that change.
+Public support mailbox: **TO BE ASSIGNED**. Email support is temporarily
+unavailable. A dedicated RL Applications mailbox must be able to send, receive
+and recover access before commercial release; then keep the public pages and
+both store consoles in sync. The verified Resend no-reply transactional sender
+is for account messages and is not a monitored support mailbox.
 
 ### Description
 

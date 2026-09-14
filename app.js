@@ -4205,8 +4205,8 @@ function wireUI() {
     if ((el = hit('data-recsave'))) return saveRec(el.dataset.recsave || null);
   });
 
-  $('#privacyBtn').onclick = () => window.open('privacy.html', '_blank', 'noopener');
-  $('#supportBtn').onclick = () => window.open('support.html', '_blank', 'noopener');
+  $('#privacyBtn').onclick = () => window.location.assign('privacy.html');
+  $('#supportBtn').onclick = () => window.location.assign('support.html');
 
   // Only offered while there is no real store to buy from.
   $('#previewBtn').onclick = () => {

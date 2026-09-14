@@ -2,7 +2,7 @@
 
 Prepared 11 September 2026. Local release draft only; neither public page nor store declaration has been published by this work.
 
-`privacy.html` and `support.html` now describe required accounts, optional completion sharing, individual purchases, the actual location provider, and an external deletion-request route. The owner confirmed that `rambodog555@gmail.com` remains the public support address temporarily. Do not represent RL Studios as a registered business name until that is verified.
+`privacy.html` and `support.html` describe required accounts, optional completion sharing, individual purchases, the actual location provider, and an external deletion-request route. Public support mailbox: **TO BE ASSIGNED**; email contact is temporarily unavailable. A working mailbox for support, deletion requests and moderation must be assigned before commercial release. The verified Resend no-reply transactional sender remains available for account messages but is not a monitored support route.
 
 ## Evidence and open release checks
 
