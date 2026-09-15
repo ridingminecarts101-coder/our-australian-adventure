@@ -12,13 +12,14 @@ import os
 import re
 import sys
 
-APP_FILES = ['app.js', 'world.js', 'config.js', 'land.js', 'countries.js', 'store.js']
+APP_FILES = ['app.js', 'world.js', 'config.js', 'land.js', 'countries.js', 'store.js', 'photo-backup.js', 'photo-transfer.js']
 HTML = 'index.html'
 CSS = 'styles.css'
 
 # Entry points and browser callbacks. Never "unused" even when nothing in our
 # own source calls them by name.
 ENTRY_POINTS = {
+    'exposePhotoBackup', 'exposePhotoTransfer',  # immediately invoked module wrappers
     'boot', 'runDiagnostics',
     # assigned to window / called from inline handlers
     'toggle', 'detail', 'rate', 'note',
@@ -64,7 +65,7 @@ def main():
     # Ids the app creates at runtime rather than declaring in index.html
     RUNTIME_IDS = {'memoryBox', 'tripStart', 'tripEnd', 'tripNotes', 'sql',
                'recTitle', 'recPlace', 'recAdmin', 'recCountry',
-               'recCategory', 'recDesc'}
+               'recCategory', 'recDesc', 'recSource', 'recReviewConsent'}
     missing = sorted(wanted - html_ids - RUNTIME_IDS)
     if missing:
         problems.append(('JS looks for ids that are not in index.html', missing))

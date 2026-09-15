@@ -319,6 +319,7 @@ function harness() {
 
   {
     const h = { signOutHandling: false, signOutWork: null, authGeneration: 1, userId: 'owner-a', accountUser: {},
+      PENDING_GROUP_INVITE_KEY: 'wayfinder.pending-group-invite',
       passwordRecoveryMode: true, passwordRecoveryBusy: true, passwordRecoveryOwnerId: 'owner-a',
       passwordRecoveryAttempt: 0, pendingPasswordRecovery: { ownerId: 'owner-a', attempt: 0 },
       recoveryRequestBusy: true, recoveryRequestAttempt: 0,
@@ -399,6 +400,7 @@ function harness() {
     const owner = '11111111-1111-4111-8111-111111111111';
     const queue = [{id:'legacy-unowned',blob:{}}], values = new Map([['owner', owner]]);
     const h = { signOutHandling:false, signOutWork:null, authGeneration:1, userId:owner, accountUser:{}, accountIsAnonymous:false,
+      PENDING_GROUP_INVITE_KEY:'wayfinder.pending-group-invite',
       passwordRecoveryMode:false,passwordRecoveryBusy:false,passwordRecoveryOwnerId:null,passwordRecoveryAttempt:0,
       pendingPasswordRecovery:null,recoveryRequestBusy:false,recoveryRequestAttempt:0,
       progress:new Map(),personalProgress:new Map(),personalCacheReady:true,

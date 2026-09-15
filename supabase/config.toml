@@ -1,2 +1,5 @@
 [functions.revenuecat-deletion-worker]
 verify_jwt = false
+
+[functions.community-review-notifier]
+verify_jwt = false

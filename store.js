@@ -198,6 +198,40 @@ const Billing = {
   _customerInfoListener: null,
   _listenerPlugin: null,
   onChange: null,
+  onBusyChange: null,
+  _storeAction: null,
+  _customerInfoRequest: 0,
+  _lastCustomerInfoAcceptedRequest: 0,
+  _customerInfoChangedDuringAction: false,
+
+  get busy() { return !!this._storeAction; },
+
+  _withStoreAction(kind, work) {
+    if (this._storeAction) return Promise.resolve({ ok: false, reason: 'store_busy' });
+    const action = { kind, owner: this._appUserId, generation: this._generation };
+    this._storeAction = action;
+    // An older foreground/customer read must not replace a newer purchase or
+    // restore result for the same account after the Apple sheet closes.
+    this._customerInfoRequest++;
+    if (typeof this.onBusyChange === 'function') {
+      try { this.onBusyChange(true); } catch { /* store action must still finish */ }
+    }
+    return Promise.resolve().then(work).finally(() => {
+      if (this._storeAction !== action) return;
+      this._storeAction = null;
+      const needsRefresh = this._customerInfoChangedDuringAction;
+      if (typeof this.onBusyChange === 'function') {
+        try { this.onBusyChange(false); } catch { /* never retain a busy lease */ }
+      }
+      // Keep this intent until an actual current CustomerInfo read succeeds.
+      // A back-to-back action or offline read can defer it without losing a
+      // refund notification or scheduling an unbounded retry loop.
+      if (needsRefresh && action.owner === this._appUserId
+          && action.generation === this._generation) {
+        void this.foreground();
+      }
+    });
+  },
 
   get native() {
     const cap = window.Capacitor;
@@ -227,6 +261,8 @@ const Billing = {
     const previousCleanup = this._cleanupReady;
     if (requestedId !== this._appUserId) {
       this._generation++;
+      this._customerInfoRequest++;
+      this._customerInfoChangedDuringAction = false;
       this._ready = null;
       this._appUserId = requestedId;
       loadEntitlements(requestedId);
@@ -286,6 +322,10 @@ const Billing = {
   async _addCustomerInfoListener(P, expectedGeneration, expectedId) {
     if (!P || !P.addCustomerInfoUpdateListener) return;
     const listener = customerInfo => {
+      if (this._storeAction) {
+        this._customerInfoChangedDuringAction = true;
+        return;
+      }
       this._acceptCustomerInfo(customerInfo, expectedGeneration, expectedId);
     };
     const listenerId = await P.addCustomerInfoUpdateListener(listener);
@@ -317,9 +357,12 @@ const Billing = {
    */
   async refresh(expectedGeneration = this._generation, expectedId = this._appUserId) {
     if (!this.native) return [...owned];
+    const request = ++this._customerInfoRequest;
     try {
       const { customerInfo } = await this._plugin.getCustomerInfo();
-      if (expectedGeneration !== this._generation || expectedId !== this._appUserId) return [];
+      if (expectedGeneration !== this._generation || expectedId !== this._appUserId
+          || request !== this._customerInfoRequest) return [];
+      this._lastCustomerInfoAcceptedRequest = request;
       return this._acceptCustomerInfo(customerInfo, expectedGeneration, expectedId);
     } catch (e) { console.warn('refresh', e); return [...owned]; }
   },
@@ -348,7 +391,9 @@ const Billing = {
   /* Returns { ok, slug } or { ok:false, reason }. A cancelled purchase is not
    * an error and must not be reported as one.
    */
-  async buy(slug) {
+  buy(slug) { return this._withStoreAction('buy', () => this._buyUnlocked(slug)); },
+
+  async _buyUnlocked(slug) {
     const pack = packBySlug(slug);
     if (!pack || pack.unreleased) return { ok: false, reason: 'not for sale' };
 
@@ -386,16 +431,20 @@ const Billing = {
       if (runGeneration !== this._generation || runId !== this._appUserId) {
         return { ok: false, reason: 'account changed' };
       }
-      const product = (products || [])[0];
+      const product = (products || []).find(item => item.identifier === productId(slug));
       if (!product) return { ok: false, reason: 'the store does not have that one yet' };
 
-      const { customerInfo } = await this._plugin.purchaseStoreProduct({ product });
+      const { customerInfo, productIdentifier } = await this._plugin.purchaseStoreProduct({ product });
       if (runGeneration !== this._generation || runId !== this._appUserId) {
         return { ok: false, reason: 'account changed' };
       }
+      if (productIdentifier && productIdentifier !== productId(slug)) {
+        return { ok: false, reason: 'access_pending' };
+      }
+      this._customerInfoRequest++;
       this._acceptCustomerInfo(customerInfo, runGeneration, runId);
       if (!owned.has(slug) && !owned.has('all')) {
-        return { ok: false, reason: 'purchase completed but access is not configured; try Restore Purchases' };
+        return { ok: false, reason: 'access_pending' };
       }
       return { ok: true, slug };
     } catch (e) {
@@ -404,8 +453,8 @@ const Billing = {
       if (e && (e.userCancelled || String(e.code) === '1')) {
         return { ok: false, reason: 'cancelled' };
       }
-      console.warn('purchase', e);
-      return { ok: false, reason: (e && e.message) || 'the store refused' };
+      console.warn('purchase unavailable');
+      return { ok: false, reason: 'store_unavailable' };
     }
   },
 
@@ -413,7 +462,9 @@ const Billing = {
    * of ours. It replaces local state entirely rather than merging, so a
    * refunded or family-revoked purchase actually goes away.
    */
-  async restore() {
+  restore() { return this._withStoreAction('restore', () => this._restoreUnlocked()); },
+
+  async _restoreUnlocked() {
     if (onNativePlatform() && !this.native) {
       return { ok: false, reason: 'the shop is not available in this build' };
     }
@@ -429,24 +480,43 @@ const Billing = {
       if (runGeneration !== this._generation || runId !== this._appUserId) {
         return { ok: false, reason: 'account changed' };
       }
+      this._customerInfoRequest++;
       const slugs = this._acceptCustomerInfo(customerInfo, runGeneration, runId);
       return { ok: true, restored: slugs };
     } catch (e) {
-      console.warn('restore', e);
-      return { ok: false, reason: (e && e.message) || 'could not reach the store' };
+      console.warn('restore unavailable');
+      return { ok: false, reason: 'restore_unavailable' };
     }
   },
 
   async foreground() {
     if (!this.native || !this._appUserId) return [...owned];
+    if (this._storeAction) {
+      this._customerInfoChangedDuringAction = true;
+      return [...owned];
+    }
     const requestedId = this._appUserId, requestedGeneration = this._generation;
     if (!await this.init()) return [...owned];
     if (requestedGeneration !== this._generation || requestedId !== this._appUserId) return [];
+    if (this._storeAction) {
+      this._customerInfoChangedDuringAction = true;
+      return [...owned];
+    }
     const P = this._plugin;
     try {
       if (P && P.invalidateCustomerInfoCache) await P.invalidateCustomerInfoCache();
       if (requestedGeneration !== this._generation || requestedId !== this._appUserId) return [];
-      return await this.refresh(requestedGeneration, requestedId);
+      if (this._storeAction) {
+        this._customerInfoChangedDuringAction = true;
+        return [...owned];
+      }
+      const result = await this.refresh(requestedGeneration, requestedId);
+      if (this._customerInfoChangedDuringAction && !this._storeAction
+          && requestedGeneration === this._generation && requestedId === this._appUserId
+          && this._lastCustomerInfoAcceptedRequest === this._customerInfoRequest) {
+        this._customerInfoChangedDuringAction = false;
+      }
+      return result;
     } catch (e) {
       console.warn('billing foreground', e);
       return [...owned];
@@ -459,6 +529,8 @@ const Billing = {
     if (ownerId !== this._appUserId && ownerId !== entitlementOwner) return true;
     const previousReady = this._ready;
     this._generation++;
+    this._customerInfoRequest++;
+    this._customerInfoChangedDuringAction = false;
     this._ready = null;
     this._appUserId = null;
     entitlementOwner = null;
@@ -476,6 +548,8 @@ const Billing = {
   async signOut() {
     const previousReady = this._ready;
     this._generation++;
+    this._customerInfoRequest++;
+    this._customerInfoChangedDuringAction = false;
     this._ready = null;
     this._appUserId = null;
     entitlementOwner = null;

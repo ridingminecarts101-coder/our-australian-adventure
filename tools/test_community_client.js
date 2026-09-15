@@ -8,7 +8,7 @@ const turn = () => new Promise(r=>setImmediate(r));
 function harness() {
   const values=new Map(), elements=new Map(), calls=[], effects=[];
   const el=key=>{
-    if(!elements.has(key)) elements.set(key,{innerHTML:'',textContent:'',value:'Valid fixture',
+    if(!elements.has(key)) elements.set(key,{innerHTML:'',textContent:'',value:key==='#recSource'?'':'Valid fixture',checked:key==='#recReviewConsent',
       classList:{add(){},remove(){},toggle(){}},addEventListener(){},setAttribute(){}});
     return elements.get(key);
   };
@@ -126,14 +126,72 @@ async function main(){
     const pending=h.run(`recCard({id:'pending',created_by:'owner-a',title:'Fixture recommendation',
       place:'Fixture reserve',country:'AU',up_votes:0,down_votes:0,stars_count:0,
       moderation_status:'pending',hidden:true})`);
-    assert(pending.includes('Awaiting operator review. Only you can see it.'));
+    assert(pending.includes('Awaiting review. Only you can see it.'));
     assert(!pending.includes('Hidden after reports.'));
     const held=h.run(`recCard({id:'held',created_by:'owner-a',title:'Fixture recommendation',
       place:'Fixture reserve',country:'AU',up_votes:0,down_votes:0,stars_count:0,
       moderation_status:'approved',hidden:true})`);
     assert(held.includes('Hidden after reports or operator review.'));
     h.response(()=>Promise.resolve({error:null}));await h.run('saveRec(null)');
-    assert(h.effects.includes('Sent for operator review'));
+    assert(h.effects.includes('Sent for review. Check Community → Mine for the result.'));
+  }
+  {
+    const h=harness();
+    h.context.COUNTRY_NAME={AU:'Australia'};h.context.COUNTRY_FLAG={AU:'AU'};
+    h.run('showManagedDialog=()=>{};openRecSheet(null);');
+    const form=h.elements.get('#recBody').innerHTML;
+    assert(form.includes('id="recReviewConsent" type="checkbox">'),'fresh consent starts unchecked');
+    assert(form.includes('OpenAI, Gmail and Resend'),'named review services disclosed before sending');
+    assert(form.includes('memory photos never join a submission'));
+    assert(!form.includes('type="file"'),'Community has no image or file input');
+  }
+  {
+    const h=harness();
+    h.run("$('#recReviewConsent').checked=false;");
+    await h.run('saveRec(null)');
+    assert.equal(h.calls.length,0,'no consent must send no submission');
+    assert(!h.effects.includes('close'),'no consent preserves the form');
+    h.run("$('#recReviewConsent').checked=true; $('#recSource').value='javascript:alert(1)';");
+    await h.run('saveRec(null)');
+    assert.equal(h.calls.length,0,'unsafe source sends no submission');
+    h.run("$('#recSource').value='https://www.nationalparks.nsw.gov.au/';");
+    await h.run('saveRec(null)');
+    const first=h.calls[0].row;
+    assert.equal(first.moderation_consent_version,'community-ai-2026-09-15');
+    assert.equal(first.source_url,'https://www.nationalparks.nsw.gov.au/');
+    assert.match(first.moderation_consent_nonce,/^[a-f0-9-]{36}$/);
+    assert(!Object.keys(first).some(k=>/photo|image|email|approved|reason/.test(k)), 'no photo, email or decision fields sent');
+    await h.run("saveRec('post')");
+    assert.notEqual(h.calls[1].row.moderation_consent_nonce,first.moderation_consent_nonce,'edit requires a fresh consent assertion');
+    assert.equal(h.run('recSort'),'mine','author is taken to their review results');
+    for(const bad of ['http://example.com','https://u:p@example.com','https://127.0.0.1/','https://10.0.0.1/','https://[::1]/','https://localhost/','https://a.local/','https://a.internal/','https://example.com:9999/','https://example.com:443/','https://a-.com/','https://a.xn--bad-/','data:text/html,bad']) {
+      assert.equal(h.context.communitySourceUrl(bad),'',bad+' rejected');
+    }
+    assert.equal(h.context.communitySourceUrl('https://example.org/path?q=walk'),'https://example.org/path?q=walk');
+    assert.equal(h.context.communitySourceUrl('https://xn--e1afmkfd.xn--p1ai/'),'https://xn--e1afmkfd.xn--p1ai/');
+    const rejected=h.run(`recCard({id:'rejected',created_by:'owner-a',title:'Fixture recommendation',
+      place:'Fixture reserve',country:'AU',up_votes:0,down_votes:0,stars_count:0,
+      moderation_status:'rejected',hidden:true,moderation_reason:'Please remove <script>bad</script>',
+      source_url:'javascript:alert(1)'})`);
+    assert(rejected.includes('Not published.'));
+    assert(rejected.includes('&lt;script&gt;bad&lt;/script&gt;'));
+    assert(!rejected.includes('javascript:'));
+    assert(!rejected.includes('Awaiting review.'));
+    assert(rejected.includes('ask the studio to review this decision'));
+    const outsider=h.run(`recCard({id:'rejected',created_by:'owner-b',title:'Fixture',place:'Reserve',country:'AU',
+      up_votes:0,down_votes:0,stars_count:0,moderation_status:'rejected',hidden:true,moderation_reason:'Private reason'})`);
+    assert(!outsider.includes('Private reason'),'private denial reason is author-only even if a stale client row exists');
+  }
+  for(const [message,expected] of [
+    ['Community review limit: try again later (3 per hour)','several requests recently'],
+    ['Community review limit: try again later (20 per day)','several requests recently'],
+    ['Confirm Community email/AI review before submitting','Reopen the recommendation'],
+    ['Confirm Community email/AI review for each edit','Reopen the recommendation'],
+  ]) {
+    const h=harness();h.response(()=>Promise.resolve({error:{message}}));
+    await h.run('saveRec(null)');
+    assert(h.effects.some(t=>t.includes(expected)),'database boundary has useful feedback');
+    assert(!h.effects.includes('close'),'rejected request keeps form text');
   }
   {
     const h=harness();h.context.confirm=()=>false;

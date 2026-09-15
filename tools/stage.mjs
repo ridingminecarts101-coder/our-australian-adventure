@@ -21,7 +21,7 @@ const OUT = join(ROOT, 'www');
 const SHIP = [
   'index.html', 'privacy.html', 'support.html', 'notices.html', 'manifest.json',
   'styles.css',
-  'app.js', 'frame-guard.js', 'photo-files.js', 'config.js', 'countries.js', 'store.js', 'partners.js',
+  'app.js', 'frame-guard.js', 'photo-files.js', 'photo-backup.js', 'photo-transfer.js', 'config.js', 'countries.js', 'store.js', 'partners.js',
   'land.js', 'world.js',
   'data/adventures.json',
   'vendor/supabase-2.113.0.js',
