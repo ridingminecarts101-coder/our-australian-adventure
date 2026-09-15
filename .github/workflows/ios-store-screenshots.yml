@@ -128,6 +128,19 @@ jobs:
               if got != (width,height): raise SystemExit(f'{image.name}: unexpected {got}, wanted {(width,height)}')
               print(f'{image.name}: {got[0]}x{got[1]} JPEG')
           PY
+      - name: Export screenshots and failure attachments
+        if: always()
+        run: |
+          set -euo pipefail
+          for family in iphone ipad; do
+            result="build/store-screenshots-${family}.xcresult"
+            if test -d "$result"; then
+              output="build/store-screenshots/failure-evidence/${family}"
+              mkdir -p "$output"
+              xcrun xcresulttool export attachments \
+                --path "$result" --output-path "$output"
+            fi
+          done
       - name: Save screenshots and test evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6

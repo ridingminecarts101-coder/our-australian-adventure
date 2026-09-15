@@ -1,0 +1,69 @@
+name: iOS public startup diagnostic
+
+# Manual unsigned simulator test before login. It uses no App Store environment,
+# private review credential, signing material or RevenueCat public SDK key.
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-startup-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  startup:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Stage the exact unsigned native app
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run stage
+          npx cap sync ios
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+          grep -Fq "ios: ''" ios/App/App/public/config.js
+      - name: Observe fresh pre-login iPhone startup
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          xcodebuild test \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+            -derivedDataPath build/DerivedData-startup \
+            -resultBundlePath build/startup-diagnostic.xcresult \
+            -only-testing:WayfinderStoreScreenshotsUITests/WayfinderStoreScreenshots/testStartupDiagnostic \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/startup-diagnostic.log
+      - name: Export startup screen and accessibility evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          if test -d build/startup-diagnostic.xcresult; then
+            mkdir -p build/startup-attachments
+            xcrun xcresulttool export attachments \
+              --path build/startup-diagnostic.xcresult \
+              --output-path build/startup-attachments
+          fi
+      - name: Retain startup test evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ios-startup-diagnostic-${{ github.run_number }}
+          path: |
+            build/startup-attachments/
+            build/startup-diagnostic.log
+          if-no-files-found: warn
+          retention-days: 7

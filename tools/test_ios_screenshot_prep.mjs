@@ -3,10 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import xcode from 'xcode';
 
-const [projectText, scheme, workflow, testSource, listing, copy, markup, appSource] = await Promise.all([
+const [projectText, scheme, workflow, startupWorkflow, testSource, listing, copy, markup, appSource] = await Promise.all([
   readFile(new URL('../ios/App/App.xcodeproj/project.pbxproj', import.meta.url), 'utf8'),
   readFile(new URL('../ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme', import.meta.url), 'utf8'),
   readFile(new URL('../.github/workflows/ios-store-screenshots.yml', import.meta.url), 'utf8'),
+  readFile(new URL('../.github/workflows/ios-startup-diagnostic.yml', import.meta.url), 'utf8'),
   readFile(new URL('../ios/App/WayfinderStoreScreenshotsUITests/WayfinderStoreScreenshots.swift', import.meta.url), 'utf8'),
   readFile(new URL('../store-release/ios-listing.json', import.meta.url), 'utf8').then(JSON.parse),
   readFile(new URL('../store-release/APP-STORE-COPY-AND-REVIEW.md', import.meta.url), 'utf8'),
@@ -50,9 +51,27 @@ assert.match(workflow, /Available iPhone Pro Max and 13-inch iPad Pro simulators
 assert.match(workflow, /1320 2868/);
 assert.match(workflow, /2064 2752/);
 assert.match(workflow, /xcresulttool export attachments/);
+assert.match(workflow, /- name: Export screenshots and failure attachments\n\s+if: always\(\)/);
+assert(workflow.indexOf('Export screenshots and failure attachments') < workflow.indexOf('Save screenshots and test evidence'),
+  'failure attachments must be exported before artifact upload');
 assert.match(workflow, /-s format jpeg/);
 
+assert.match(startupWorkflow, /workflow_dispatch:/);
+assert.match(startupWorkflow, /CODE_SIGNING_ALLOWED=NO/);
+assert.match(startupWorkflow, /-only-testing:WayfinderStoreScreenshotsUITests\/WayfinderStoreScreenshots\/testStartupDiagnostic/);
+assert.match(startupWorkflow, /- name: Export startup screen and accessibility evidence\n\s+if: always\(\)/);
+assert(startupWorkflow.indexOf('Export startup screen and accessibility evidence') < startupWorkflow.indexOf('Retain startup test evidence'),
+  'startup failure evidence must be exported before upload');
+assert.doesNotMatch(startupWorkflow, /environment: app-store|secrets\.|TEST_RUNNER_|REVENUECAT_IOS_PUBLIC_SDK_KEY|APP_STORE_CONNECT_API_/);
+
 assert.match(testSource, /XCUIScreen\.main\.screenshot\(\)/);
+assert.match(testSource, /func testStartupDiagnostic\(\)/);
+const diagnostic = testSource.slice(testSource.indexOf('func testStartupDiagnostic()'), testSource.indexOf('func testCaptureStoreSubmissionScreens()'));
+assert(diagnostic.indexOf('startup-actual-screen') < diagnostic.indexOf('XCTAssertTrue(webViewFound'),
+  'diagnostic screenshot must be attached before failure assertion');
+assert(diagnostic.indexOf('startup-accessibility-tree') < diagnostic.indexOf('XCTAssertTrue(webViewFound'),
+  'diagnostic accessibility tree must be attached before failure assertion');
+assert.doesNotMatch(diagnostic, /reviewEmail|reviewPassword|WAYFINDER_REVIEW_/);
 assert.match(testSource, /WAYFINDER_REVIEW_EMAIL/);
 assert.match(testSource, /WAYFINDER_REVIEW_PASSWORD/);
 assert.match(testSource, /throw XCTSkip\("A private, verified review account/);

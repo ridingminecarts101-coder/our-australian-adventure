@@ -10,6 +10,38 @@ final class WayfinderStoreScreenshots: XCTestCase {
         app.launch()
     }
 
+    func testStartupDiagnostic() {
+        // No fixture or purchase key is available to this test. Observe the
+        // installed app before any login and keep evidence even if it fails.
+        let webView = app.webViews.firstMatch
+        let webViewFound = webView.waitForExistence(timeout: 45)
+        let signInFound = app.buttons["Sign in"].waitForExistence(timeout: 30)
+        let retryFound = app.buttons["Try again"].exists
+
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "startup-actual-screen"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+
+        let accessibility = app.debugDescription
+        let emailPattern = try! NSRegularExpression(
+            pattern: "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}",
+            options: [.caseInsensitive]
+        )
+        let redacted = emailPattern.stringByReplacingMatches(
+            in: accessibility, range: NSRange(accessibility.startIndex..., in: accessibility),
+            withTemplate: "[redacted-email]"
+        )
+        let tree = XCTAttachment(string: redacted)
+        tree.name = "startup-accessibility-tree"
+        tree.lifetime = .keepAlways
+        add(tree)
+
+        XCTAssertTrue(webViewFound, "The native WebView did not become available")
+        XCTAssertFalse(retryFound, "Wayfinder reached the recoverable startup-error screen")
+        XCTAssertTrue(signInFound, "A fresh native install must show the required account gate")
+    }
+
     func testCaptureStoreSubmissionScreens() throws {
         try signInIfRequired()
         let adventures = button(containing: "Adventures")
