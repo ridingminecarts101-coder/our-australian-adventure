@@ -12,7 +12,7 @@ const JOB = {
 };
 const env = {
   COMMUNITY_REVIEW_WORKER_TOKEN: 'strong-worker-token',
-  SUPABASE_URL: 'https://sample.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_test',
+  SUPABASE_URL: 'https://ajyuozqoukigeeyhvuqc.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_test',
   RESEND_COMMUNITY_REVIEW_API_KEY: 're_mock',
 };
 const request = (token = env.COMMUNITY_REVIEW_WORKER_TOKEN, method = 'POST') =>
@@ -54,8 +54,20 @@ function harness({ jobs = [JOB], resend = () => answer({ id: 'provider-email-id'
 }
 
 {
+  let networkCalls = 0;
+  const wrongProject = createCommunityReviewNotifier({
+    env: { ...env, SUPABASE_URL: 'https://other-project.supabase.co' },
+    fetchImpl: async () => { networkCalls++; return answer([]); },
+  });
+  assert.equal((await wrongProject(request())).status, 503);
+  assert.equal(networkCalls, 0, 'wrong project URL fails before private queue claim or email send');
+}
+
+{
   const { calls, handle } = harness();
   assert.deepEqual(await (await handle(request())).json(), { claimed: 1, acknowledged: 1, retried: 0 });
+  assert.equal(JSON.parse(calls.find(c => c.name === 'claim_community_review_notifications').options.body).p_limit, 1,
+    'one lease per invocation bounds sequential provider/database timeouts');
   const send = calls.find(c => c.url === 'https://api.resend.com/emails');
   assert.equal(send.options.headers['idempotency-key'], `community-review/${ID}/3`);
   assert.equal(send.options.headers.authorization, 'Bearer re_mock');
@@ -74,6 +86,13 @@ function harness({ jobs = [JOB], resend = () => answer({ id: 'provider-email-id'
   assert.ok(!body.html.includes('must-not-leak'));
   assert.equal(calls.find(c => c.name === 'ack_community_review_notification').options.body,
     JSON.stringify({ p_recommendation_id: ID, p_moderation_revision: 3, p_lease_token: LEASE }));
+}
+
+{
+  const { calls, handle } = harness({ jobs: [JOB, { ...JOB, recommendation_id: '22222222-2222-4222-8222-222222222222' }] });
+  assert.equal((await handle(request())).status, 503,
+    'an unexpected oversized claim response must not start an unbounded send batch');
+  assert.equal(calls.filter(c => c.url === 'https://api.resend.com/emails').length, 0);
 }
 
 {
@@ -163,4 +182,4 @@ function harness({ jobs = [JOB], resend = () => answer({ id: 'provider-email-id'
   assert.equal((await handle(request())).status, 200);
 }
 
-console.log('Community review notifier mock HTTP: 13 scenarios PASS');
+console.log('Community review notifier mock HTTP: 15 scenarios PASS');

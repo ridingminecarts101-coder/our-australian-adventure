@@ -1,4 +1,5 @@
 const RESEND_URL = 'https://api.resend.com/emails';
+const EXPECTED_SUPABASE_URL = 'https://ajyuozqoukigeeyhvuqc.supabase.co';
 const RECIPIENT = 'help.rlapplications@gmail.com';
 const SENDER = 'Wayfinder Review <no-reply@auth.rlapplications.com>';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -115,7 +116,8 @@ export function createCommunityReviewNotifier({ env, fetchImpl = fetch } = {}) {
     const supabaseUrl = envValue(env, 'SUPABASE_URL');
     const serviceKey = envValue(env, 'SUPABASE_SECRET_KEY') || envValue(env, 'SUPABASE_SERVICE_ROLE_KEY');
     const resendKey = envValue(env, 'RESEND_COMMUNITY_REVIEW_API_KEY');
-    if (!supabaseUrl || !/^https:\/\/[^/]+\/?$/.test(supabaseUrl) || !serviceKey || !resendKey) {
+    if (!supabaseUrl || supabaseUrl.replace(/\/$/, '') !== EXPECTED_SUPABASE_URL
+        || !serviceKey || !resendKey) {
       return json({ error: 'worker_not_configured' }, 503);
     }
     const apiHeaders = { apikey: serviceKey, 'content-type': 'application/json' };
@@ -131,9 +133,12 @@ export function createCommunityReviewNotifier({ env, fetchImpl = fetch } = {}) {
     };
 
     let jobs;
-    try { jobs = await rpc('claim_community_review_notifications', { p_limit: 10 }); }
+    // One sequential lease keeps claim + send + ack/retry bounded below the
+    // hosted Edge request idle limit even when every network call times out.
+    // The scheduler can invoke again; SQL still enforces the global day cap.
+    try { jobs = await rpc('claim_community_review_notifications', { p_limit: 1 }); }
     catch { return json({ error: 'queue_unavailable' }, 503); }
-    if (!Array.isArray(jobs)) return json({ error: 'queue_unavailable' }, 503);
+    if (!Array.isArray(jobs) || jobs.length > 1) return json({ error: 'queue_unavailable' }, 503);
 
     let acknowledged = 0, retried = 0;
     for (const job of jobs) {

@@ -148,8 +148,8 @@
     const backupGuard = iosBackupGuard();
     if (backupGuard) {
       await backupGuard.prepare();
-      // An interrupted import must receive verified per-file exclusion before
-      // its existing bytes can be adopted by visible photo metadata.
+      // A file left by an interrupted import must receive the same verified
+      // per-file exclusion as a newly written JPEG before metadata adopts it.
       await backupGuard.exclude({ path: safe });
     }
     return true;

@@ -5019,8 +5019,8 @@ function openRecSheet(id) {
       value="${r && r.source_url ? esc(r.source_url) : ''}"></label>
     <p class="fineprint">A source helps us check that the place and activity are real. Recommendations are text-only; your memory photos never join a submission.</p>
     <label class="rec-consent"><input id="recReviewConsent" type="checkbox">
-      <span>I agree to send this recommendation, its public source link and my display name to RL Applications for AI-assisted review using OpenAI, Gmail and Resend.</span></label>
-    <p class="fineprint">Your submission stays private while it is reviewed. An approved recommendation and your display name appear on the Community board. If it is declined, you will see the reason under Community → Mine and can request another review. Automated checks can make mistakes. <a href="privacy.html">How review data is handled</a>.</p>
+      <span>I agree to send this recommendation, its public source link and my display name to RL Applications through Resend and Gmail for AI review using OpenAI. The AI agent may approve or reject it after checking the current submission.</span></label>
+    <p class="fineprint">Your submission stays private while it is reviewed. Approved content and your display name appear on the Community board; a rejection stays private with a reason under Community → Mine. Uncertain or reported content stays private for operator review. Automated checks can make mistakes, and you can request another review. <a href="privacy.html">How review data is handled</a>.</p>
     <p class="fineprint">Use your own words. Do not submit private information or links, sexual or explicit material, insults, threats, unsafe activities, or undisclosed advertising. Review may take time; you can still use the rest of Wayfinder without submitting.</p>
     <button class="btn-primary" data-recsave="${r ? esc(r.id) : ''}">${
       r ? 'Send changes for review' : 'Send for review'}</button>`;

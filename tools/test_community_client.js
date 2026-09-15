@@ -141,7 +141,11 @@ async function main(){
     h.run('showManagedDialog=()=>{};openRecSheet(null);');
     const form=h.elements.get('#recBody').innerHTML;
     assert(form.includes('id="recReviewConsent" type="checkbox">'),'fresh consent starts unchecked');
-    assert(form.includes('OpenAI, Gmail and Resend'),'named review services disclosed before sending');
+    assert(!/id="recReviewConsent"[^>]*checked/.test(form),'edit form cannot inherit a previous consent');
+    for(const provider of ['OpenAI','Gmail','Resend'])
+      assert(form.includes(provider),provider+' disclosed before sending');
+    assert(form.includes('The AI agent may approve or reject'),'automatic publication/denial disclosed in the consent choice');
+    assert(form.includes('Uncertain or reported content stays private'),'human hold disclosed before sending');
     assert(form.includes('memory photos never join a submission'));
     assert(!form.includes('type="file"'),'Community has no image or file input');
   }

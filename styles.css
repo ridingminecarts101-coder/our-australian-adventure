@@ -712,9 +712,9 @@ input, select, textarea { font: inherit; color: inherit; }
            min-height: 30px; }
 .reclink.danger { color: #c4553c; }
 .recnote { margin-top: 6px; font-size: 12px; color: #c4553c; }
-.rec-consent { display: flex; align-items: flex-start; gap: 10px; margin: 18px 0 8px; }
-.rec-consent input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--rust, #8c3e20); }
-.rec-consent span { flex: 1; font-size: 14px; line-height: 1.5; }
+#recSheet label.rec-consent { display: flex; align-items: flex-start; gap: 10px; margin: 18px 0 8px; }
+#recSheet .rec-consent input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px; padding: 0; margin: 2px 0 0; accent-color: var(--rust, #8c3e20); }
+#recSheet .rec-consent span { flex: 1; font-size: 14px; line-height: 1.5; }
 
 #recSheet label { display: block; margin: 10px 0 0; font-size: 13px; color: var(--muted); }
 #recSheet input, #recSheet select, #recSheet textarea {

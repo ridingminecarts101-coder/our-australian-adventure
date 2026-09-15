@@ -119,7 +119,7 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
   iosCalls.length = 0;
   await ios.verifyExcluded(OWNER, PATH);
   assert.deepEqual(iosCalls, [['prepare'], ['exclude', PATH]],
-    'an existing iOS photo gets verified per-file backup exclusion before adoption');
+    'an existing iOS photo gets a verified per-file backup exclusion before adoption');
   iosCalls.length = 0;
   await assert.rejects(ios.verifyExcluded(OTHER, PATH), /does not belong/);
   assert.deepEqual(iosCalls, [], 'foreign-owner path never reaches backup plugin');
@@ -149,7 +149,7 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
   rollbackCalls.length = 0;
   await assert.rejects(failingGuard.verifyExcluded(OWNER, PATH), /refused/);
   assert.deepEqual(rollbackCalls, ['prepare', 'exclude'],
-    'failed existing-file exclusion reports failure without deleting bytes');
+    'failed exclusion of existing bytes reports failure without deleting them');
 
   const prepareCalls = [];
   const failedPrepare = load({

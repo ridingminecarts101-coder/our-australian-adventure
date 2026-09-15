@@ -59,12 +59,14 @@ EXPECTED_MAILTOS = {
     "/wayfinder/support/": {
         "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support",
         "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20content%20correction",
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20Community%20review",
     },
     "/wayfinder/notices/": set(),
     "/wayfinder/privacy/": {"mailto:help.rlapplications@gmail.com?subject=Wayfinder%20privacy"},
     "/wayfinder/delete-account/": {
         "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20account%20deletion",
         "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support",
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20Community%20data",
     },
 }
 APP_EXPECTED_MAILTOS = {
