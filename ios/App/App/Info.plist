@@ -52,7 +52,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>To attach your own photos to the places you have been.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>To find adventures near you. Only used when you press Near me; your coordinates are sent to BigDataCloud to identify the region and are not saved in your Wayfinder account.</string>
+	<string>When you choose Near me, your coordinates and IP address go to BigDataCloud to find your region and improve its location service using anonymous pairings. Your location is not saved in your Wayfinder account. You can browse countries without location access.</string>
 	<!-- The app uses HTTPS and nothing but standard system encryption, which
 	     is exempt. Declaring it here means App Store Connect stops asking on
 	     every single upload. -->

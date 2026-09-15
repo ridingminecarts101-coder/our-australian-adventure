@@ -138,6 +138,8 @@ li + li { margin-top: 0.45rem; }
 .button:hover { background: var(--forest-light); color: white; }
 .button.secondary { background: transparent; color: var(--forest); }
 .button.secondary:hover { background: var(--sage); }
+.button.unavailable { cursor: default; background: #667a6b; border-color: #667a6b; color: white; }
+.button.unavailable:hover { background: #667a6b; color: white; }
 
 .status {
   display: inline-flex;
@@ -186,6 +188,10 @@ li + li { margin-top: 0.45rem; }
 .prose h3 { margin-top: 1.75rem; }
 .prose p, .prose li { color: #37453e; }
 .prose a { overflow-wrap: anywhere; }
+.notices-prose table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.notices-prose th, .notices-prose td { border-bottom: 1px solid var(--line); padding: .55rem .4rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.notices-prose pre { padding: 1rem; border: 1px solid var(--line); border-radius: .8rem; background: var(--paper); white-space: pre-wrap; overflow-wrap: anywhere; font: .82rem/1.55 ui-monospace, monospace; }
+.notices-prose section { max-width: 100%; }
 .notice { margin: 1.5rem 0; padding: 1.25rem 1.35rem; border-left: 5px solid var(--gold); border-radius: .2rem .9rem .9rem .2rem; background: #fff7df; }
 .notice.warning { border-color: var(--clay); background: #f9e6de; }
 

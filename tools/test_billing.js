@@ -113,7 +113,7 @@ function harness({ native = false, platform = 'web', key = '', confirmResult = t
   const state = {
     customerInfo, listeners: new Map(), listenerHistory: [], nextListener: 0,
     invalidateGate: null, removeGate: null, configureGate: null,
-    configureFailures: 0, warnings: [],
+    configureFailures: 0, cancelNextPurchase: false, warnings: [],
   };
   const purchases = {
     async configure(options) {
@@ -135,6 +135,10 @@ function harness({ native = false, platform = 'web', key = '', confirmResult = t
     },
     async purchaseStoreProduct({ product }) {
       calls.push(['purchase', product.identifier]);
+      if (state.cancelNextPurchase) {
+        state.cancelNextPurchase = false;
+        throw { code: 1, userCancelled: true };
+      }
       const slug = product.identifier.slice('app.wayfinder.mobile.gems.'.length).replace(/_/g, '-');
       state.customerInfo.entitlements.active[slug] = { identifier: slug, isActive: true };
       return { customerInfo: state.customerInfo };
@@ -213,6 +217,45 @@ async function main() {
   assert.equal(unavailableRestore.ok, false);
   assert.match(unavailableRestore.reason, /not available/);
   assert.equal(noKey.calls.some(([name]) => name === 'restore'), false);
+
+  // Exercise every exact permanent product with one isolated native customer.
+  // This is a StoreKit/RevenueCat mock, not a claim that Apple settled a sale.
+  const purchaseSet = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  await vm.runInContext(`Billing.init('${accountA}')`, purchaseSet.context);
+  purchaseSet.state.cancelNextPurchase = true;
+  const cancelled = await vm.runInContext("Billing.buy('africa')", purchaseSet.context);
+  assert.equal(cancelled.ok, false);
+  assert.equal(cancelled.reason, 'cancelled');
+  assert.equal(vm.runInContext('owned.size', purchaseSet.context), 0,
+    'cancelled StoreKit sheet must grant no pack');
+  const allSlugs = [...vm.runInContext('PACKS.map(p => p.slug)', purchaseSet.context)];
+  assert.equal(allSlugs.length, 8);
+  for (const slug of allSlugs) {
+    const result = await vm.runInContext(`Billing.buy('${slug}')`, purchaseSet.context);
+    assert.equal(result.ok, true, `${slug} mock purchase should return success`);
+    assert.equal(result.slug, slug);
+    assert.equal(vm.runInContext(`owned.has('${slug}')`, purchaseSet.context), true,
+      `${slug} must have its active entitlement`);
+  }
+  const purchasedIds = purchaseSet.calls.filter(([name]) => name === 'purchase').map(([, id]) => id);
+  assert.equal(new Set(purchasedIds).size, 8, 'eight distinct store IDs must be purchased');
+  for (const slug of allSlugs) {
+    assert(purchasedIds.includes(`app.wayfinder.mobile.gems.${slug.replace(/-/g, '_')}`));
+  }
+
+  const secondPhone = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  await vm.runInContext(`Billing.init('${accountA}')`, secondPhone.context);
+  assert.equal(vm.runInContext('owned.size', secondPhone.context), 0,
+    'a fresh phone starts with no local paid cache');
+  secondPhone.state.customerInfo = purchaseSet.state.customerInfo;
+  const restored = await vm.runInContext('Billing.restore()', secondPhone.context);
+  assert.equal(restored.ok, true);
+  assert.deepEqual([...restored.restored].sort(), allSlugs.slice().sort(),
+    'restore must read all eight active entitlements from CustomerInfo');
+  secondPhone.state.customerInfo = { entitlements: { active: {} }, allPurchasedProductIdentifiers: [] };
+  await vm.runInContext(`Billing.init('${accountB}')`, secondPhone.context);
+  assert.equal(vm.runInContext('owned.size', secondPhone.context), 0,
+    'another Wayfinder identity must not inherit restored access');
 
   const native = harness({ native: true, platform: 'android', key: 'goog_PUBLIC_TEST_KEY' });
   assert.equal(await vm.runInContext('Billing.init()', native.context), false);
@@ -400,7 +443,7 @@ async function main() {
   const prices = vm.runInContext('PACKS.map(({ slug, price }) => ({ slug, price }))', browser.context);
   assert.equal(prices.find(p => p.slug === 'all').price, 'AUD $14.99');
   assert(prices.filter(p => p.slug !== 'all').every(p => p.price === 'AUD $2.99'));
-  console.log('  billing behaviour: prices, identity, native guard, purchase and sign-out passed');
+  console.log('  billing behaviour: 8 mock IAPs, cancelled sale, restore, identity, native guard and sign-out passed');
 }
 
 main().catch(error => { console.error(error); process.exit(1); });

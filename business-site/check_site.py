@@ -28,6 +28,7 @@ ROUTES = {
     "/privacy/": "privacy/index.html",
     "/wayfinder/": "wayfinder/index.html",
     "/wayfinder/support/": "wayfinder/support/index.html",
+    "/wayfinder/notices/": "wayfinder/notices/index.html",
     "/wayfinder/privacy/": "wayfinder/privacy/index.html",
     "/wayfinder/delete-account/": "wayfinder/delete-account/index.html",
 }
@@ -55,6 +56,7 @@ EXPECTED_MAILTOS = {
         "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support",
         "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20content%20correction",
     },
+    "/wayfinder/notices/": set(),
     "/wayfinder/privacy/": {"mailto:help.rlapplications@gmail.com?subject=Wayfinder%20privacy"},
     "/wayfinder/delete-account/": {
         "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20account%20deletion",
@@ -221,8 +223,8 @@ def local_checks() -> tuple[list[str], set[str]]:
     errors: list[str] = []
     external: set[str] = set()
     html_files = sorted(ROOT.rglob("*.html"))
-    if len(html_files) != 8:
-        errors.append(f"expected 8 HTML pages, found {len(html_files)}")
+    if len(html_files) != 9:
+        errors.append(f"expected 9 HTML pages, found {len(html_files)}")
 
     try:
         _, expected_stylesheet = authored_assets()
@@ -278,6 +280,8 @@ def local_checks() -> tuple[list[str], set[str]]:
         for link in doc.links:
             parsed = urlparse(link)
             if parsed.scheme in {"http", "https"}:
+                if parsed.hostname == "ridingminecarts101-coder.github.io" and parsed.path.startswith("/our-australian-adventure/"):
+                    errors.append(f"{rel}: public website must not link to the PWA review build")
                 external.add(link)
             elif parsed.scheme == "mailto":
                 continue

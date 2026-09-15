@@ -106,11 +106,14 @@ def main():
                           'NSPrivacyCollectedDataTypePreciseLocation'):
             item = collected_rows.get(data_type, {})
             purposes = set(item.get('NSPrivacyCollectedDataTypePurposes', []))
+            provider_purpose = ('NSPrivacyCollectedDataTypePurposeOther'
+                                if data_type == 'NSPrivacyCollectedDataTypePreciseLocation'
+                                else 'NSPrivacyCollectedDataTypePurposeAnalytics')
             if (item.get('NSPrivacyCollectedDataTypeLinked') is not True
                     or item.get('NSPrivacyCollectedDataTypeTracking') is not False
                     or not {'NSPrivacyCollectedDataTypePurposeAppFunctionality',
-                            'NSPrivacyCollectedDataTypePurposeAnalytics'}.issubset(purposes)):
-                problems.append('%s disclosure lacks linked app-functionality/analytics, non-tracking settings'
+                            provider_purpose}.issubset(purposes)):
+                problems.append('%s disclosure lacks linked app-functionality/provider-purpose, non-tracking settings'
                                 % data_type)
     except (OSError, plistlib.InvalidFileException) as error:
         problems.append('iOS privacy manifest is missing or invalid: %s' % error)

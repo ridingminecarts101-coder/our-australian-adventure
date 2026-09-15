@@ -1059,8 +1059,8 @@
       "place": "Kurobe Gorge Railway",
       "sources": [
         {
-          "accessed": "2026-09-14",
-          "claim_supported": "Until 30 September 2026 operations are a shuttle between Unazuki and Nekomata; full-line fares and the operator's 1 October resumption notice are published.",
+          "accessed": "2026-09-15",
+          "claim_supported": "Until 30 September 2026 operations are a shuttle between Unazuki and Nekomata; October onward routes and schedules are yet to be determined by the operator.",
           "country": "JP",
           "gem_rationale": "Access correction only; specialist mountain railway remains outside Japan's standard Golden Route.",
           "id": 4753,
@@ -1685,6 +1685,27 @@
       "country": "AU",
       "place": "Kakadu wetlands",
       "sources": [
+        {
+          "accessed": "2026-09-15",
+          "access_note": "Official visitor guide updated January 2026; Yellow Water region and seasonal-access guidance checked 2026-09-15.",
+          "country": "AU",
+          "publisher": "Parks Australia",
+          "reference_id": "OA-423-VISITOR-GUIDE-2026",
+          "supports": "Yellow Water is a South Alligator River floodplain; receding water exposes a walk and boardwalk viewpoints, with varied birdlife and a year-round cruise. Seasonal access requires checking.",
+          "target_id": 423,
+          "title": "Kakadu National Park Visitor Guide (updated January 2026)",
+          "url": "https://api.parksaustralia.gov.au/sites/default/files/2024-04/document/knp-visitor-guide.pdf"
+        },
+        {
+          "accessed": "2026-09-15",
+          "country": "AU",
+          "publisher": "Parks Australia",
+          "reference_id": "OA-423-DAILY-ACCESS-2026",
+          "supports": "The Kakadu Access Report gives daily updates on key visitor sites and changing road or site conditions.",
+          "target_id": 423,
+          "title": "Kakadu access report",
+          "url": "https://kakadu.gov.au/news/access-and-alerts/"
+        },
         {
           "accessed": "2026-09-14",
           "country": "AU",
@@ -3236,17 +3257,17 @@
       "place": "Paracas Red Beach",
       "sources": [
         {
-          "access_note": "Accessed 2026-09-14; public web source; current conditions still require checking.",
+          "access_note": "Replacement official SERNANP government page verified 2026-09-15 (HTTP 200; Playa Roja named). The prior visitareasnaturales URL unexpectedly returned unrelated gambling content on 2026-09-15; it is not used as current provenance. Current access still requires checking.",
           "country": "PE",
-          "date": "current page; accessed 2026-09-14",
+          "date": "official government page; verified 2026-09-15",
           "decision": "reclassify_hidden_gem_false",
-          "gem_rationale": "SERNANP places Playa Roja on the signed 26 km North Tourist Circuit, with mapped viewpoints, parking and a paved approach; it is a core reserve stop.",
+          "gem_rationale": "SERNANP names Playa Roja among the reserve's visitor viewpoints; it is not treated as a hidden gem.",
           "id": 4025,
           "place": "Paracas Red Beach",
-          "publisher": "SERNANP Perú",
-          "supports": "Playa Roja is a named viewpoint on the signed North Tourist Circuit.",
-          "title": "Reserva Nacional de Paracas",
-          "url": "https://visitaareasnaturales.sernanp.gob.pe/anps/reserva-nacional-de-paracas/"
+          "publisher": "SERNANP Perú — Plataforma del Estado Peruano",
+          "supports": "Official SERNANP reserve summary lists Playa Roja among named viewpoints.",
+          "title": "Reserva Nacional de Paracas — informes y publicaciones",
+          "url": "https://www.gob.pe/institucion/sernanp/informes-publicaciones/1718991-reserva-nacional-de-paracas"
         }
       ],
       "batch": "account-c-americas-africa-83-country"
@@ -6524,7 +6545,7 @@
         "continent": "Asia",
         "cost": 2,
         "country": "JP",
-        "description": "Ride the narrow-gauge train into Kurobe Gorge on the section operating that day. Through 30 September 2026 service is a return shuttle from Unazuki to Nekomata; the operator announces full-line Unazuki-Keyakidaira service from 1 October, subject to conditions.",
+        "description": "Ride the narrow-gauge train into Kurobe Gorge on the section operating that day. Through 30 September 2026 service is a return shuttle from Unazuki to Nekomata; October onward routes and schedules await operator confirmation. Check the current timetable before booking.",
         "difficulty": 1,
         "dog_friendly": "no",
         "duration": "Half day",
@@ -7853,7 +7874,7 @@
         "continent": "Oceania",
         "cost": 3,
         "country": "AU",
-        "description": "Visit Kakadu as floodwater recedes and the wetlands remain full of birdlife. Check the daily access report and book any cruise before travelling, because roads and sites reopen in stages.",
+        "description": "Visit the Yellow Water floodplain as waters recede and watch for birdlife from the boardwalk or a booked cruise. Check Kakadu's daily access report before travelling, because site and road conditions can change.",
         "difficulty": 3,
         "dog_friendly": "no",
         "duration": "Full day",
@@ -7868,7 +7889,7 @@
           "world-heritage"
         ],
         "title": "See Kakadu's floodplains after the wet season",
-        "verified_at": "2026-09-14"
+        "verified_at": "2026-09-15"
       }
     },
     {
@@ -10848,7 +10869,7 @@
         "continent": "South America",
         "cost": 1,
         "country": "PE",
-        "description": "The reddish sand comes from eroded granite cliffs mixing with black volcanic rock, and it's a detour most Ballestas Islands day-trippers skip entirely. There's no shade and no facilities, so treat it as a lookout stop rather than a swim.",
+        "description": "Visit Playa Roja, a named visitor viewpoint in Paracas National Reserve. Follow reserve signs and check current access before travelling; plan it as a lookout without assuming swimming or on-site services.",
         "difficulty": 1,
         "dog_friendly": "check",
         "duration": "1-2 hrs",
@@ -10861,7 +10882,7 @@
         "season": "Year-round",
         "tags": [],
         "title": "Find the ochre sand of Playa Roja in Paracas National Reserve",
-        "verified_at": "2026-09-14"
+        "verified_at": "2026-09-15"
       }
     },
     {

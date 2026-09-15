@@ -121,6 +121,33 @@ async function main(){
     assert(h.run("recError.includes('Reconnect')"),'late network result cannot erase offline status');
     assert.equal(h.run("recs.some(r=>r.id==='late')"),false);
   }
+  {
+    const h=harness();
+    const pending=h.run(`recCard({id:'pending',created_by:'owner-a',title:'Fixture recommendation',
+      place:'Fixture reserve',country:'AU',up_votes:0,down_votes:0,stars_count:0,
+      moderation_status:'pending',hidden:true})`);
+    assert(pending.includes('Awaiting operator review. Only you can see it.'));
+    assert(!pending.includes('Hidden after reports.'));
+    const held=h.run(`recCard({id:'held',created_by:'owner-a',title:'Fixture recommendation',
+      place:'Fixture reserve',country:'AU',up_votes:0,down_votes:0,stars_count:0,
+      moderation_status:'approved',hidden:true})`);
+    assert(held.includes('Hidden after reports or operator review.'));
+    h.response(()=>Promise.resolve({error:null}));await h.run('saveRec(null)');
+    assert(h.effects.includes('Sent for operator review'));
+  }
+  {
+    const h=harness();h.context.confirm=()=>false;
+    h.run(`locate=async()=>{effects.push('geolocation');return {lat:0,lon:0}};
+      whereAmI=async()=>{effects.push('vendor');return {continent:null}};`);
+    await h.run('jumpToHere()');
+    assert(!h.effects.includes('geolocation'),'cancel must avoid device location');
+    assert(!h.effects.includes('vendor'),'cancel must avoid BigDataCloud request');
+    assert.equal(h.elements.get('#hereBtn'),undefined,'cancel must leave UI untouched');
+    h.context.confirm=()=>true;
+    await h.run('jumpToHere()');
+    assert(h.effects.includes('geolocation'),'allow starts location request');
+    assert(h.effects.includes('vendor'),'allow reaches vendor lookup');
+  }
   console.log('PASS: eight Community mutation boundaries, deletion guard, feedback serialization, retry and owner-scoped block/unblock');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

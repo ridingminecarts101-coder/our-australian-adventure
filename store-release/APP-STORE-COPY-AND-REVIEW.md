@@ -67,11 +67,11 @@ Draft Notes for Review:
 >
 > Purchases: open Me, then Paid collections. The eight non-consumable products unlock digital hidden-gem guide entries. Seven continent packs are AUD 2.99 each. All continents is AUD 14.99 and includes all seven geographic packs plus the Antarctica collection and future additions. Travel, admission, permits, accommodation and guide services are not included. Restore purchases is directly below the products. Purchases are associated with the signed-in Wayfinder account through RevenueCat’s App User ID.
 >
-> Near me: return to Adventures and select Near me. Location is requested only then. Coordinates are sent to BigDataCloud to identify the area and are not stored in the Wayfinder account. Manual browsing remains available if permission is declined.
+> Near me: return to Adventures and select Near me. An explanation and choice appear before device location is requested. Coordinates and the network IP address go to BigDataCloud for area lookup and anonymous geolocation-model improvement. Wayfinder does not save this location to the account. Manual browsing remains available if either choice is declined.
 >
 > Memories: new photos added by the submitted native build remain in app-private device storage and do not sync to another device. Notes, ratings, completion status and trips sync to the account. Removing the app can remove device-local photos.
 >
-> Community: open Community to view separately labelled user recommendations. A signed-in, verified account can recommend a place, vote, rate, report and block. Three reports hide a recommendation pending moderation. Community content never enters the curated adventure catalogue.
+> Community: open Community to view separately labelled user recommendations. A signed-in, verified account can send a recommendation for review, vote, rate, report and block. New and edited recommendations stay visible only to their author until a studio moderator approves them. Three reports hide a recommendation pending a separate moderation decision. Community content never enters the curated adventure catalogue.
 >
 > Account deletion: open Me, then Settings, then Delete my account and all my data. The app confirms before starting deletion. The current backend deletes the Wayfinder account data and queues deletion of the account identifier from RevenueCat. Device-local data is also cleared for that owner.
 >

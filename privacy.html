@@ -82,7 +82,7 @@
         <td>Our database</td></tr>
     <tr><td>Purchase records and unlocked packs in the mobile apps</td>
         <td>To recognise purchases and restore access for your account</td>
-        <td>Apple or Google, RevenueCat, and a cache on your device</td></tr>
+        <td>Apple for iOS purchases, RevenueCat, and a cache on your device; Google if Android purchases are enabled later</td></tr>
   </table>
 
   <h2>Accounts and advertising</h2>
@@ -152,13 +152,14 @@
      may have kept a separate copy.</p>
 
   <h2>Purchases</h2>
-  <p>Purchases are not active in the web review build. If one-time hidden-gem packs
-     are enabled in a future native release, they will belong to an individual
-     Wayfinder account; joining a group will not give other members your purchases.
-     Apple or Google will handle payment details, and Wayfinder will not receive your
-     card number. RevenueCat is planned to process your Wayfinder account identifier,
-     purchase and receipt information, unlocked packs and technical information needed
-     to operate billing. <a href="https://www.revenuecat.com/privacy-policy">RevenueCat privacy policy</a>.</p>
+  <p>Purchases are not active in the PWA web review build. The iOS app contains optional
+     one-time hidden-gem packs for the individual Wayfinder account; they are prepared
+     for TestFlight sandbox testing and are not yet publicly on sale. Joining a group
+     does not give other members your purchases. Apple handles iOS payment details,
+     and Wayfinder does not receive your card number. RevenueCat processes the linked
+     Wayfinder account identifier, purchase and receipt information, unlocked packs
+     and technical information needed to check or restore access. Google purchases
+     are not configured for Android yet. <a href="https://www.revenuecat.com/privacy-policy">RevenueCat privacy policy</a>.</p>
 
   <h2>Notifications</h2>
   <p>Optional, off unless you turn them on, and generated on your own device. They
@@ -205,8 +206,9 @@
   <p>Google provides the current Gmail support mailbox and its email infrastructure
      may retain messages previously sent to the former support address.
      The no-reply Resend sender is not a monitored support
-     mailbox. RevenueCat and the app stores are planned to support future native
-     purchases; BigDataCloud handles optional location lookups. These services receive
+     mailbox. Apple and RevenueCat support the prepared iOS purchase and restore flow;
+     Google purchases remain future Android work. BigDataCloud handles optional location
+     lookups. These services receive
      the information needed for their role, including normal network request
      information, and may process it outside Australia.</p>
 

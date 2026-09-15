@@ -231,6 +231,12 @@ jobs:
           cmp -s notices.html "$APP_PATH/public/notices.html"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH" 2>&1 | tee build/codesign-verify.log
 
+      - name: Audit bundled privacy declarations
+        run: |
+          python3 tools/audit_archive_privacy.py \
+            --app build/Wayfinder.xcarchive/Products/Applications/App.app \
+            --output build/privacy-manifest-inventory.json
+
       - name: Export App Store IPA
         env:
           PROFILE_NAME: ${{ steps.signing.outputs.profile_name }}
@@ -317,6 +323,7 @@ jobs:
             build/codesign-verify.log
             build/ios-export.log
             build/ipa-sha256.txt
+            build/privacy-manifest-inventory.json
             build/app-store-validation.json
             build/app-store-upload.json
           if-no-files-found: warn

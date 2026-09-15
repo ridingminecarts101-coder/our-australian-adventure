@@ -27,19 +27,23 @@ There is no build step, client-side JavaScript, analytics, form handler or envir
 
 ## Wayfinder launch links
 
-The overview's **Open Wayfinder** button and the installation FAQ both link
-directly to the existing GitHub Pages PWA. Keep both destinations aligned.
-The iOS/iPadOS and Android installation guides are deep-linked from the product
-page; their FAQ is expanded by default so those anchors remain visible without
-JavaScript. Native App Store and Google Play listings are not yet published.
-Once the actual listings are live, replace the PWA launch destinations with
-the verified store route appropriate to the visitor, preserving access to the
-PWA and accounting for its origin-bound photos. Do not insert placeholder
-store URLs or claim automatic store routing exists before implementation.
+The Wayfinder overview displays a noninteractive App Store download notice
+until a verified App Store listing is live. Its support FAQ explains the same
+availability, and the website does not link to the existing PWA review build.
+Google Play is planned but also has no live listing or download link. The
+existing PWA hosting and its origin-bound user data are unchanged by this
+website update. The third-party permission texts linked from support are hosted
+at `/wayfinder/notices/` rather than through the review build; keep this copy
+aligned with the bundled app notices when dependencies change.
+
+At launch, replace the inactive notice with a real link to the verified App
+Store listing, update the FAQ and product status together, and add a Google Play
+link only after its own listing is live. Do not insert placeholder store URLs or
+claim a download is available before either listing is public.
 
 The hero's decorative pseudo-element must keep `pointer-events: none` so it
-cannot cover the mobile launch button. When changing the shared CSS, update
-its version query in all HTML pages: assets are cached for one week.
+cannot cover a future mobile launch button. When changing the shared CSS,
+update its version query in all HTML pages: assets are cached for one week.
 
 ## Checks
 

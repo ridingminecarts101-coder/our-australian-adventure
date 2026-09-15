@@ -1398,6 +1398,7 @@ function matchRegion(country, subdivision) {
 }
 
 async function jumpToHere() {
+  if (!confirm('Near me sends your current coordinates and IP address to BigDataCloud to find your country or region. BigDataCloud also uses anonymous coordinate/IP pairings to improve its location service. Wayfinder does not save this location in your account. Continue? You can browse countries manually instead.')) return;
   const btn = $('#hereBtn');
   btn.disabled = true;
   btn.textContent = 'Finding you…';
@@ -4658,7 +4659,8 @@ function recCard(r) {
   const mine = myVotes.get(r.id);
   const v = mine ? mine.vote : 0;
   const own = userId && r.created_by === userId;
-  return `<article class="reccard${r.hidden ? ' hidden-post' : ''}">
+  const pending = r.moderation_status !== 'approved';
+  return `<article class="reccard${r.hidden || pending ? ' hidden-post' : ''}">
     <div class="recvote">
       <button class="recv${v === 1 ? ' on' : ''}" data-recvote="1" data-recid="${esc(r.id)}"
               aria-label="Vote up">▲</button>
@@ -4681,7 +4683,8 @@ function recCard(r) {
           : `<button class="reclink" data-recreport="${esc(r.id)}">Report</button>
              <button class="reclink" data-recblock="${esc(r.created_by)}">Block</button>`}
       </div>
-      ${r.hidden ? '<div class="recnote">Hidden after reports. Only you can see it.</div>' : ''}
+      ${own && pending ? '<div class="recnote">Awaiting operator review. Only you can see it.</div>'
+        : own && r.hidden ? '<div class="recnote">Hidden after reports or operator review. Only you can see it.</div>' : ''}
     </div>
   </article>`;
 }
@@ -4831,11 +4834,11 @@ function openRecSheet(id) {
     <label>Why it is worth it<textarea id="recDesc" maxlength="600" rows="4"
       placeholder="What makes it worth the detour, and anything someone should know before going.">${
         r && r.description ? esc(r.description) : ''}</textarea></label>
-    <p class="fineprint">Posting puts your display name on it. Do not post
+    <p class="fineprint">New recommendations and edits wait for operator review before other travellers can see them. Posting puts your display name on it. Do not post
        anything unsafe, abusive, or advertising a business you are part of.
        Posts can be reported and removed.</p>
     <button class="btn-primary" data-recsave="${r ? esc(r.id) : ''}">${
-      r ? 'Save changes' : 'Post it'}</button>`;
+      r ? 'Send changes for review' : 'Send for review'}</button>`;
   showManagedDialog('#recSheet');
 }
 
@@ -4864,7 +4867,7 @@ async function saveRec(id) {
   if (!res) return;
   if (res.error) { console.warn(res.error); return toast('Could not post it'); }
   closeRecSheet();
-  toast(id ? 'Updated' : 'Posted');
+  toast('Sent for operator review');
   recSort = 'new';
   $$('#recSort .chip').forEach(c => c.classList.toggle('on', c.dataset.recsort === 'new'));
   setPressedSelection($$('#recSort .chip'), $('#recSort .chip[data-recsort="new"]'));
