@@ -17,6 +17,8 @@
   --radius:     14px;
   --safe-top:    env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,7 +49,14 @@ html, body {
   overscroll-behavior-y: none;
 }
 
-body { padding-bottom: calc(64px + var(--safe-bottom)); }
+/* Keep the navigation in the page flow so short panels fill the viewport and
+   the bottom safe area is reserved once, by the bar itself. */
+#app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+}
+#app > .panel { flex: 1 0 auto; width: 100%; }
 .hidden { display: none !important; }
 h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
@@ -57,8 +66,8 @@ input, select, textarea { font: inherit; color: inherit; }
 .lock {
   position: fixed; inset: 0; z-index: 50;
   display: flex; flex-direction: column; align-items: center;
-  padding: calc(24px + var(--safe-top)) calc(24px + env(safe-area-inset-left, 0px))
-           calc(24px + var(--safe-bottom));
+  padding: calc(24px + var(--safe-top)) calc(24px + var(--safe-right))
+           calc(24px + var(--safe-bottom)) calc(24px + var(--safe-left));
   overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   background: linear-gradient(160deg, var(--ochre) 0%, #5d2714 100%);
 }
@@ -66,7 +75,7 @@ input, select, textarea { font: inherit; color: inherit; }
   width: 100%; max-width: 380px; text-align: center;
   flex: none; margin: auto 0;
   background: var(--card); border-radius: 20px;
-  padding: 32px 24px calc(28px + var(--safe-bottom));
+  padding: 32px 24px 28px;
   box-shadow: 0 20px 60px rgba(0,0,0,.35);
 }
 .lock-emblem { font-size: 44px; line-height: 1; }
@@ -109,7 +118,8 @@ input, select, textarea { font: inherit; color: inherit; }
 .topbar {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
-  padding: calc(12px + var(--safe-top)) 16px 10px;
+  padding: calc(12px + var(--safe-top)) calc(16px + var(--safe-right))
+           10px calc(16px + var(--safe-left));
   background: var(--ochre); color: #fff;
 }
 .eyebrow { font-size: 11px; letter-spacing: .16em; opacity: .8; font-weight: 600; }
@@ -136,7 +146,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .syncbar.warn { color: var(--gem); }
 
 /* ── Filters ─────────────────────────────────────────────────────── */
-.panel { padding: 14px 16px 24px; }
+.panel { padding: 14px calc(16px + var(--safe-right)) 24px calc(16px + var(--safe-left)); }
 .filters { display: grid; gap: 10px; }
 #search {
   width: 100%; padding: 12px 14px; font-size: 17px;
@@ -259,12 +269,13 @@ input, select, textarea { font: inherit; color: inherit; }
 
 /* ── Bottom tab bar ──────────────────────────────────────────────── */
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  position: sticky; bottom: 0; z-index: 30; flex: none;
   /* Five tabs. Named rather than counted so adding one does not silently
      wrap the last item onto a second row, which is what happened. */
   display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--card); border-top: 1px solid var(--line);
   padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left); padding-right: var(--safe-right);
 }
 .tab {
   display: grid; gap: 2px; justify-items: center; align-content: center;
@@ -281,12 +292,13 @@ input, select, textarea { font: inherit; color: inherit; }
   position: absolute; left: 0; right: 0; bottom: 0;
   max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
   background: var(--sand); border-radius: 20px 20px 0 0;
-  padding: 22px 18px calc(28px + var(--safe-bottom));
+  padding: 22px calc(18px + var(--safe-right))
+           calc(28px + var(--safe-bottom)) calc(18px + var(--safe-left));
   animation: rise .22s ease;
 }
 @keyframes rise { from { transform: translateY(28px); opacity: .4; } }
 .sheet-close {
-  position: absolute; top: 12px; right: 12px;
+  position: absolute; top: 12px; right: calc(12px + var(--safe-right));
   width: 34px; height: 34px; border-radius: 50%;
   background: var(--sand-2); color: var(--ink-2); font-size: 15px;
 }
@@ -387,6 +399,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .ptotal span { font-size: 11px; opacity: .8; }
 
 .stampgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.stampgrid > .empty { grid-column: 1 / -1; }
 @media (min-width: 460px) { .stampgrid { grid-template-columns: repeat(3, 1fr); } }
 
 /* Stamps are drawn like the real thing: a double-ruled box, banged on at a

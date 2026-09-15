@@ -66,6 +66,21 @@ final class WayfinderStoreScreenshots: XCTestCase {
         XCTAssertTrue(australia.waitForExistence(timeout: 15))
         australia.tap()
         capture("08-australia")
+        let allAustralia = button(containing: "Everything in Australia")
+        XCTAssertTrue(allAustralia.waitForExistence(timeout: 15), "The Australia catalogue route was unavailable")
+        allAustralia.tap()
+        let detail = app.buttons.matching(NSPredicate(
+            format: "label BEGINSWITH[c] %@", "Open details for "
+        )).firstMatch
+        XCTAssertTrue(detail.waitForExistence(timeout: 15), "No Australia adventure detail was reachable")
+        capture("09-australia-adventures")
+        detail.tap()
+        let detailDialog = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label BEGINSWITH[c] %@", "Adventure detail"
+        )).firstMatch
+        XCTAssertTrue(detailDialog.waitForExistence(timeout: 10),
+                      "The selected adventure detail did not open")
+        capture("10-adventure-detail")
     }
 
     private func signInIfRequired() throws {
@@ -95,7 +110,11 @@ final class WayfinderStoreScreenshots: XCTestCase {
     }
 
     private func tapTab(_ name: String, captureAs file: String) {
-        let tab = button(containing: name)
+        // Match the bottom navigation label, including its icon. A substring
+        // match for "Me" also matches "Recommend a place" in Community.
+        let tab = app.buttons.matching(NSPredicate(
+            format: "label ==[c] %@ OR label ENDSWITH[c] %@", name, " " + name
+        )).firstMatch
         XCTAssertTrue(tab.waitForExistence(timeout: 10), "Missing tab: \(name)")
         XCTAssertTrue(tab.isHittable, "The tab is present but cannot be tapped: \(name)")
         tab.tap()

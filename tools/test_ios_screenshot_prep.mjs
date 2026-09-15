@@ -97,7 +97,9 @@ assert.match(markup, /data-tab="tab-list"[^>]*>.*Adventures/);
 for (const name of [
   '01-adventures-world', '02-passport', '03-memories', '04-community',
   '05-trips-achievements', '06-paid-collections', '07-oceania', '08-australia',
+  '09-australia-adventures', '10-adventure-detail',
 ]) assert(testSource.includes(`"${name}"`), `missing screenshot ${name}`);
+assert.match(testSource, /button\(containing: "Everything in Australia"\)/);
 assert.equal((testSource.match(/\("iap-/g) || []).length, 1,
   'IAP captures are generated from the reviewed eight-product loop');
 

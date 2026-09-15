@@ -7,7 +7,7 @@
     "iosScheme": "wayfinder"
   },
   "ios": {
-    "contentInset": "always",
+    "contentInset": "never",
     "backgroundColor": "#f6efe6",
     "limitsNavigationsToAppBoundDomains": false
   },
