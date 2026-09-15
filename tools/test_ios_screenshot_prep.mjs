@@ -45,7 +45,8 @@ for (const log of ['iphone', 'ipad']) {
     `${log} log directory must exist before xcodebuild starts`);
 }
 assert.match(workflow, /iPhone 17 Pro Max/);
-assert.match(workflow, /iPad Pro 13-inch \(M4\)/);
+assert.match(workflow, /iPad Pro 13-inch \(M5\)/);
+assert.match(workflow, /Available iPhone Pro Max and 13-inch iPad Pro simulators/);
 assert.match(workflow, /1320 2868/);
 assert.match(workflow, /2064 2752/);
 assert.match(workflow, /xcresulttool export attachments/);

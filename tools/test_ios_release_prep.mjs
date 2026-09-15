@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { injectApplePublicKey, validateApplePublicKey } from './prepare_ios_store_release.mjs';
 
 const source = await readFile('config.js', 'utf8');
@@ -23,7 +26,7 @@ for (const required of [
   'APP_STORE_CONNECT_API_PRIVATE_KEY_P8_BASE64',
   'REVENUECAT_IOS_PUBLIC_SDK_KEY',
   'UPLOAD_WAYFINDER',
-  'CODE_SIGN_STYLE=Manual',
+  'CODE_SIGN_STYLE = Manual;',
   'xcrun altool --validate-app',
   'xcrun altool --upload-app',
 ]) assert.match(workflow, new RegExp(required));
@@ -47,6 +50,50 @@ assert.match(workflow, /test -f ios\/App\/App\.xcodeproj\/project\.xcworkspace\/
   'signed delivery must require a reviewed Swift package resolution');
 assert.match(workflow, /-disableAutomaticPackageResolution/,
   'signed delivery must not resolve different Swift dependency revisions');
+const archiveStep = workflow.match(/- name: Archive signed Release build[\s\S]*?(?=\n      - name: )/)?.[0] || '';
+const archiveArgs = archiveStep.match(/xcodebuild archive \\\n([\s\S]*?)2>&1 \| tee build\/ios-archive\.log/)?.[1] || '';
+assert(archiveArgs, 'signed archive command must be present');
+assert.doesNotMatch(archiveArgs, /\b(?:DEVELOPMENT_TEAM|CODE_SIGN_STYLE|CODE_SIGN_IDENTITY|PROVISIONING_PROFILE_SPECIFIER|CURRENT_PROJECT_VERSION|MARKETING_VERSION)=/,
+  'archive command-line settings affect package and resource targets, so App signing must be target-scoped');
+assert.match(archiveStep, /trap 'cp build\/unsigned-project\.pbxproj "\$PROJECT"' EXIT/,
+  'the App-only archive override must restore the committed project even when archiving fails');
+
+const project = await readFile('ios/App/App.xcodeproj/project.pbxproj', 'utf8');
+const appReleasePattern = /\t\t504EC3181FED79650016851F \/\* Release \*\/ = \{[\s\S]*?\n\t\t\};/;
+const sourceAppRelease = project.match(appReleasePattern)?.[0] || '';
+assert.match(sourceAppRelease, /CODE_SIGN_STYLE = Automatic;/,
+  'committed App Release must retain its development default before protected archive inputs are supplied');
+assert.doesNotMatch(sourceAppRelease, /PROVISIONING_PROFILE_SPECIFIER|DEVELOPMENT_TEAM/);
+const pythonBody = archiveStep.match(/python3 - <<'PY'\n([\s\S]*?)\n          PY/)?.[1]
+  ?.split('\n').map(line => line.replace(/^          /, '')).join('\n') || '';
+assert(pythonBody, 'App-only signing configuration must be executable');
+const sandbox = await mkdtemp(join(tmpdir(), 'wayfinder-ios-signing-'));
+try {
+  const sandboxProject = join(sandbox, 'ios', 'App', 'App.xcodeproj', 'project.pbxproj');
+  await mkdir(join(sandbox, 'ios', 'App', 'App.xcodeproj'), { recursive: true });
+  await writeFile(sandboxProject, project);
+  const result = spawnSync(process.platform === 'win32' ? 'python' : 'python3', ['-'], {
+    cwd: sandbox,
+    input: pythonBody,
+    encoding: 'utf8',
+    env: { ...process.env, PROFILE_NAME: 'Wayfinder App Store', APPLE_TEAM_ID: 'ABCDEFGHIJ',
+      RELEASE_MARKETING_VERSION: '2.3.4', RELEASE_BUILD_NUMBER: '42' },
+  });
+  assert.equal(result.status, 0, result.stderr || 'App-only signing injection failed');
+  const configured = await readFile(sandboxProject, 'utf8');
+  const appRelease = configured.match(appReleasePattern)?.[0] || '';
+  assert.match(appRelease, /CODE_SIGN_STYLE = Manual;/);
+  assert.match(appRelease, /CODE_SIGN_IDENTITY = "Apple Distribution";/);
+  assert.match(appRelease, /DEVELOPMENT_TEAM = ABCDEFGHIJ;/);
+  assert.match(appRelease, /PROVISIONING_PROFILE_SPECIFIER = "Wayfinder App Store";/);
+  assert.match(appRelease, /CURRENT_PROJECT_VERSION = 42;/);
+  assert.match(appRelease, /MARKETING_VERSION = 2\.3\.4;/);
+  assert.equal(configured.replace(appReleasePattern, '').replace(/\r\n/g, '\n') ===
+    project.replace(appReleasePattern, '').replace(/\r\n/g, '\n'), true,
+    'no project, UI test, package, or resource configuration may receive signing overrides');
+} finally {
+  await rm(sandbox, { recursive: true, force: true });
+}
 assert.doesNotMatch(workflow, /security import[^\n]*[\s\S]{0,200}\s-A(?:\s|$)/,
   'the imported distribution identity must not be available to every runner process');
 assert(workflow.indexOf('- name: Remove signing material') < workflow.indexOf('- name: Save non-binary delivery evidence'),

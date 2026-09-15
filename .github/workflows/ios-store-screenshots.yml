@@ -54,9 +54,13 @@ jobs:
           import json, subprocess
           data=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
           names={d['name'] for runtime in data['devices'].values() for d in runtime}
-          required=['iPhone 17 Pro Max','iPad Pro 13-inch (M4)']
+          required=['iPhone 17 Pro Max','iPad Pro 13-inch (M5)']
           missing=[name for name in required if name not in names]
-          if missing: raise SystemExit('Required screenshot simulators unavailable: '+', '.join(missing))
+          if missing:
+              print('Available iPhone Pro Max and 13-inch iPad Pro simulators:',
+                    ', '.join(sorted(name for name in names
+                                     if 'Pro Max' in name or 'iPad Pro 13-inch' in name)))
+              raise SystemExit('Required screenshot simulators unavailable: '+', '.join(missing))
           PY
       - name: Capture genuine iPhone screens
         run: |
@@ -101,7 +105,7 @@ jobs:
             -project ios/App/App.xcodeproj \
             -scheme App \
             -configuration Debug \
-            -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M4)' \
+            -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)' \
             -derivedDataPath build/DerivedData-ipad \
             -resultBundlePath build/store-screenshots-ipad.xcresult \
             -only-testing:WayfinderStoreScreenshotsUITests/WayfinderStoreScreenshots/testCaptureStoreSubmissionScreens \

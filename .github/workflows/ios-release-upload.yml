@@ -168,7 +168,47 @@ jobs:
         env:
           PROFILE_NAME: ${{ steps.signing.outputs.profile_name }}
         run: |
-          set -o pipefail
+          set -euo pipefail
+          PROJECT=ios/App/App.xcodeproj/project.pbxproj
+          cp "$PROJECT" build/unsigned-project.pbxproj
+          trap 'cp build/unsigned-project.pbxproj "$PROJECT"' EXIT
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          project = Path('ios/App/App.xcodeproj/project.pbxproj')
+          source = project.read_text()
+          marker = '504EC3181FED79650016851F /* Release */'
+          pattern = re.compile(r'(?m)^\t\t' + re.escape(marker) + r' = \{\n.*?^\t\t\};', re.S)
+          matches = list(pattern.finditer(source))
+          if len(matches) != 1:
+              raise SystemExit('Expected exactly one App target Release configuration')
+          block = matches[0].group()
+          if block.count('CODE_SIGN_STYLE = Automatic;') != 1:
+              raise SystemExit('App Release signing default changed unexpectedly')
+          if any(key in block for key in ('DEVELOPMENT_TEAM =', 'PROVISIONING_PROFILE_SPECIFIER =', 'CODE_SIGN_IDENTITY =')):
+              raise SystemExit('App Release already has a signing override')
+          profile = os.environ['PROFILE_NAME']
+          if not re.fullmatch(r'[A-Za-z0-9 ._-]{1,100}', profile):
+              raise SystemExit('Invalid App Store provisioning profile name')
+          team = os.environ['APPLE_TEAM_ID']
+          version = os.environ['RELEASE_MARKETING_VERSION']
+          build = os.environ['RELEASE_BUILD_NUMBER']
+          if not re.fullmatch(r'[A-Z0-9]{10}', team) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version) or not re.fullmatch(r'[1-9][0-9]*', build):
+              raise SystemExit('Invalid protected Release configuration')
+          block = block.replace('CODE_SIGN_STYLE = Automatic;',
+              'CODE_SIGN_STYLE = Manual;\n'
+              f'\t\t\t\tCODE_SIGN_IDENTITY = "Apple Distribution";\n'
+              f'\t\t\t\tDEVELOPMENT_TEAM = {team};\n'
+              f'\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{profile}";')
+          for key, value in (('CURRENT_PROJECT_VERSION', build), ('MARKETING_VERSION', version)):
+              block, count = re.subn(r'(?m)^(\s*' + key + r' = )[^;]+;', lambda match: match.group(1) + value + ';', block)
+              if count != 1:
+                  raise SystemExit('App Release version setting changed unexpectedly: ' + key)
+          project.write_text(source[:matches[0].start()] + block + source[matches[0].end():])
+          PY
+          plutil -lint "$PROJECT"
           xcodebuild archive \
             -project ios/App/App.xcodeproj \
             -scheme App \
@@ -176,12 +216,6 @@ jobs:
             -destination 'generic/platform=iOS' \
             -disableAutomaticPackageResolution \
             -archivePath build/Wayfinder.xcarchive \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY='Apple Distribution' \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
-            CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
-            MARKETING_VERSION="$RELEASE_MARKETING_VERSION" \
             2>&1 | tee build/ios-archive.log
 
       - name: Verify archive identity and embedded billing config
