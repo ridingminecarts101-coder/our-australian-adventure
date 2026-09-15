@@ -67,9 +67,13 @@
     <summary>How do I use the same progress on another phone?</summary>
     <p>Use the same verified account on both phones. Signed-in progress syncs across
        devices.
-       First confirm that changes have synced on the original device. Photos added in
-       current versions stay on that device and do not sync to another phone, even
-       when you use the same account.</p>
+       First confirm that changes have synced on the original device. New photos do
+       not sync automatically. To move their real image bytes, choose
+       <strong>Me → Settings → Export photos from this device</strong>, save and
+       personally transfer every numbered <code>.wfpbackup</code> file, then choose
+       <strong>Import a photo backup</strong> while signed in to the same account on
+       the other device. Keep the backup password: Wayfinder cannot recover an
+       exported file if you forget it.</p>
   </details>
 
   <details>
@@ -118,8 +122,12 @@
        backend or GitHub, and it does not sync to another device. The production
        backend now blocks client photo-record and cloud-file uploads. Signing out preserves them for the same account, while
        uninstalling, clearing app data, or clearing browser/site storage can remove
-       them permanently. There is no Wayfinder photo export or device-backup feature,
-       so keep an independent copy. Native releases exclude Wayfinder's persistent
+       them permanently. Me → Settings offers manual export and import of
+       password-encrypted, numbered <code>.wfpbackup</code> files for the same
+       account. Wayfinder does not automatically sync those files or upload them to
+       RL Applications. Files, AirDrop, email or a cloud provider can hold a
+       separate copy if you choose that route. Save every part and keep the backup
+       password safe. Native releases exclude Wayfinder's persistent
        app data from Android and iOS device or cloud backups. A PWA cannot control copies retained by browser,
        operating-system or user-configured device backups. The active cloud-photo
        store is empty. RL Applications retains a separate Desktop backup of 15
@@ -151,7 +159,10 @@
     <summary>Do purchases cover my whole group?</summary>
     <p>Purchases are not active in the PWA web review build. The iOS app contains
        optional one-time packs for one Wayfinder account, prepared for TestFlight
-       sandbox testing and not yet publicly on sale. The Australian base prices are
+       sandbox testing and not yet publicly on sale. Restore belongs to that same
+       individual Wayfinder account; group members do not own or receive your packs.
+       Real Apple sandbox purchase and restore checks on physical phones are still
+       pending. The Australian base prices are
        <strong>AUD $14.99 once for every continent pack</strong> or
        <strong>AUD $2.99 once for an individual continent pack</strong>.
        Apple shows the actual price for your storefront when the iOS purchase flow
@@ -188,6 +199,8 @@
        adventure list.</p>
   </details>
 
+
+
   <details>
     <summary>Something on the Community list is wrong or offensive</summary>
     <p>Press <strong>Report</strong> on the post. Three reports hide it from everyone
@@ -215,7 +228,9 @@
   <p>The in-app deletion flow also removes the account's device-local photos from the
      device where it runs. An emailed request cannot remotely erase local photos on
      another phone or browser profile. Clear its app data or browser/site storage, or
-     uninstall the native app, to remove those copies; signing out alone preserves them.</p>
+     uninstall the native app, to remove those copies. Exported
+     <code>.wfpbackup</code> files remain wherever you saved or transferred them and
+     must be deleted separately. Signing out alone preserves device-local photos.</p>
 
   <details>
     <summary>Why does a country say “do not travel”?</summary>

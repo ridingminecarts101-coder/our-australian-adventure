@@ -27,15 +27,18 @@ ROUTES = {
     "/support/": "support/index.html",
     "/privacy/": "privacy/index.html",
     "/wayfinder/": "wayfinder/index.html",
+    "/wayfinder/invite/": "wayfinder/invite/index.html",
     "/wayfinder/support/": "wayfinder/support/index.html",
     "/wayfinder/notices/": "wayfinder/notices/index.html",
     "/wayfinder/privacy/": "wayfinder/privacy/index.html",
     "/wayfinder/delete-account/": "wayfinder/delete-account/index.html",
 }
+INDEXABLE_ROUTES = set(ROUTES) - {"/wayfinder/invite/"}
 ASSETS = {
     "/assets/site.css": "assets/site.css",
     "/assets/brand-mark.svg": "assets/brand-mark.svg",
     "/assets/wayfinder-mark.svg": "assets/wayfinder-mark.svg",
+    "/assets/wayfinder-invite.js": "assets/wayfinder-invite.js",
     "/robots.txt": "robots.txt",
     "/sitemap.xml": "sitemap.xml",
 }
@@ -52,6 +55,7 @@ EXPECTED_MAILTOS = {
     "/support/": {"mailto:help.rlapplications@gmail.com?subject=RL%20Applications%20support"},
     "/privacy/": {"mailto:help.rlapplications@gmail.com?subject=RL%20Applications%20privacy"},
     "/wayfinder/": set(),
+    "/wayfinder/invite/": set(),
     "/wayfinder/support/": {
         "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support",
         "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20content%20correction",
@@ -223,8 +227,8 @@ def local_checks() -> tuple[list[str], set[str]]:
     errors: list[str] = []
     external: set[str] = set()
     html_files = sorted(ROOT.rglob("*.html"))
-    if len(html_files) != 9:
-        errors.append(f"expected 9 HTML pages, found {len(html_files)}")
+    if len(html_files) != len(ROUTES) + 1:
+        errors.append(f"expected {len(ROUTES) + 1} HTML pages, found {len(html_files)}")
 
     try:
         _, expected_stylesheet = authored_assets()
@@ -252,9 +256,16 @@ def local_checks() -> tuple[list[str], set[str]]:
         for landmark in ("nav", "main", "footer"):
             if landmark not in doc.tags:
                 errors.append(f"{rel}: missing {landmark} landmark")
-        for forbidden in ("script", "form", "iframe"):
+        for forbidden in ("form", "iframe"):
             if forbidden in doc.tags:
                 errors.append(f"{rel}: forbidden <{forbidden}> present")
+        if expected_route == "/wayfinder/invite/":
+            if doc.tags.count("script") != 1 or doc.inline_scripts:
+                errors.append(f"{rel}: expected exactly one external invite script")
+            if "src=\"/assets/wayfinder-invite.js\"" not in text:
+                errors.append(f"{rel}: invite script source differs from reviewed local asset")
+        elif "script" in doc.tags:
+            errors.append(f"{rel}: forbidden <script> present")
         if len(doc.ids) != len(set(doc.ids)):
             errors.append(f"{rel}: duplicate id present")
         if ABN not in text:
@@ -296,7 +307,7 @@ def local_checks() -> tuple[list[str], set[str]]:
                     if parsed.fragment not in linked.ids:
                         errors.append(f"{rel}: unresolved fragment {link}")
 
-        expected_canonical = f"https://rlapplications.com{expected_route}" if expected_route else None
+        expected_canonical = f"https://rlapplications.com{expected_route}" if expected_route in INDEXABLE_ROUTES else None
         if expected_canonical and doc.canonicals != [expected_canonical]:
             errors.append(f"{rel}: canonical URL is {doc.canonicals!r}, expected {[expected_canonical]!r}")
         if not expected_canonical and doc.canonicals:
@@ -308,7 +319,7 @@ def local_checks() -> tuple[list[str], set[str]]:
         sitemap = ET.parse(ROOT / "sitemap.xml")
         ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
         sitemap_urls = {node.text for node in sitemap.findall("sm:url/sm:loc", ns)}
-        expected_urls = {f"https://rlapplications.com{route}" for route in ROUTES}
+        expected_urls = {f"https://rlapplications.com{route}" for route in INDEXABLE_ROUTES}
         if sitemap_urls != expected_urls:
             errors.append("sitemap routes differ from public content routes")
     except ET.ParseError as exc:
@@ -424,6 +435,10 @@ def fetch(url: str, *, follow: bool = True) -> tuple[int, dict[str, str], bytes]
 def check_headers(label: str, headers: dict[str, str], errors: list[str]) -> None:
     for name, fragments in REQUIRED_HEADERS.items():
         value = headers.get(name, "")
+        if name == "content-security-policy" and urlparse(label).path == "/wayfinder/invite/":
+            fragments = ("default-src 'self'", "script-src 'self'", "frame-ancestors 'none'")
+            if "script-src 'none'" in value:
+                errors.append(f"{label}: invite route still has global no-script CSP")
         for fragment in fragments:
             if fragment not in value:
                 errors.append(f"{label}: {name} missing {fragment}")
@@ -475,7 +490,10 @@ def live_checks() -> list[str]:
                     )
                 if "data-cfemail" in text or "/cdn-cgi/l/email-protection" in text:
                     errors.append(f"{label}: email rewriting detected")
-                if "<script" in text.lower():
+                if route == "/wayfinder/invite/":
+                    if text.lower().count("<script") != 1 or 'src="/assets/wayfinder-invite.js"' not in text:
+                        errors.append(f"{label}: invite script differs from reviewed local asset")
+                elif "<script" in text.lower():
                     errors.append(f"{label}: unexpected script detected")
 
         for old, destination in REDIRECTS.items():

@@ -5,7 +5,7 @@ const fs = require('fs');
 const vm = require('vm');
 
 const source = fs.readFileSync('store.js', 'utf8');
-const appSource = fs.readFileSync('app.js', 'utf8');
+const appSource = fs.readFileSync('app.js', 'utf8').replace(/\r\n?/g, '\n');
 
 function arrowCallbackAfter(marker) {
   const markerAt = appSource.indexOf(marker);
@@ -21,8 +21,68 @@ function arrowCallbackAfter(marker) {
   throw new Error(`unterminated callback after: ${marker}`);
 }
 
+function functionAt(marker, token) {
+  const markerAt = appSource.indexOf(marker);
+  assert(markerAt >= 0, `missing app integration marker: ${marker}`);
+  const start = appSource.indexOf(token, markerAt);
+  assert(start >= 0, `missing function after: ${marker}`);
+  const brace = appSource.indexOf('{', start);
+  let depth = 0;
+  for (let i = brace; i < appSource.length; i++) {
+    if (appSource[i] === '{') depth++;
+    if (appSource[i] === '}' && --depth === 0) return appSource.slice(start, i + 1);
+  }
+  throw new Error(`unterminated function after: ${marker}`);
+}
+
 async function settle() {
   await new Promise(resolve => setImmediate(resolve));
+}
+
+async function testStoreFeedback(accountA, accountB) {
+  const markup = fs.readFileSync('index.html', 'utf8');
+  assert.match(markup, /id="storeStatus"[^>]*role="status"[^>]*aria-live="polite"/,
+    'store outcome remains visible beside Restore');
+  const status = { textContent: '' };
+  const calls = { toasts: [], renders: 0 };
+  let buyResult = { ok: false, reason: 'access_pending' };
+  let restoreResult = { ok: true, restored: [] };
+  const context = {
+    userId: accountA, authGeneration: 3, storeStatusOwner: null,
+    $: selector => selector === '#storeStatus' ? status : null,
+    Billing: { buy: async () => buyResult, restore: async () => restoreResult },
+    toast: message => calls.toasts.push(message),
+    renderAll: () => { calls.renders++; }, openId: null,
+    renderSheet() {},
+  };
+  vm.createContext(context);
+  vm.runInContext(functionAt('function setStoreStatus(', 'function setStoreStatus('), context);
+  vm.runInContext(functionAt('async function buyPack(', 'async function buyPack('), context);
+  const restoreHandler = vm.runInContext(`(${functionAt("$('#restoreBtn').onclick = async () => {", 'async () => {')})`, context);
+
+  await context.buyPack('oceania');
+  assert.match(status.textContent, /access is not confirmed.*Gems remain locked/,
+    'resolved store response without entitlement leaves durable diagnostic, not false unlock');
+  assert.equal(calls.renders, 0);
+  restoreResult = { ok: true, restored: [] };
+  await restoreHandler();
+  assert.match(status.textContent, /No active paid collections.*gems remain locked/,
+    'empty restore is a visible account diagnostic');
+  buyResult = { ok: true, slug: 'oceania' };
+  await context.buyPack('oceania');
+  assert.match(status.textContent, /Purchase verified.*Collection unlocked/);
+  assert.equal(calls.renders, 2, 'verified restore/buy repaint the store');
+
+  let finishOldBuy;
+  buyResult = new Promise(resolve => { finishOldBuy = resolve; });
+  const oldBuy = context.buyPack('africa');
+  context.userId = accountB;
+  context.authGeneration++;
+  const beforeOldReturn = status.textContent;
+  finishOldBuy({ ok: false, reason: 'access_pending' });
+  await oldBuy;
+  assert.equal(status.textContent, beforeOldReturn,
+    'an old account response must not show a purchase result on the new account');
 }
 
 async function testAppLifecycleHooks(accountA, accountB) {
@@ -113,6 +173,7 @@ function harness({ native = false, platform = 'web', key = '', confirmResult = t
   const state = {
     customerInfo, listeners: new Map(), listenerHistory: [], nextListener: 0,
     invalidateGate: null, removeGate: null, configureGate: null,
+    purchaseGate: null, restoreGate: null,
     configureFailures: 0, cancelNextPurchase: false, warnings: [],
   };
   const purchases = {
@@ -135,6 +196,7 @@ function harness({ native = false, platform = 'web', key = '', confirmResult = t
     },
     async purchaseStoreProduct({ product }) {
       calls.push(['purchase', product.identifier]);
+      if (state.purchaseGate) await state.purchaseGate;
       if (state.cancelNextPurchase) {
         state.cancelNextPurchase = false;
         throw { code: 1, userCancelled: true };
@@ -143,7 +205,11 @@ function harness({ native = false, platform = 'web', key = '', confirmResult = t
       state.customerInfo.entitlements.active[slug] = { identifier: slug, isActive: true };
       return { customerInfo: state.customerInfo };
     },
-    async restorePurchases() { calls.push(['restore']); return { customerInfo: state.customerInfo }; },
+    async restorePurchases() {
+      calls.push(['restore']);
+      if (state.restoreGate) await state.restoreGate;
+      return { customerInfo: state.customerInfo };
+    },
     async invalidateCustomerInfoCache() {
       calls.push(['invalidateCustomerInfoCache']);
       if (state.invalidateGate) await state.invalidateGate;
@@ -188,6 +254,7 @@ async function main() {
   const accountA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   const accountB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
   await testAppLifecycleHooks(accountA, accountB);
+  await testStoreFeedback(accountA, accountB);
   browser.values.set(`oaa.packs.v2.${accountA}`, JSON.stringify(['all']));
   await vm.runInContext(`Billing.init('${accountA}')`, browser.context);
   assert.equal(vm.runInContext("ownsPack('all')", browser.context), true);
@@ -242,6 +309,153 @@ async function main() {
   for (const slug of allSlugs) {
     assert(purchasedIds.includes(`app.wayfinder.mobile.gems.${slug.replace(/-/g, '_')}`));
   }
+
+  const mismatch = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  await vm.runInContext(`Billing.init('${accountA}')`, mismatch.context);
+  mismatch.context.Capacitor.Plugins.Purchases.getProducts = async () => ({
+    products: [{ identifier: 'app.wayfinder.mobile.gems.africa', priceString: 'local price' }],
+  });
+  const wrongProduct = await vm.runInContext("Billing.buy('oceania')", mismatch.context);
+  assert.equal(wrongProduct.ok, false);
+  assert.equal(mismatch.calls.some(([name]) => name === 'purchase'), false,
+    'a mismatched product response must never open the wrong Apple sale');
+
+  const overlapping = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  await vm.runInContext(`Billing.init('${accountA}')`, overlapping.context);
+  let releasePurchase;
+  overlapping.state.purchaseGate = new Promise(resolve => { releasePurchase = resolve; });
+  const activeBuy = vm.runInContext("Billing.buy('asia')", overlapping.context);
+  await settle();
+  assert.equal(vm.runInContext('Billing.busy', overlapping.context), true);
+  const blockedRestore = await vm.runInContext('Billing.restore()', overlapping.context);
+  const blockedBuy = await vm.runInContext("Billing.buy('africa')", overlapping.context);
+  assert.equal(blockedRestore.reason, 'store_busy');
+  assert.equal(blockedBuy.reason, 'store_busy');
+  assert.equal(overlapping.calls.filter(([name]) => name === 'restore').length, 0);
+  assert.equal(overlapping.calls.filter(([name]) => name === 'purchase').length, 1);
+  releasePurchase();
+  assert.equal((await activeBuy).ok, true);
+  assert.equal(vm.runInContext('Billing.busy', overlapping.context), false);
+
+  let releaseRestore;
+  overlapping.state.restoreGate = new Promise(resolve => { releaseRestore = resolve; });
+  const activeRestore = vm.runInContext('Billing.restore()', overlapping.context);
+  await settle();
+  assert.equal((await vm.runInContext("Billing.buy('europe')", overlapping.context)).reason, 'store_busy');
+  assert.equal(overlapping.calls.filter(([name]) => name === 'purchase').length, 1);
+  releaseRestore();
+  assert.equal((await activeRestore).ok, true);
+
+  const staleRead = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  await vm.runInContext(`Billing.init('${accountA}')`, staleRead.context);
+  let releaseOldInfo, enteredOldInfo;
+  const oldInfoGate = new Promise(resolve => { releaseOldInfo = resolve; });
+  const oldInfoEntered = new Promise(resolve => { enteredOldInfo = resolve; });
+  staleRead.context.Capacitor.Plugins.Purchases.getCustomerInfo = async () => {
+    enteredOldInfo();
+    await oldInfoGate;
+    return { customerInfo: { entitlements: { active: {} } } };
+  };
+  const foregroundBeforeBuy = vm.runInContext('Billing.foreground()', staleRead.context);
+  await oldInfoEntered;
+  assert.equal((await vm.runInContext("Billing.buy('oceania')", staleRead.context)).ok, true);
+  releaseOldInfo();
+  await foregroundBeforeBuy;
+  assert.equal(vm.runInContext("ownsPack('oceania')", staleRead.context), true,
+    'an older empty foreground response must not erase a later verified purchase');
+
+  const deferredRefund = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  await vm.runInContext(`Billing.init('${accountA}')`, deferredRefund.context);
+  let releaseRefundBuy;
+  deferredRefund.state.purchaseGate = new Promise(resolve => { releaseRefundBuy = resolve; });
+  const refundBuy = vm.runInContext("Billing.buy('europe')", deferredRefund.context);
+  await settle();
+  deferredRefund.state.listenerHistory[0]({ entitlements: { active: {} } });
+  deferredRefund.context.Capacitor.Plugins.Purchases.getCustomerInfo = async () => ({
+    customerInfo: { entitlements: { active: {} }, allPurchasedProductIdentifiers: [] },
+  });
+  releaseRefundBuy();
+  assert.equal((await refundBuy).ok, true,
+    'the purchase response can temporarily show access before a concurrent refund is re-read');
+  await settle();
+  assert.equal(vm.runInContext("ownsPack('europe')", deferredRefund.context), false,
+    'a listener received during the store sheet must trigger a fresh read and revoke refunded access');
+
+  const backToBack = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  await vm.runInContext(`Billing.init('${accountA}')`, backToBack.context);
+  let releaseFirstBuy, releaseInvalidation, releaseSecondRestore;
+  backToBack.state.purchaseGate = new Promise(resolve => { releaseFirstBuy = resolve; });
+  backToBack.state.invalidateGate = new Promise(resolve => { releaseInvalidation = resolve; });
+  const firstBuy = vm.runInContext("Billing.buy('europe')", backToBack.context);
+  await settle();
+  backToBack.state.listenerHistory[0]({ entitlements: { active: {} } });
+  backToBack.context.Capacitor.Plugins.Purchases.getCustomerInfo = async () => ({
+    customerInfo: { entitlements: { active: {} }, allPurchasedProductIdentifiers: [] },
+  });
+  releaseFirstBuy();
+  assert.equal((await firstBuy).ok, true);
+  await settle();
+  assert.equal(vm.runInContext('Billing._customerInfoChangedDuringAction', backToBack.context), true);
+  backToBack.state.restoreGate = new Promise(resolve => { releaseSecondRestore = resolve; });
+  const secondRestore = vm.runInContext('Billing.restore()', backToBack.context);
+  await settle();
+  releaseInvalidation();
+  await settle();
+  assert.equal(vm.runInContext('Billing._customerInfoChangedDuringAction', backToBack.context), true,
+    'a back-to-back store action must retain a skipped refund recheck');
+  releaseSecondRestore();
+  assert.equal((await secondRestore).ok, true);
+  await settle();
+  assert.equal(vm.runInContext('Billing._customerInfoChangedDuringAction', backToBack.context), false,
+    'the pending refund recheck clears only after a current CustomerInfo read succeeds');
+  assert.equal(vm.runInContext("ownsPack('europe')", backToBack.context), false,
+    'a back-to-back store action cannot indefinitely retain a refunded pack');
+
+  const offlineRefund = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  await vm.runInContext(`Billing.init('${accountA}')`, offlineRefund.context);
+  let releaseOfflineBuy;
+  offlineRefund.state.purchaseGate = new Promise(resolve => { releaseOfflineBuy = resolve; });
+  const offlineBuy = vm.runInContext("Billing.buy('asia')", offlineRefund.context);
+  await settle();
+  offlineRefund.state.listenerHistory[0]({ entitlements: { active: {} } });
+  offlineRefund.context.Capacitor.Plugins.Purchases.getCustomerInfo = async () => {
+    throw new Error('offline test');
+  };
+  releaseOfflineBuy();
+  assert.equal((await offlineBuy).ok, true);
+  await settle();
+  assert.equal(vm.runInContext('Billing._customerInfoChangedDuringAction', offlineRefund.context), true,
+    'an offline post-sheet read keeps the refund recheck pending without looping');
+  offlineRefund.context.Capacitor.Plugins.Purchases.getCustomerInfo = async () => ({
+    customerInfo: { entitlements: { active: {} }, allPurchasedProductIdentifiers: [] },
+  });
+  await vm.runInContext('Billing.foreground()', offlineRefund.context);
+  assert.equal(vm.runInContext('Billing._customerInfoChangedDuringAction', offlineRefund.context), false);
+  assert.equal(vm.runInContext("ownsPack('asia')", offlineRefund.context), false,
+    'the next explicit foreground read revokes access after the offline recheck');
+
+  const skippedForeground = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  skippedForeground.state.customerInfo = { entitlements: { active: {
+    europe: { identifier: 'europe', isActive: true },
+  } }, allPurchasedProductIdentifiers: [] };
+  await vm.runInContext(`Billing.init('${accountA}')`, skippedForeground.context);
+  let releaseCancelledSheet;
+  skippedForeground.state.purchaseGate = new Promise(resolve => { releaseCancelledSheet = resolve; });
+  skippedForeground.state.cancelNextPurchase = true;
+  const cancelledSheet = vm.runInContext("Billing.buy('asia')", skippedForeground.context);
+  await settle();
+  await vm.runInContext('Billing.foreground()', skippedForeground.context);
+  assert.equal(vm.runInContext('Billing._customerInfoChangedDuringAction', skippedForeground.context), true,
+    'a visibility refresh skipped by the store sheet must retain a post-sheet read intent');
+  skippedForeground.context.Capacitor.Plugins.Purchases.getCustomerInfo = async () => ({
+    customerInfo: { entitlements: { active: {} }, allPurchasedProductIdentifiers: [] },
+  });
+  releaseCancelledSheet();
+  assert.equal((await cancelledSheet).reason, 'cancelled');
+  await settle();
+  assert.equal(vm.runInContext("ownsPack('europe')", skippedForeground.context), false,
+    'a cancelled sheet without CustomerInfo still rechecks and revokes refunded cached access');
+  assert.equal(vm.runInContext('Billing._customerInfoChangedDuringAction', skippedForeground.context), false);
 
   const secondPhone = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
   await vm.runInContext(`Billing.init('${accountA}')`, secondPhone.context);

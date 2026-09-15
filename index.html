@@ -198,6 +198,7 @@
        every gem and the exclusive Antarctica collection.</p>
     <div id="storePanel" class="storelist"></div>
     <button id="restoreBtn" class="btn-ghost">Restore purchases</button>
+    <p id="storeStatus" class="muted" role="status" aria-live="polite"></p>
     <div id="previewRow" class="settings hidden">
       <button id="previewBtn" class="btn-ghost">Preview paid adventures</button>
       <p class="fineprint">Unlocks the paid entries on this device so you can read
@@ -216,6 +217,9 @@
          adventures that are in season this month.</p>
       <p id="realtimeState" class="muted"></p>
       <button id="refreshBtn" class="btn-ghost">Force refresh from server</button>
+      <button id="exportPhotosBtn" class="btn-ghost">Export photos from this device</button>
+      <button id="importPhotosBtn" class="btn-ghost">Import a photo backup</button>
+      <p class="fineprint">Move your photos to the same Wayfinder account on another phone with a password-encrypted backup. You choose where to save or share the file; Wayfinder does not upload it. Save every numbered part before replacing your phone.</p>
       <button id="signOutBtn" class="btn-ghost">Sign out this phone</button>
       <button id="deleteAccountBtn" class="btn-ghost danger">Delete my account and all my data</button>
       <p class="fineprint">Access, opening hours, seasonal closures, permits and Traditional Owner
@@ -267,6 +271,22 @@
 </div>
 
 <!-- ───────────────────────── Photo lightbox ─────────────────── -->
+<div id="photoBackupSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="photoBackupTitle" tabindex="-1">
+  <div class="sheet-backdrop"></div>
+  <div class="sheet-card">
+    <button id="photoBackupClose" class="sheet-close" aria-label="Close photo backup">✕</button>
+    <h2 id="photoBackupTitle">Photo backup</h2>
+    <p>Photos and their adventure associations stay private to your account. This moves photo copies only; your progress and written memories sync through your account separately.</p>
+    <label id="photoBackupFileLabel">Backup files<input id="photoBackupFiles" type="file" accept=".wfpbackup,application/json,application/octet-stream" multiple></label>
+    <label>Backup password<input id="photoBackupPassword" type="password" autocomplete="off" minlength="8" maxlength="1024"></label>
+    <label id="photoBackupConfirmLabel">Confirm backup password<input id="photoBackupConfirm" type="password" autocomplete="off" minlength="8" maxlength="1024"></label>
+    <p id="photoBackupStatus" role="status" aria-live="polite"></p>
+    <button id="photoBackupStart" class="btn-primary">Prepare encrypted backup</button>
+    <button id="photoBackupSave" class="btn-primary hidden">Save or share this backup part</button>
+    <button id="photoBackupNext" class="btn-ghost hidden">Prepare next part</button>
+    <p class="fineprint">Keep your files and backup password somewhere safe. RL Applications cannot recover a forgotten backup password. Saving to your own cloud drive or sending a file uses the service you choose. Deleting your Wayfinder account does not delete files you exported.</p>
+  </div>
+</div>
 <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Photo" tabindex="-1">
   <button class="lb-close" data-lbclose aria-label="Close">✕</button>
   <button class="lb-nav prev" data-lbstep="-1" aria-label="Previous photo">‹</button>
@@ -292,6 +312,8 @@
 <script src="land.js"></script>
 <script src="world.js"></script>
 <script src="photo-files.js"></script>
+<script src="photo-backup.js"></script>
+<script src="photo-transfer.js"></script>
 <!-- Supabase, served from here rather than a CDN.
 
      Two reasons, and the second is the one that would have cost a

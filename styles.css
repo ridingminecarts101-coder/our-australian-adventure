@@ -303,6 +303,12 @@ input, select, textarea { font: inherit; color: inherit; }
   background: var(--sand-2); color: var(--ink-2); font-size: 15px;
 }
 .sheet-card h2 { font-size: 21px; line-height: 1.25; padding-right: 40px; }
+#photoBackupSheet label { display: block; margin: 16px 0; font-weight: 600; }
+#photoBackupSheet input { display: block; width: 100%; min-width: 0; padding: 12px; margin-top: 6px; font-size: 17px; color: var(--ink); background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; }
+#photoBackupSheet .sheet-card > button:not(.sheet-close) { display: block; width: 100%; margin-top: 12px; }
+#photoBackupSheet p { line-height: 1.55; overflow-wrap: anywhere; }
+#photoBackupSheet .sheet-card { max-height: calc(100dvh - max(20px, var(--safe-top))); }
+#photoBackupClose { width: 44px; height: 44px; }
 .sheet-place { color: var(--muted); font-size: 14px; margin: 6px 0 12px; }
 .sheet-desc { font-size: 15px; line-height: 1.55; margin: 12px 0; }
 .factgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }

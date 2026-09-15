@@ -114,12 +114,18 @@
   <p>Signing out keeps new device-local photos for the same account and hides them
      from other signed-in accounts. Uninstalling the native app, clearing its app
      data, or clearing the PWA's browser/site storage can permanently remove them.
-     Wayfinder does not currently provide a photo export or device-backup feature,
-     so keep an independent copy of anything important. Native releases exclude
-     Wayfinder's persistent app data, including new photos, from Android and iOS
-     device or cloud backups. The PWA cannot control
-     copies a browser, operating system or user-configured device backup may retain
-     outside its site storage.</p>
+     Under <em>Me → Settings</em>, <strong>Export photos from this device</strong>
+     prepares password-encrypted, numbered <code>.wfpbackup</code> files. Save every
+     part and use <strong>Import a photo backup</strong> while signed in to the same
+     Wayfinder account on another device. This is a manual transfer of photo copies;
+     Wayfinder does not automatically sync them or upload the backup to RL Applications.
+     A file you save to Files, transfer by AirDrop, email or put with a cloud-storage
+     provider is a separate copy handled by the route you choose. Keep the backup
+     password safe: Wayfinder cannot recover an encrypted file if you forget it.
+     Native releases exclude Wayfinder's persistent app data, including new photos,
+     from Android and iOS device or cloud backups. The PWA cannot control copies a
+     browser, operating system or user-configured device backup may retain outside
+     its site storage.</p>
   <p>On 15 September 2026, the 15 historical cloud photo objects and all 11 active
      photo metadata records were removed from the production Wayfinder service.
      RL Applications separately retains a Desktop backup of those historical
@@ -140,6 +146,7 @@
      A post can remain hidden while a report is reviewed. Review and responses may
      take longer while Wayfinder is in testing.
      Do not post private or sensitive information there.</p>
+
 
   <h2>Personal progress and groups</h2>
   <p>Your progress belongs to your account. Groups are optional, and joining uses an
@@ -191,7 +198,9 @@
      device where it runs. An emailed or server-side deletion request cannot remotely
      erase local photos on another device or browser profile. Clear that app's data,
      clear the PWA's browser/site storage, or uninstall the native app to remove any
-     remaining local copies. Signing out alone preserves them.</p>
+     remaining local copies. Exported <code>.wfpbackup</code> files remain wherever
+     you saved or transferred them; delete those files separately. Signing out alone
+     preserves device-local photos.</p>
 
   <h2>Who runs it</h2>
   <p>Wayfinder is developed and operated by Riley Lawler, a sole trader
@@ -217,6 +226,7 @@
      lookups. These services receive
      the information needed for their role, including normal network request
      information, and may process it outside Australia.</p>
+
 
   <h2>Retention and device copies</h2>
   <p>Your hosted travel records remain until you remove them or delete your account.

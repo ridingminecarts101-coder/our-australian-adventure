@@ -44,7 +44,7 @@ async function modalBehavior() {
   const opener = node(document); opener.setAttribute('data-open', '7');
   const replacement = node(document); replacement.setAttribute('data-open', '7');
   const dialogs = {};
-  for (const id of ['sheet', 'tripSheet', 'recSheet', 'lightbox']) {
+  for (const id of ['sheet', 'tripSheet', 'recSheet', 'lightbox', 'photoBackupSheet']) {
     const dialog = node(document, id); dialog.classList.add('hidden');
     dialog.controls = [node(document, `${id}-close`), node(document, `${id}-last`)];
     bySelector.set(`#${id}`, dialog); dialogs[id] = dialog;
@@ -59,6 +59,9 @@ async function modalBehavior() {
     showLightbox() {},
   };
   vm.createContext(context);
+  context.window = { WayfinderPhotoTransfer: { close: () => {
+    closed.push('photoBackupSheet'); context.hideManagedDialog('#photoBackupSheet');
+  } } };
   vm.runInContext(section('const DIALOG_CONTROLS', 'async function openLightbox'), context);
   for (const [id, fn] of [['sheet','closeSheet'], ['tripSheet','closeTripSheet'],
     ['recSheet','closeRecSheet'], ['lightbox','closeLightbox']]) {
@@ -85,14 +88,14 @@ async function modalBehavior() {
   assert(dialogs.sheet.classList.contains('hidden'));
   assert.equal(document.activeElement, replacement, 'focus returns to the replacement card after a re-render');
 
-  for (const id of ['tripSheet', 'recSheet', 'lightbox']) {
+  for (const id of ['tripSheet', 'recSheet', 'lightbox', 'photoBackupSheet']) {
     document.activeElement = replacement;
     context.showManagedDialog(`#${id}`);
     await Promise.resolve();
     context.handleDialogKeydown(key('Escape'));
     await Promise.resolve();
   }
-  assert.deepEqual(closed, ['sheet', 'tripSheet', 'recSheet', 'lightbox']);
+  assert.deepEqual(closed, ['sheet', 'tripSheet', 'recSheet', 'lightbox', 'photoBackupSheet']);
   assert(prevented >= 7);
 }
 
@@ -129,5 +132,5 @@ function cardAndSelectionBehavior() {
 (async () => {
   cardAndSelectionBehavior();
   await modalBehavior();
-  console.log('PASS: keyboard card activation, selection semantics and four-dialog focus lifecycle');
+  console.log('PASS: keyboard card activation, selection semantics and five-dialog focus lifecycle');
 })().catch(error => { console.error(error); process.exitCode = 1; });

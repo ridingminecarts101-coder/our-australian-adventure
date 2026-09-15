@@ -64,6 +64,8 @@ window.OAA_CONFIG = {
    * installed web app, or nothing but a browser.
    */
   shareBase: 'https://ridingminecarts101-coder.github.io/our-australian-adventure/',
+  // Group invitations use a branded landing page; auth callbacks stay on shareBase.
+  inviteBase: 'https://rlapplications.com/wayfinder/invite/',
 
   // New installs use a recoverable email/password account. Existing anonymous
   // sessions can add email/password in place without changing their user id.

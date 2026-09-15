@@ -93,6 +93,11 @@ const filters = { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 'Al
 let nav = { level: 'world', continent: null, country: null, admin1: null };
 let browserNavigationWired = false;
 let pendingTripDeepLink = null;
+let pendingGroupInviteBusy = false;
+let lastExternalDeepLink = null;
+let lastExternalDeepLinkAt = 0;
+const PENDING_GROUP_INVITE_KEY = 'wayfinder.pending-group-invite';
+const PENDING_GROUP_INVITE_MAX_AGE = 30 * 60 * 1000;
 
 const DOG_LABEL = {
   yes:   'Dogs welcome',
@@ -966,6 +971,98 @@ async function discardSavedLocalPhoto(record) {
   await idbLocalDelete(record.owner_id, record.id);
 }
 
+// Photo transfer uses local bytes only. A unique IndexedDB reservation prevents
+// an import from overwriting an existing photo, including in another PWA tab.
+async function validateImportedPhoto(item) {
+  let image, release = () => {};
+  try {
+    if (typeof createImageBitmap === 'function') {
+      image = await createImageBitmap(item.blob);
+      release = () => image.close();
+    } else {
+      const url = URL.createObjectURL(item.blob);
+      release = () => URL.revokeObjectURL(url);
+      image = await new Promise((resolve, reject) => {
+        const img = new Image(); img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('A backup photo could not be decoded.'));
+        img.src = url;
+      });
+    }
+    const width = image.width || image.naturalWidth, height = image.height || image.naturalHeight;
+    if (!width || !height || width > 20000 || height > 20000
+        || (item.width && item.width !== width) || (item.height && item.height !== height)) {
+      throw new Error('A backup photo has invalid image dimensions.');
+    }
+  } finally { release(); }
+}
+
+async function saveImportedPhoto(item, owner) {
+  await validateImportedPhoto(item);
+  const record = localPhotoRecord({ ...item, owner_id: owner });
+  const files = nativePhotoFiles();
+  const existing = files && (await files.list(owner)).find(file => file.path.endsWith(`/${record.id}.jpg`));
+  if (existing) {
+    // Recover a byte-identical orphan left by an interrupted earlier import.
+    // A different existing file is always preserved and never overwritten.
+    const prior = new Uint8Array(await (await files.read(owner, existing.path)).arrayBuffer());
+    const incoming = new Uint8Array(await record.blob.arrayBuffer());
+    if (prior.length !== incoming.length || !prior.every((byte, i) => byte === incoming[i])) {
+      throw new Error('An existing photo file has this ID. Your original was kept.');
+    }
+    await files.verifyExcluded(owner, existing.path);
+    const { blob, ...metadata } = record;
+    const recovered = { ...metadata, native_path: existing.path, bytes: prior.length };
+    await idbWrite(LOCAL_PHOTO_STORE, store => store.add(recovered));
+    return { ...recovered, recovered_existing_file: true };
+  }
+  await idbWrite(LOCAL_PHOTO_STORE, store => store.add(record));
+  if (!files) return record;
+  try { return await saveLocalPhoto(record); }
+  catch (error) { await idbLocalDelete(owner, record.id); throw error; }
+}
+
+async function listTransferPhotos(owner) {
+  const records = await idbLocalAll(owner);
+  const db = await idb();
+  const queued = await new Promise((resolve, reject) => {
+    const request = db.transaction('queue').objectStore('queue').getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+  const byId = new Map(records.map(record => [record.id, record]));
+  for (const record of queued) {
+    if (record.owner_id === owner && !byId.has(record.id)) byId.set(record.id, record);
+  }
+  return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function setupPhotoTransfer() {
+  const transfer = window.WayfinderPhotoTransfer;
+  if (!transfer) return;
+  transfer.mount({
+    session: () => ({ owner: userId, generation: authGeneration, deleting: accountDeletionInProgress || passwordRecoveryMode }),
+    list: listTransferPhotos,
+    read: async (record, owner) => {
+      if (record.owner_id !== owner) throw new Error('Photo belongs to a different account.');
+      if (record.blob) return record.blob;
+      const files = nativePhotoFiles();
+      if (files && record.native_path) return files.read(owner, record.native_path);
+      throw new Error('A local photo file is missing. Existing photos have not been changed.');
+    },
+    save: saveImportedPhoto,
+    remove: record => record.recovered_existing_file
+      ? idbLocalDelete(record.owner_id, record.id) : discardSavedLocalPhoto(record),
+    refresh: async owner => {
+      const local = await idbLocalAll(owner);
+      if (owner !== userId || accountDeletionInProgress) return;
+      photos = local; renderAll();
+    },
+    show: () => showManagedDialog('#photoBackupSheet'),
+    hide: () => hideManagedDialog('#photoBackupSheet'),
+    toast,
+  });
+}
+
 let localPersistenceRequested = false;
 async function requestLocalPhotoPersistence() {
   if (localPersistenceRequested || nativePhotoFiles()) return;
@@ -1445,6 +1542,14 @@ function linkTo(params) {
   const base = (window.OAA_CONFIG && OAA_CONFIG.shareBase)
     || `${location.origin}${location.pathname}`;
   return `${base}${base.includes('?') ? '&' : '?'}${new URLSearchParams(params)}`;
+}
+
+function groupInviteLink(code) {
+  const base = (window.OAA_CONFIG && OAA_CONFIG.inviteBase)
+    || 'https://rlapplications.com/wayfinder/invite/';
+  const url = new URL(base);
+  url.searchParams.set('join', code);
+  return url.href;
 }
 
 /* One plugin lookup, used by everything below.
@@ -2138,9 +2243,25 @@ async function deleteOwnedGroup(groupId) {
 /* The shop, such as it is. Counts come from the data, so a pack can never
  * claim more than it holds, and an owned pack stops advertising itself.
  */
+let storeStatusOwner = null;
+function setStoreStatus(message) {
+  const status = $('#storeStatus');
+  if (!status) return;
+  storeStatusOwner = userId;
+  status.textContent = message;
+}
+
 function renderStore() {
   const el = $('#storePanel');
   if (!el) return;
+  const status = $('#storeStatus');
+  if (status && storeStatusOwner !== userId) {
+    status.textContent = '';
+    storeStatusOwner = userId;
+  }
+  const restore = $('#restoreBtn');
+  if (restore) restore.disabled = Billing.busy;
+  Billing.onBusyChange = () => renderStore();
   const row = $('#previewRow');
   if (row) {
     row.classList.toggle('hidden', !previewAvailable());
@@ -2166,7 +2287,7 @@ function renderStore() {
       ${got ? '<span class="packowned">Unlocked</span>'
             : Billing.mode === 'unavailable'
               ? '<span class="packowned">Mobile app</span>'
-              : `<button class="btn-buy" data-buy="${esc(p.slug)}">${esc(priceFor(p.slug))}</button>`}
+              : `<button class="btn-buy" data-buy="${esc(p.slug)}"${Billing.busy ? ' disabled' : ''}>${esc(priceFor(p.slug))}</button>`}
     </div>`;
   }).join('') + (hasAll ? '' :
     '<p class="fineprint">One payment for your account, with no subscription. ' +
@@ -2176,11 +2297,21 @@ function renderStore() {
 
 // Buying, from wherever the button was pressed.
 async function buyPack(slug) {
+  const storeOwner = userId, storeGeneration = authGeneration;
+  setStoreStatus('Checking this purchase with Apple and Wayfinder…');
   const res = await Billing.buy(slug);
+  if (storeOwner !== userId || storeGeneration !== authGeneration) return;
   if (!res.ok) {
-    if (res.reason !== 'cancelled') toast(`Purchase failed — ${res.reason}`);
+    if (res.reason === 'cancelled') setStoreStatus('Purchase cancelled. Gems remain locked.');
+    else if (res.reason === 'access_pending') setStoreStatus(
+      'The store returned, but paid access is not confirmed on this Wayfinder account. Gems remain locked. Try Restore purchases; if still locked, contact support.');
+    else if (res.reason === 'store_busy') setStoreStatus('A purchase or restore is already in progress. Wait for it to finish.');
+    else setStoreStatus('Purchase could not be verified. Gems remain locked. Check your Apple account and connection, then try again or contact support.');
+    if (res.reason !== 'cancelled' && res.reason !== 'store_busy') toast('Purchase not verified. See Paid collections for details.');
     return;
   }
+  setStoreStatus(res.simulated ? 'Unlocked for local preview only. No purchase was made.'
+    : 'Purchase verified for this Wayfinder account. Collection unlocked.');
   toast(res.simulated ? 'Unlocked (simulated)' : 'Unlocked. Enjoy.');
   renderAll();
   if (openId !== null) renderSheet(openId);
@@ -3559,6 +3690,7 @@ function handleDialogKeydown(event) {
   if (event.key === 'Escape') {
     event.preventDefault();
     if (dialog.id === 'lightbox') closeLightbox();
+    else if (dialog.id === 'photoBackupSheet') window.WayfinderPhotoTransfer.close();
     else if (dialog.id === 'recSheet') closeRecSheet();
     else if (dialog.id === 'tripSheet') closeTripSheet();
     else closeSheet();
@@ -3785,6 +3917,7 @@ function renderMe() {
 }
 
 function renderAll() {
+  if (window.WayfinderPhotoTransfer) window.WayfinderPhotoTransfer.sessionChanged();
   renderHeader();
   renderPlaces();
   renderList();
@@ -4023,6 +4156,9 @@ function wireNative() {
   if (!App) return;                              // web: the browser's own back works
 
   App.addListener('backButton', () => {
+    const photoBackupSheet = $('#photoBackupSheet');
+    if (photoBackupSheet && !photoBackupSheet.classList.contains('hidden')
+        && window.WayfinderPhotoTransfer) return window.WayfinderPhotoTransfer.close();
     if (!$('#lightbox').classList.contains('hidden')) return closeLightbox();
     if (!$('#recSheet').classList.contains('hidden')) return closeRecSheet();
     if (!$('#tripSheet').classList.contains('hidden')) return closeTripSheet();
@@ -4060,9 +4196,16 @@ function wireNative() {
    * launched the app cold is still delivered once this runs.
    */
   App.addListener('appUrlOpen', ({ url }) => {
-    try { openDeepLink(new URL(url).search); }
+    try { openExternalDeepLink(url); }
     catch { /* a URL we cannot parse is not a link we can act on */ }
   });
+  // getLaunchUrl covers a cold launch even if the native event was delivered
+  // before this listener; the pending-code helper deduplicates both paths.
+  if (typeof App.getLaunchUrl === 'function') {
+    App.getLaunchUrl().then(link => {
+      if (link && link.url) openExternalDeepLink(link.url);
+    }).catch(() => {});
+  }
   App.addListener('appStateChange', ({ isActive }) => {
     if (isActive) void refreshPendingEmailVerification();
   });
@@ -4123,6 +4266,7 @@ function activateAppTab(b) {
 }
 
 function wireUI() {
+  setupPhotoTransfer();
   wireNative();
   wireBrowserNavigation();
   Billing.onChange = () => {
@@ -4231,13 +4375,25 @@ function wireUI() {
   };
 
   $('#restoreBtn').onclick = async () => {
-    toast('Checking with the store…');
+    const storeOwner = userId, storeGeneration = authGeneration;
+    setStoreStatus('Checking this Wayfinder account with the store…');
     const res = await Billing.restore();
-    if (!res.ok) return toast(`Could not restore — ${res.reason}`);
+    if (storeOwner !== userId || storeGeneration !== authGeneration) return;
+    if (!res.ok) {
+      setStoreStatus(res.reason === 'store_busy'
+        ? 'A purchase or restore is already in progress. Wait for it to finish.'
+        : 'Restore could not verify paid access on this Wayfinder account. Check the original account and connection, then contact support if it stays locked.');
+      if (res.reason !== 'store_busy') toast('Restore not verified. See Paid collections for details.');
+      return;
+    }
     renderAll();
-    toast(res.restored.length
-      ? `Restored ${res.restored.length} pack${res.restored.length === 1 ? '' : 's'}`
-      : 'Nothing to restore on this account');
+    if (res.restored.length) {
+      setStoreStatus(`Verified ${res.restored.length} active collection${res.restored.length === 1 ? '' : 's'} for this Wayfinder account.`);
+      toast(`Restored ${res.restored.length} pack${res.restored.length === 1 ? '' : 's'}`);
+    } else {
+      setStoreStatus('No active paid collections were found for this Wayfinder account. If you used Buy, check the original account and contact support; gems remain locked.');
+      toast('No active collections found. See Paid collections for details.');
+    }
   };
 
   // Buy buttons live in re-rendered markup, so the tap is caught on the way up.
@@ -4425,7 +4581,7 @@ function wireUI() {
     if (b.dataset.groupact === 'invite') {
       const g = myGroups.find(x => x.id === activeGroupId);
       if (!g || !g.invite_enabled) return toast('Invitations are paused');
-      const url = linkTo({ join: g.join_code });
+      const url = groupInviteLink(g.join_code);
       const text = `Join "${g.name}" on Wayfinder. Open this and it will ask you to confirm.`;
       return share({ title: 'Wayfinder', text, url }, `${text}
 
@@ -4482,6 +4638,7 @@ ${url}`);
   // Connectivity
   addEventListener('online',  () => {
     online = true;
+    void resumePendingGroupInvite();
     flushOutbox(); flushPhotoQueue(); flushTrips();
     syncNow();
     if (!realtimeOk) resubscribeRealtime();
@@ -5086,6 +5243,7 @@ function showAccountLock(message = '') {
 }
 
 function hideAndClearPrivateOverlays() {
+  if (window.WayfinderPhotoTransfer) window.WayfinderPhotoTransfer.close(true);
   for (const id of ['#sheet', '#tripSheet', '#recSheet', '#lightbox']) {
     const overlay = $(id);
     if (overlay) overlay.classList.add('hidden');
@@ -5182,6 +5340,7 @@ async function handleSignedOut(message = 'Signed out. Sign in to continue.') {
       passwordRecoveryAttempt++;
       recoveryRequestBusy = false; recoveryRequestAttempt++;
       pendingPasswordRecovery = null;
+      localStorage.removeItem(PENDING_GROUP_INVITE_KEY);
       progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
       releaseLocalPhotoUrls();
       photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
@@ -5553,6 +5712,7 @@ async function enterApp({ recoveryOwnerId = passwordRecoveryMode ? passwordRecov
   $('#lock').classList.add('hidden');
   $('#app').classList.remove('hidden');
   openDeepLink();
+  void resumePendingGroupInvite();
   await pullProgress();
   if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
   await pullPhotos();
@@ -5600,6 +5760,79 @@ function resolvePendingTripDeepLink(listComplete = false) {
   return false;
 }
 
+function readPendingGroupInvite() {
+  let pending;
+  try { pending = JSON.parse(localStorage.getItem(PENDING_GROUP_INVITE_KEY) || 'null'); }
+  catch { pending = null; }
+  if (!pending || typeof pending.code !== 'string'
+      || !/^[A-Z0-9]{6,32}$/.test(pending.code)
+      || !Number.isFinite(pending.created)
+      || Date.now() - pending.created > PENDING_GROUP_INVITE_MAX_AGE
+      || pending.created > Date.now()) {
+    localStorage.removeItem(PENDING_GROUP_INVITE_KEY);
+    return null;
+  }
+  return pending;
+}
+
+function queueGroupInvite(code) {
+  if (typeof code !== 'string' || !/^[A-Za-z0-9]{6,32}$/.test(code)) {
+    toast('That invite link is not valid');
+    return false;
+  }
+  const clean = code.toUpperCase();
+  const old = readPendingGroupInvite();
+  if (!old || old.code !== clean || (old.owner && old.owner !== userId)) {
+    localStorage.setItem(PENDING_GROUP_INVITE_KEY, JSON.stringify({
+      code: clean, created: Date.now(), owner: userId || null,
+    }));
+  }
+  return true;
+}
+
+async function resumePendingGroupInvite() {
+  if (pendingGroupInviteBusy || !sb || !userId) return;
+  const pending = readPendingGroupInvite();
+  if (!pending) return;
+  if (pending.owner && pending.owner !== userId) {
+    localStorage.removeItem(PENDING_GROUP_INVITE_KEY);
+    return;
+  }
+  if (!online) {
+    toast('Invite saved. Joining needs a connection; try again when online.');
+    return;
+  }
+  pendingGroupInviteBusy = true;
+  try {
+    const accepted = confirm('Join the Wayfinder group from this invite?\n\nYour personal list stays yours. You will choose whether to share past completions.');
+    localStorage.removeItem(PENDING_GROUP_INVITE_KEY);
+    if (accepted && userId && (!pending.owner || pending.owner === userId)) {
+      await joinGroup(pending.code);
+    }
+  } finally {
+    pendingGroupInviteBusy = false;
+    if (readPendingGroupInvite()) void resumePendingGroupInvite();
+  }
+}
+
+function openExternalDeepLink(rawUrl) {
+  if (rawUrl === lastExternalDeepLink && Date.now() - lastExternalDeepLinkAt < 15000) return;
+  const url = new URL(rawUrl);
+  const isInviteScheme = url.protocol === 'wayfinder:' && url.hostname === 'invite'
+    && (url.pathname === '' || url.pathname === '/');
+  const isPwa = url.protocol === 'https:'
+    && url.hostname === 'ridingminecarts101-coder.github.io'
+    && url.pathname.startsWith('/our-australian-adventure/');
+  const isBrandedInvite = url.protocol === 'https:'
+    && url.hostname === 'rlapplications.com'
+    && url.pathname === '/wayfinder/invite/';
+  if (isInviteScheme || isPwa || isBrandedInvite) {
+    lastExternalDeepLink = rawUrl;
+    lastExternalDeepLinkAt = Date.now();
+    openDeepLink(url.search);
+  }
+}
+
 function tidyDeepLinkQuery() {
   if (!location.search) return;
   const state = browserNavigationEnabled() ? { wayfinderNav: nav } : null;
@@ -5612,20 +5845,13 @@ function openDeepLink(search = location.search) {
   // nobody should end up sharing their list with a stranger because they
   // tapped something in a group chat.
   const join = q.get('join');
-  if (join && !sb) {
-    // Tapping an invite and getting silence is indistinguishable from a
-    // broken link. Say which it is.
-    toast('Joining needs a connection — open this link again when you have one');
-    return;
-  }
-  if (join) {
-    (async () => {
-      const clean = join.trim().toUpperCase();
-      if (!/^[A-Z0-9]{6,32}$/.test(clean)) return toast('That invite link is not valid');
-      if (confirm('Join the Wayfinder group from this invite?\n\nYour personal list stays yours. You will choose whether to share past completions.')) {
-        await joinGroup(clean);
-      }
-    })();
+  if (join !== null) {
+    if (q.getAll('join').length !== 1) toast('That invite link is not valid');
+    else if (queueGroupInvite(join)) {
+      if (userId) void resumePendingGroupInvite();
+      else toast('Invite saved. Sign in to choose whether to join.');
+    }
+    if (search === location.search) tidyDeepLinkQuery();
     return;
   }
 

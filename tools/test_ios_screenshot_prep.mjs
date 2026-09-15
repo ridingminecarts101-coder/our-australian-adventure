@@ -13,7 +13,7 @@ const [projectText, scheme, workflow, startupWorkflow, testSource, listing, copy
   readFile(new URL('../store-release/APP-STORE-COPY-AND-REVIEW.md', import.meta.url), 'utf8'),
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../app.js', import.meta.url), 'utf8'),
-]);
+]).then(values => values.map(value => typeof value === 'string' ? value.replace(/\r\n/g, '\n') : value));
 
 const projectPath = fileURLToPath(new URL('../ios/App/App.xcodeproj/project.pbxproj', import.meta.url));
 const project = xcode.project(projectPath);

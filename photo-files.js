@@ -142,6 +142,19 @@
     return true;
   }
 
+  async function verifyExcluded(owner, path) {
+    const safe = scopedPath(owner, path);
+    requiredFilesystem();
+    const backupGuard = iosBackupGuard();
+    if (backupGuard) {
+      await backupGuard.prepare();
+      // A file left by an interrupted import must receive the same verified
+      // per-file exclusion as a newly written JPEG before metadata adopts it.
+      await backupGuard.exclude({ path: safe });
+    }
+    return true;
+  }
+
   async function read(owner, path) {
     const safe = scopedPath(owner, path);
     const result = await requiredFilesystem().readFile({
@@ -181,6 +194,6 @@
   }
 
   global.WayfinderPhotoFiles = Object.freeze({
-    isNative: isNativePlatform, prepare, save, read, remove, list,
+    isNative: isNativePlatform, prepare, verifyExcluded, save, read, remove, list,
   });
 })(window);

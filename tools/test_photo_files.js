@@ -117,6 +117,12 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
   assert.deepEqual(iosCalls, [['prepare']],
     'native startup prepares iOS persistent directories before photo UI');
   iosCalls.length = 0;
+  await ios.verifyExcluded(OWNER, PATH);
+  assert.deepEqual(iosCalls, [['prepare'], ['exclude', PATH]],
+    'an existing iOS photo gets a verified per-file backup exclusion before adoption');
+  iosCalls.length = 0;
+  await assert.rejects(ios.verifyExcluded(OTHER, PATH), /does not belong/);
+  assert.deepEqual(iosCalls, [], 'foreign-owner path never reaches backup plugin');
   await ios.save(OWNER, ID, original);
   assert.deepEqual(iosCalls.map(call => call[0]), ['prepare', 'write', 'exclude'],
     'iOS must verify WebView storage and exclude each JPEG from backup around every write');
@@ -140,6 +146,10 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
   await assert.rejects(failingGuard.save(OWNER, ID, original), /refused/);
   assert.deepEqual(rollbackCalls, ['prepare', 'write', 'exclude', 'delete'],
     'an iOS JPEG is removed if the device-only flag cannot be applied');
+  rollbackCalls.length = 0;
+  await assert.rejects(failingGuard.verifyExcluded(OWNER, PATH), /refused/);
+  assert.deepEqual(rollbackCalls, ['prepare', 'exclude'],
+    'failed exclusion of existing bytes reports failure without deleting them');
 
   const prepareCalls = [];
   const failedPrepare = load({
