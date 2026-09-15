@@ -19,7 +19,7 @@ const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '
 const OUT = join(ROOT, 'www');
 
 const SHIP = [
-  'index.html', 'privacy.html', 'support.html', 'manifest.json',
+  'index.html', 'privacy.html', 'support.html', 'notices.html', 'manifest.json',
   'styles.css',
   'app.js', 'frame-guard.js', 'photo-files.js', 'config.js', 'countries.js', 'store.js', 'partners.js',
   'land.js', 'world.js',
