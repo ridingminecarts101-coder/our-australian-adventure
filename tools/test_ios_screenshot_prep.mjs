@@ -57,8 +57,8 @@ assert.match(testSource, /WAYFINDER_REVIEW_EMAIL/);
 assert.match(testSource, /WAYFINDER_REVIEW_PASSWORD/);
 assert.match(testSource, /throw XCTSkip\("A private, verified review account/);
 assert.match(testSource, /button\(containing: "Oceania"\)\.waitForExistence/);
-assert.match(testSource, /app\.staticTexts\["Mobile app"\]\.count/);
-assert.match(testSource, /app\.staticTexts\["Unlocked"\]\.count/);
+assert.match(testSource, /app\.staticTexts\.matching\(NSPredicate\(format: "label == %@", "Mobile app"\)\)\.count/);
+assert.match(testSource, /app\.staticTexts\.matching\(NSPredicate\(format: "label == %@", "Unlocked"\)\)\.count/);
 assert.doesNotMatch(testSource, /@example\.|fixture-service|password\s*=\s*"[^"\n]+"/i);
 for (const label of ['Email', 'Password', 'Sign in', 'Stamps', 'Your memories',
   'Traveller recommendations', 'Trips', 'Paid collections']) {

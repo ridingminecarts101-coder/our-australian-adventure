@@ -32,9 +32,9 @@ final class WayfinderStoreScreenshots: XCTestCase {
             ("Asia gems", "asia"), ("Middle East gems", "middle-east"),
             ("South America gems", "south-america"), ("Africa gems", "africa"),
         ]
-        XCTAssertEqual(app.staticTexts["Mobile app"].count, 0,
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", "Mobile app")).count, 0,
                        "The native purchase rows are unavailable; do not submit a store screenshot")
-        XCTAssertEqual(app.staticTexts["Unlocked"].count, 0,
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", "Unlocked")).count, 0,
                        "The private screenshot account must not already own the eight packs")
         capture("06-paid-collections")
         for (name, slug) in products {
