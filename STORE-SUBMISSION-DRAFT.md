@@ -4,12 +4,14 @@ Updated 15 September 2026 from the published `77d1a35` baseline and the current
 owner account decisions. This is prepared metadata and a review
 checklist, not evidence that a signed build, purchase or store review has passed.
 
-The owner has placed the Apple Developer membership order and confirms it is
-still being processed. They chose the individual/sole-trader route for the
-initial release and accept the Apple
-account's developer/seller identity for now, while **RL Applications** remains
-the studio brand. Root still needs to confirm membership activation, App Store
-Connect access after processing, and the exact seller string shown by Apple. The owner has sent
+App Store Connect access for the owner's individual/sole-trader account was
+verified on 15 September 2026: Apps, Users and Access, and Business load while
+signed in. The Apps page contains no apps, and the New App form currently has no
+Bundle ID available. The owner accepts the Apple account's developer/seller
+identity for the initial release, while **RL Applications** remains the studio
+brand. Root still needs to create and verify the explicit App ID, record the
+selected Team ID, and confirm the exact seller string shown by Apple. The account
+menu name “Riley Lawler” is not itself seller-field confirmation. The owner has sent
 Apple an enquiry about a possible later conversion; conversion is optional and
 is not an initial upload-preparation gate.
 
@@ -205,9 +207,9 @@ actually wanted; if created later, keep it out of Git.
 
 ### iOS / App Store
 
-- Confirm that the user-reported individual Apple membership is active, then
-  record the Team ID and exact developer/seller identity shown in App Store
-  Connect. The owner accepts that identity for the initial release. Keep RL
+- App Store Connect account access is verified. Create and verify the explicit
+  App ID, then record the selected Team ID and exact developer/seller identity
+  shown in App Store Connect. The owner accepts that identity for the initial release. Keep RL
   Applications as the studio brand; later account conversion remains optional
   pending Apple's response.
 - The unsigned simulator workflow passed for published source `77d1a35`

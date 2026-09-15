@@ -11,13 +11,13 @@
     "subtitle": "Real adventures worldwide",
     "primary_category": "Travel",
     "secondary_category": "Lifestyle",
-    "developer_identity_status": "Individual/sole-trader Apple identity accepted for the initial release; exact App Store seller string awaiting console confirmation. RL Applications remains the studio brand.",
+    "developer_identity_status": "Individual/sole-trader App Store Connect access verified 15 September 2026; exact App Store seller string and selected Team ID still await field-level confirmation. RL Applications remains the studio brand.",
     "copyright": "2026 Riley Nicholas Lawler trading as RL Applications",
     "app_download_price_aud": "0.00",
     "release_mode": "Manual release after approval",
     "availability": null,
     "content_rights": "Select that the app contains third-party content and the necessary rights only after the content/licence review is confirmed; see THIRD-PARTY-NOTICES.md.",
-    "apple_membership_status": "Individual membership order placed; Apple processing and developer/publishing activation pending."
+    "apple_membership_status": "Individual App Store Connect access verified 15 September 2026; Apps, Users and Access, and Business load. No app record exists and New App currently offers no Bundle ID."
   },
   "localization": {
     "promotional_text": "Find memorable places, build your adventure list and keep your travel notes together. Explore classic experiences and optional one-time hidden-gem collections.",
@@ -39,7 +39,7 @@
     "notes": "Wayfinder is a travel checklist and guide. Use the private verified review-account credentials supplied in App Review Information. Purchases unlock digital guide content, not travel or admission. The Me tab includes Restore purchases, Privacy, Support, and Delete my account and all my data. New photos are stored privately on the device and do not sync with progress. Near me requests foreground location only after it is selected; manual browsing is available. Use the hidden-gem store to test each non-consumable pack; All continents covers every geographic pack and Antarctica. Group and Community functionality must match the final review build and the additional test steps supplied with it. Do not submit these notes until all referenced features have passed their final live tests."
   },
   "submission_gates": [
-    "Confirm the user-reported individual Apple membership is active and record the exact App Store seller identity",
+    "Create and verify the explicit App ID, then record the selected Team ID and exact App Store seller identity",
     "Confirm bundle ID and app-name availability in the selected Apple team before creating immutable records",
     "Owner chooses initial storefront availability and enters an App Review contact phone privately",
     "Signed current Release archive/IPA and physical-iPhone testing",

@@ -62,6 +62,24 @@ function main() {
     },0)`), 0, 'every visible world land dot has a navigation geography');
   }
 
+  // A canvas laid out inside a hidden tab reports zero width. Once that tab
+  // is visible, the next draw must replace the 1px fallback bitmap rather
+  // than leaving the map blank for the rest of the session.
+  {
+    let width = 0;
+    const c = canvas(0);
+    c.getBoundingClientRect = () => ({left:0, top:0, width,
+      height:Number.parseFloat(c.style.height) || width});
+    context.testCanvas = c;
+    run(`drawWorldMap(testCanvas, Object.fromEntries(CONTINENT_ORDER.map(x=>[x,1])), null, null)`);
+    assert.equal(c.width, 2, 'hidden map initially uses only the guarded 1 CSS pixel fallback');
+    width = 566;
+    run(`drawWorldMap(testCanvas, Object.fromEntries(CONTINENT_ORDER.map(x=>[x,1])), null, null)`);
+    assert.equal(c.width, 1132, 'visible redraw restores a device-pixel-sized backing bitmap');
+    assert(Number.parseFloat(c.style.height) > 100 && c.arcs.length > 150,
+      'visible redraw restores useful map height and land geometry');
+  }
+
   for (const continent of JSON.parse(run('JSON.stringify(CONTINENT_ORDER)'))) {
     const c = canvas(390); context.testCanvas = c; context.testContinent = continent;
     run('drawWorldMap(testCanvas, null, null, {continent:testContinent})');

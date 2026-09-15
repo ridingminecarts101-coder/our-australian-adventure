@@ -4095,6 +4095,31 @@ function openRandomAdventure() {
   openSheet(pool[Math.floor(Math.random() * pool.length)].id);
 }
 
+function activateAppTab(b) {
+  // Tapping the tab you are already on takes you back to the top of it.
+  // For Adventures that means the world map, however deep you had drilled -
+  // otherwise the only way out of a region is to walk back up the crumbs.
+  const already = b.classList.contains('active');
+  if (already && b.dataset.tab === 'tab-list' && nav.level !== 'world') {
+    goTo('world');
+    return;
+  }
+  $$('.tab').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  setCurrentTab($$('.tab'), b);
+  $$('.panel').forEach(p => p.classList.add('hidden'));
+  $('#' + b.dataset.tab).classList.remove('hidden');
+  window.scrollTo(0, 0);
+
+  // Canvas layout is zero while another panel is displayed. Redraw only after
+  // Adventures is visible so its backing bitmap matches the visible width.
+  if (b.dataset.tab === 'tab-list') renderPlaces();
+
+  // Fetched on opening rather than at launch: it is a separate list and
+  // most sessions never look at it.
+  if (b.dataset.tab === 'tab-community') pullRecommendations();
+}
+
 function wireUI() {
   wireNative();
   wireBrowserNavigation();
@@ -4103,25 +4128,7 @@ function wireUI() {
   };
 
   // Tabs
-  $$('.tab').forEach(b => b.onclick = () => {
-    // Tapping the tab you are already on takes you back to the top of it.
-    // For Adventures that means the world map, however deep you had drilled -
-    // otherwise the only way out of a region is to walk back up the crumbs.
-    const already = b.classList.contains('active');
-    if (already && b.dataset.tab === 'tab-list' && nav.level !== 'world') {
-      goTo('world');
-      return;
-    }
-    $$('.tab').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    setCurrentTab($$('.tab'), b);
-    $$('.panel').forEach(p => p.classList.add('hidden'));
-    $('#' + b.dataset.tab).classList.remove('hidden');
-    window.scrollTo(0, 0);
-    // Fetched on opening rather than at launch: it is a separate list and
-    // most sessions never look at it.
-    if (b.dataset.tab === 'tab-community') pullRecommendations();
-  });
+  $$('.tab').forEach(b => b.onclick = () => activateAppTab(b));
   setCurrentTab($$('.tab'), $('.tab.active'));
 
   // Quick chips

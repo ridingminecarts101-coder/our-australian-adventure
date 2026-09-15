@@ -8,6 +8,7 @@ const vm = require('node:vm');
 function harness() {
   const elements = new Map(), listeners = new Map(), pushed = [], replaced = [];
   const values = new Map();
+  const collections = new Map();
   const element = key => {
     if (!elements.has(key)) {
       const classes = new Set(['hidden']);
@@ -35,7 +36,7 @@ function harness() {
     crypto: require('node:crypto').webcrypto, URL, URLSearchParams,
     location: { hostname: 'localhost', origin: 'http://localhost', pathname: '/', search: '' },
     history, navigator: { onLine: true, userAgent: '', platform: '', maxTouchPoints: 0 },
-    document: { querySelector: element, querySelectorAll: () => [], createElement: () => element('new'),
+    document: { querySelector: element, querySelectorAll: selector => collections.get(selector) || [], createElement: () => element('new'),
       body: element('body') },
     localStorage: { getItem: k => values.get(k) || null,
       setItem: (k, v) => values.set(k, String(v)), removeItem: k => values.delete(k) },
@@ -52,7 +53,7 @@ function harness() {
   }
   const run = code => vm.runInContext(code, context);
   run('globalThis.realRenderList=renderList; globalThis.realRenderPlaces=renderPlaces; renderPlaces=()=>{}; renderList=()=>{}; buildFilterOptions=()=>{}; renderTrips=()=>{}; toast=t=>{globalThis.lastToast=t};');
-  return { context, run, elements, listeners, pushed, replaced, values };
+  return { context, run, elements, listeners, pushed, replaced, values, collections, element };
 }
 
 async function main() {
@@ -61,6 +62,29 @@ async function main() {
     'tools/fixtures/geographic-correction-overlay-final.json', 'utf8'));
   {
     const h = harness();
+
+    const adventuresTab = h.element('adventuresTab');
+    adventuresTab.dataset.tab = 'tab-list';
+    const communityTab = h.element('communityTab');
+    communityTab.dataset.tab = 'tab-community';
+    communityTab.classList.remove('hidden');
+    communityTab.classList.add('active');
+    const adventuresPanel = h.element('#tab-list');
+    const communityPanel = h.element('#tab-community');
+    communityPanel.classList.remove('hidden');
+    h.collections.set('.tab', [adventuresTab, communityTab]);
+    h.collections.set('.panel', [adventuresPanel, communityPanel]);
+    h.context.adventuresTab = adventuresTab;
+    h.run(`renderPlaces=()=>{
+      globalThis.mapRedraws=(globalThis.mapRedraws||0)+1;
+      globalThis.adventuresVisibleAtRedraw=!document.querySelector('#tab-list').classList.contains('hidden');
+    }; activateAppTab(adventuresTab);`);
+    assert.equal(h.run('mapRedraws'), 1, 'opening Adventures redraws its map');
+    assert.equal(h.run('adventuresVisibleAtRedraw'), true,
+      'the map redraw happens only after its panel has visible layout');
+    assert.equal(adventuresPanel.classList.contains('hidden'), false);
+    assert.equal(communityPanel.classList.contains('hidden'), true);
+
     h.run(`ADV=${JSON.stringify(all)}; owned=new Set(['all']); progress=new Map();
       nav={level:'adventures',continent:'Africa',country:null,admin1:null};
       Object.assign(filters,{quick:'all',q:'tetouan',st:'All',cat:'All',diff:5,cost:4,dog:'All'});`);
