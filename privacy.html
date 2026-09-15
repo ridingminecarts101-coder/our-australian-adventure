@@ -66,7 +66,7 @@
     <tr><td>Which adventures you have ticked, shortlisted, rated or written a note on</td>
         <td>It is the point of the app</td><td>Your device, and our database if you are online</td></tr>
     <tr><td>Photos you attach, and the date taken read from the photo</td>
-        <td>To show them against the adventure</td><td>New photos stay on the device where you add them; older cloud photos remain in our private file storage</td></tr>
+        <td>To show them against the adventure</td><td>Current photos stay on the device where you add them. The production cloud photo store is empty; a separate historical Desktop backup is retained as described below.</td></tr>
     <tr><td>Trips you plan</td><td>To group adventures together</td>
         <td>Your device, and our database</td></tr>
     <tr><td>A display name, if you set one</td><td>So a shared list can say who ticked what</td>
@@ -109,8 +109,7 @@
      stored in that browser's IndexedDB storage. Wayfinder does not upload the new
      image or its related photo record to the RL Applications backend or GitHub.
      New photos do not sync, so signing in on another device will not show them.
-     Until the matching server boundary is deployed, an older client may still use
-     Wayfinder's former cloud-upload path.</p>
+     The production backend now blocks client photo-record and cloud-file uploads.</p>
   <p>Signing out keeps new device-local photos for the same account and hides them
      from other signed-in accounts. Uninstalling the native app, clearing its app
      data, or clearing the PWA's browser/site storage can permanently remove them.
@@ -120,12 +119,14 @@
      device or cloud backups. The PWA cannot control
      copies a browser, operating system or user-configured device backup may retain
      outside its site storage.</p>
-  <p>Photos uploaded by an earlier version remain readable from Wayfinder's private,
-     non-publicly-listable cloud bucket through short-lived signed links. Group
-     membership alone does not share new photos. An older photo previously shared
-     with a group may remain visible to its members until you leave that group.
-     Stopping completion sharing affects ticks; it does not withdraw previously
-     shared photos or trip plans.</p>
+  <p>On 15 September 2026, the 15 historical cloud photo objects and all 11 active
+     photo metadata records were removed from the production Wayfinder service.
+     RL Applications separately retains a Desktop backup of those historical
+     originals and migration snapshots for rollback evidence pending a final
+     retention decision. It is not accessible in the app. Group membership alone
+     does not share new device-local photos. Stopping completion sharing affects
+     ticks; it does not withdraw previously shared trip plans. Another person may
+     retain a separate copy of information they previously saw or saved.</p>
 
   <h2>Traveller recommendations</h2>
   <p>Anything you post to the Community list is <strong>public</strong> to everyone
@@ -176,7 +177,7 @@
      for the current request status and guidance. For an emailed request, RL Applications
      will verify account ownership and confirm completion only after the relevant
      data and service-provider steps have been checked. A request is intended to cover the
-     account, personal progress, older uploaded cloud photos, trips, group memberships and
+     account, personal progress, trips, group memberships and
      Community contributions. Store transaction records and copies another person
      independently saved are separate; account deletion does not itself issue a refund.</p>
   <p>The in-app deletion flow removes the account's new device-local photos from the
@@ -191,7 +192,8 @@
      Email enquiries about privacy, access and corrections to
      <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20privacy">help.rlapplications@gmail.com</a>.
      Use the account-deletion route above for deletion requests.</p>
-  <p>Supabase hosts account authentication, the database and older cloud-photo storage. GitHub
+  <p>Supabase hosts account authentication and the database. Its former active
+     cloud-photo records and bucket objects are empty, with client uploads blocked. GitHub
      Pages serves the web review build. Supabase sends account confirmation and
      recovery messages through Resend using the sending-only
      <code>auth.rlapplications.com</code> domain. Resend receives the recipient email

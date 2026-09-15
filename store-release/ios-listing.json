@@ -7,17 +7,19 @@
     "sku": "wayfinder-ios-001",
     "version": "1.0.0",
     "primary_locale": "en-AU",
-    "name": "Wayfinder",
+    "name": "Wayfinder: Adventure Lists",
     "subtitle": "Real adventures worldwide",
     "primary_category": "Travel",
     "secondary_category": "Lifestyle",
-    "developer_identity_status": "Individual/sole-trader App Store Connect access verified 15 September 2026; exact App Store seller string and selected Team ID still await field-level confirmation. RL Applications remains the studio brand.",
+    "developer_identity_status": "Individual/sole-trader App Store Connect access verified 15 September 2026; Team ID BJ764589GP and app record 6812170174 are verified. The exact App Store seller string still requires confirmation from its Apple field. RL Applications remains the studio brand.",
     "copyright": "2026 Riley Nicholas Lawler trading as RL Applications",
     "app_download_price_aud": "0.00",
     "release_mode": "Manual release after approval",
     "availability": null,
     "content_rights": "Select that the app contains third-party content and the necessary rights only after the content/licence review is confirmed; see THIRD-PARTY-NOTICES.md.",
-    "apple_membership_status": "Individual App Store Connect access verified 15 September 2026; Apps, Users and Access, and Business load. No app record exists and New App currently offers no Bundle ID."
+    "apple_membership_status": "Individual App Store Connect access verified 15 September 2026. App record 6812170174 exists for Wayfinder: Adventure Lists, bundle ID app.wayfinder.mobile, SKU wayfinder-ios-001, primary locale en-AU and iOS. Paid Apps, banking and tax show Active; EU trader status is In Review.",
+    "purchase_setup_status": "All eight non-consumables have verified en-AU localization, Australian base pricing and 175 current territories with future territories enabled. All continents is AUD 14.99; the seven regional packs are AUD 2.99. Family Sharing remains off. Apple still reports MISSING_METADATA until review screenshots and remaining submission metadata are supplied.",
+    "signing_setup_status": "One active Apple Distribution certificate and one active IOS_APP_STORE profile exist for Team BJ764589GP and app.wayfinder.mobile. Their protected GitHub app-store secrets are configured. No signed workflow has been dispatched against the current source candidate."
   },
   "localization": {
     "promotional_text": "Find memorable places, build your adventure list and keep your travel notes together. Explore classic experiences and optional one-time hidden-gem collections.",
@@ -39,8 +41,8 @@
     "notes": "Wayfinder is a travel checklist and guide. Use the private verified review-account credentials supplied in App Review Information. Purchases unlock digital guide content, not travel or admission. The Me tab includes Restore purchases, Privacy, Support, and Delete my account and all my data. New photos are stored privately on the device and do not sync with progress. Near me requests foreground location only after it is selected; manual browsing is available. Use the hidden-gem store to test each non-consumable pack; All continents covers every geographic pack and Antarctica. Group and Community functionality must match the final review build and the additional test steps supplied with it. Do not submit these notes until all referenced features have passed their final live tests."
   },
   "submission_gates": [
-    "Create and verify the explicit App ID, then record the selected Team ID and exact App Store seller identity",
-    "Confirm bundle ID and app-name availability in the selected Apple team before creating immutable records",
+    "Confirm the exact App Store seller identity shown by Apple and complete the app record's remaining metadata",
+    "Complete EU trader review or make an explicit storefront decision before release",
     "Owner chooses initial storefront availability and enters an App Review contact phone privately",
     "Signed current Release archive/IPA and physical-iPhone testing",
     "Configured Apple and RevenueCat products, valid credentials, purchase and restore tests",

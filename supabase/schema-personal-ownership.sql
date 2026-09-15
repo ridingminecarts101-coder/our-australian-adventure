@@ -476,49 +476,49 @@ create policy "delete owned trips" on public.trips
 for delete to authenticated
 using (user_id = auth.uid());
 
--- Memory objects follow photo ownership/projection rather than trusting a UUID
--- embedded in the path. This also removes the old all-authenticated exception
--- for numeric legacy paths while retaining access through their metadata row.
-drop policy if exists "signed in can read memory files" on storage.objects;
-drop policy if exists "signed in can upload memory files" on storage.objects;
-drop policy if exists "signed in can delete memory files" on storage.objects;
-drop policy if exists "read own or shared memory files" on storage.objects;
-drop policy if exists "upload own memory files" on storage.objects;
-drop policy if exists "delete own or shared memory files" on storage.objects;
-drop policy if exists "read owned or projected memory files" on storage.objects;
-drop policy if exists "upload owned memory files" on storage.objects;
-drop policy if exists "move owned memory files" on storage.objects;
-drop policy if exists "delete owned memory files" on storage.objects;
-
-alter table storage.objects enable row level security;
-revoke select, insert, update, delete on storage.objects from public, anon;
-grant select, insert, update, delete on storage.objects to authenticated;
-
-create policy "read owned or projected memory files" on storage.objects
-for select to authenticated
-using (bucket_id = 'memories' and public.can_read_memory_object(name));
-
-create policy "upload owned memory files" on storage.objects
-for insert to authenticated
-with check (
-  bucket_id = 'memories'
-  and (storage.foldername(name))[1] = auth.uid()::text
-);
-
--- Storage move() and an upload with upsert both require UPDATE. The existing
--- object must be owned through its UUID prefix or its legacy metadata row;
--- the destination always moves under the caller's UUID prefix.
-create policy "move owned memory files" on storage.objects
-for update to authenticated
-using (bucket_id = 'memories' and public.can_manage_memory_object(name))
-with check (
-  bucket_id = 'memories'
-  and (storage.foldername(name))[1] = auth.uid()::text
-);
-
-create policy "delete owned memory files" on storage.objects
-for delete to authenticated
-using (bucket_id = 'memories' and public.can_manage_memory_object(name));
+-- Hosted Supabase owns storage.objects as supabase_storage_admin. The SQL
+-- Editor's postgres role cannot ALTER that table or DROP/CREATE its policies.
+-- The operator has disabled the legacy upload policy in Storage > Policies.
+-- After this core transaction creates the ownership helpers, the operator must
+-- install the reviewed final policies there before applying the device-local
+-- photo boundary. service_role remains the separate administrative boundary.
+do $managed_storage_guard$
+begin
+  if not exists (
+    select 1 from pg_class c
+     where c.oid = 'storage.objects'::regclass and c.relrowsecurity
+  ) then
+    raise exception 'storage.objects RLS must remain enabled';
+  end if;
+  if exists (
+    select 1 from pg_policies
+     where schemaname = 'storage' and tablename = 'objects'
+       and roles && array['public', 'anon', 'authenticated']::name[]
+       and policyname not in (
+         'read own or shared memory files',
+         'upload own memory files',
+         'delete own or shared memory files',
+         'read owned or projected memory files',
+         'delete owned memory files',
+         'device local photos block memory inserts',
+         'device local photos block memory updates'
+       )
+  ) then
+    raise exception using
+      message = 'unreviewed client storage.objects policy',
+      hint = 'Do not change managed table ownership; review Storage > Policies before rerunning.';
+  end if;
+  if exists (
+    select 1 from pg_policies
+     where schemaname = 'storage' and tablename = 'objects'
+       and policyname = 'upload own memory files'
+       and roles && array['public', 'anon', 'authenticated']::name[]
+       and coalesce(with_check, '') !~ '^[( ]*false[) ]*$'
+  ) then
+    raise exception 'legacy Storage upload policy must be disabled before migration';
+  end if;
+end
+$managed_storage_guard$;
 
 do $projection_policies$
 declare t text;

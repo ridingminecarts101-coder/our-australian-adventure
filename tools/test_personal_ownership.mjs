@@ -56,6 +56,7 @@ alter table public.progress enable row level security;
 alter table public.photos enable row level security;
 alter table public.trips enable row level security;
 create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
+alter table storage.objects enable row level security;
 create publication supabase_realtime;
 grant usage on schema public, auth, storage to authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
@@ -139,13 +140,17 @@ await db.query(`insert into storage.objects(bucket_id,name)
 equal('another account cannot read an owned legacy object',
   (await asUser(bob, `select count(*)::int as n from storage.objects
     where name='43/legacy.jpg'`)).rows[0].n, 0);
-await asUser(alice, `update storage.objects set name=$1 where name='43/legacy.jpg'`,
+equal('the metadata owner also has no direct cloud-object read path',
+  (await asUser(alice, `select count(*)::int as n from storage.objects
+    where name='43/legacy.jpg'`)).rows[0].n, 0);
+equal('the metadata owner cannot move a historical cloud object',
+  (await asUser(alice, `update storage.objects set name=$1 where name='43/legacy.jpg' returning id`,
+    [`${alice}/43/legacy.jpg`])).rows.length, 0);
+await db.query(`update storage.objects set name=$1 where name='43/legacy.jpg'`,
   [`${alice}/43/legacy.jpg`]);
 await asUser(alice, `update public.photos set storage_path=$1 where storage_path='43/legacy.jpg'`,
   [`${alice}/43/legacy.jpg`]);
-equal('owner can migrate a metadata-linked legacy object under their UUID prefix',
-  (await asUser(alice, 'select count(*)::int as n from storage.objects where name=$1',
-    [`${alice}/43/legacy.jpg`])).rows[0].n, 1);
+pass('administrative fixture cleanup can preserve metadata linkage without restoring client Storage access');
 
 await asUser(bob, 'select public.set_group_completion_sharing($1,true)', [groupId]);
 const feed = await asUser(alice, 'select * from public.group_completion_feed($1)', [groupId]);

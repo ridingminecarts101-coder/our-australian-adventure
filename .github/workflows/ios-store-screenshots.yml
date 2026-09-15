@@ -1,0 +1,138 @@
+name: iOS genuine store screenshots
+
+# Manual only. It signs into a private review fixture and captures the installed
+# native app in Apple simulators. It does not upload anything to App Store Connect.
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-store-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 45
+    environment: app-store
+    env:
+      WAYFINDER_REVIEW_EMAIL: ${{ secrets.WAYFINDER_REVIEW_EMAIL }}
+      WAYFINDER_REVIEW_PASSWORD: ${{ secrets.WAYFINDER_REVIEW_PASSWORD }}
+      REVENUECAT_IOS_PUBLIC_SDK_KEY: ${{ vars.REVENUECAT_IOS_PUBLIC_SDK_KEY }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Require private screenshot fixture
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          test -n "$WAYFINDER_REVIEW_EMAIL"
+          test -n "$WAYFINDER_REVIEW_PASSWORD"
+          [[ "$REVENUECAT_IOS_PUBLIC_SDK_KEY" =~ ^appl_[A-Za-z0-9]{10,}$ ]]
+      - name: Stage the exact native resources
+        run: |
+          npm ci
+          npm run stage
+          npx cap sync ios
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+          node tools/prepare_ios_store_release.mjs
+          python3 -X utf8 tools/check_billing.py --store-release --platform ios \
+            --config-path ios/App/App/public/config.js
+          grep -Fq "android: ''" ios/App/App/public/config.js
+          grep -Fq "ios: '$REVENUECAT_IOS_PUBLIC_SDK_KEY'" ios/App/App/public/config.js
+      - name: Select accepted simulator devices
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          data=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
+          names={d['name'] for runtime in data['devices'].values() for d in runtime}
+          required=['iPhone 17 Pro Max','iPad Pro 13-inch (M4)']
+          missing=[name for name in required if name not in names]
+          if missing: raise SystemExit('Required screenshot simulators unavailable: '+', '.join(missing))
+          PY
+      - name: Capture genuine iPhone screens
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          export TEST_RUNNER_WAYFINDER_REVIEW_EMAIL="$WAYFINDER_REVIEW_EMAIL"
+          export TEST_RUNNER_WAYFINDER_REVIEW_PASSWORD="$WAYFINDER_REVIEW_PASSWORD"
+          xcodebuild test \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+            -derivedDataPath build/DerivedData-iphone \
+            -resultBundlePath build/store-screenshots-iphone.xcresult \
+            -only-testing:WayfinderStoreScreenshotsUITests/WayfinderStoreScreenshots/testCaptureStoreSubmissionScreens \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/store-screenshots-iphone.log
+          mkdir -p build/store-screenshots/iphone-6.9
+          xcrun xcresulttool export attachments \
+            --path build/store-screenshots-iphone.xcresult \
+            --output-path build/store-screenshots/iphone-6.9
+          find build/store-screenshots/iphone-6.9 -type f -name '*.png' -print0 | while IFS= read -r -d '' image; do
+            sips -s format jpeg -s formatOptions 95 "$image" --out "${image%.png}.jpg" >/dev/null
+          done
+          python3 - 1320 2868 build/store-screenshots/iphone-6.9 <<'PY' | tee build/iphone-dimensions.txt
+          import pathlib, re, subprocess, sys
+          width, height, root = int(sys.argv[1]), int(sys.argv[2]), pathlib.Path(sys.argv[3])
+          images = sorted(root.rglob('*.jpg'))
+          if not images: raise SystemExit('No iPhone screenshot attachments exported')
+          for image in images:
+              text=subprocess.check_output(['sips','-g','pixelWidth','-g','pixelHeight',str(image)],text=True)
+              got=tuple(map(int,re.findall(r'pixel(?:Width|Height): (\d+)',text)))
+              if got != (width,height): raise SystemExit(f'{image.name}: unexpected {got}, wanted {(width,height)}')
+              print(f'{image.name}: {got[0]}x{got[1]} JPEG')
+          PY
+      - name: Capture genuine iPad screens
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          export TEST_RUNNER_WAYFINDER_REVIEW_EMAIL="$WAYFINDER_REVIEW_EMAIL"
+          export TEST_RUNNER_WAYFINDER_REVIEW_PASSWORD="$WAYFINDER_REVIEW_PASSWORD"
+          xcodebuild test \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M4)' \
+            -derivedDataPath build/DerivedData-ipad \
+            -resultBundlePath build/store-screenshots-ipad.xcresult \
+            -only-testing:WayfinderStoreScreenshotsUITests/WayfinderStoreScreenshots/testCaptureStoreSubmissionScreens \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/store-screenshots-ipad.log
+          mkdir -p build/store-screenshots/ipad-13
+          xcrun xcresulttool export attachments \
+            --path build/store-screenshots-ipad.xcresult \
+            --output-path build/store-screenshots/ipad-13
+          find build/store-screenshots/ipad-13 -type f -name '*.png' -print0 | while IFS= read -r -d '' image; do
+            sips -s format jpeg -s formatOptions 95 "$image" --out "${image%.png}.jpg" >/dev/null
+          done
+          python3 - 2064 2752 build/store-screenshots/ipad-13 <<'PY' | tee build/ipad-dimensions.txt
+          import pathlib, re, subprocess, sys
+          width, height, root = int(sys.argv[1]), int(sys.argv[2]), pathlib.Path(sys.argv[3])
+          images = sorted(root.rglob('*.jpg'))
+          if not images: raise SystemExit('No iPad screenshot attachments exported')
+          for image in images:
+              text=subprocess.check_output(['sips','-g','pixelWidth','-g','pixelHeight',str(image)],text=True)
+              got=tuple(map(int,re.findall(r'pixel(?:Width|Height): (\d+)',text)))
+              if got != (width,height): raise SystemExit(f'{image.name}: unexpected {got}, wanted {(width,height)}')
+              print(f'{image.name}: {got[0]}x{got[1]} JPEG')
+          PY
+      - name: Save screenshots and test evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ios-store-screenshots-${{ github.run_number }}
+          path: |
+            build/store-screenshots/
+            build/*-dimensions.txt
+            build/store-screenshots-iphone.log
+            build/store-screenshots-ipad.log
+          if-no-files-found: warn
+          retention-days: 7

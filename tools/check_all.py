@@ -56,12 +56,16 @@ CHECKS = [
     ('photo boundary', 'test_device_local_photo_policy.mjs', 'old clients cannot upload while legacy read and deletion remain'),
     ('community RLS',  'test_community_security.mjs', 'post authorship, votes, reports and moderation in PGlite'),
     ('verified participation', 'test_verified_community_access.mjs', 'anonymous and unconfirmed identities cannot create shared or public content'),
+    ('function privileges', 'test_function_execute_repair.mjs', 'explicit anonymous RPC grants are removed while intended access remains'),
+    ('purchase deletion RLS', 'test_revenuecat_deletion.mjs', 'account deletion queues purchase identity without exposing or deleting other owners'),
+    ('purchase deletion worker', 'test_revenuecat_deletion_worker.mjs', 'authenticated provider erasure, retries and private failure handling'),
     ('community client', 'test_community_client.js', 'account transitions, deletion, repeat feedback and block management'),
     ('staging import',  'test_stage_research_import.py', 'research import staging is explicit and reproducible'),
     ('release tools',  'test_play.py',       'the Play commands, against a fake API'),
     ('billing',        'check_billing.py',   'prices, account identity and native release guards'),
     ('bundle access',  'test_bundle_access.js', 'Antarctica exclusivity and locked-content privacy'),
     ('ios vs android', 'check_parity.py',    'do the two apps agree, prices included'),
+    ('ios screenshots', 'test_ios_screenshot_prep.mjs', 'genuine simulator capture target and store-copy limits'),
 ]
 
 

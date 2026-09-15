@@ -2,9 +2,10 @@
 -- Apply only after schema-personal-ownership.sql and
 -- schema-community-hardening.sql. Prepared locally; not yet deployed.
 --
--- Authenticated clients retain read/delete access to legacy cloud photos and
--- memory objects, but cannot create or modify either. SECURITY DEFINER/admin
--- operations remain a separate privileged boundary.
+-- Authenticated clients retain owned metadata access while all direct access
+-- to historical cloud objects is disabled through the managed Storage-policy
+-- prerequisite below. SECURITY DEFINER/admin operations remain a separate
+-- privileged boundary for owner-authorised removal of those originals.
 begin;
 
 do $preflight$
@@ -25,19 +26,34 @@ begin
     raise exception 'Unreviewed permissive public.photos write policy: % (%)', p.policyname, p.cmd;
   end loop;
 
-  -- Storage privileges are table-wide and may support unrelated buckets. Do
-  -- not revoke them or drop an unknown policy. Stop so that policy can be
-  -- reviewed and explicitly allowlisted instead.
-  for p in
-    select policyname, cmd from pg_policies
-     where schemaname = 'storage' and tablename = 'objects'
-       and permissive = 'PERMISSIVE'
-       and cmd in ('ALL', 'INSERT', 'UPDATE')
-       and roles && array['public', 'anon', 'authenticated']::name[]
-       and policyname not in ('upload owned memory files', 'move owned memory files')
-  loop
-    raise exception 'Unreviewed permissive storage.objects write policy: % (%)', p.policyname, p.cmd;
-  end loop;
+  if not exists (
+    select 1 from pg_class c
+     where c.oid = 'storage.objects'::regclass and c.relrowsecurity
+  ) then
+    raise exception 'storage.objects RLS must remain enabled';
+  end if;
+  if (select count(*) from pg_policies
+       where schemaname = 'storage' and tablename = 'objects'
+         and roles && array['public', 'anon', 'authenticated']::name[]) <> 2
+     or not exists (
+       select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects'
+         and policyname = 'read owned or projected memory files' and cmd = 'SELECT'
+         and permissive = 'PERMISSIVE' and roles = array['authenticated']::name[]
+         and coalesce(qual, '') like '%can_read_memory_object%'
+     )
+     or not exists (
+       select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects'
+         and policyname = 'delete owned memory files' and cmd = 'DELETE'
+         and permissive = 'PERMISSIVE' and roles = array['authenticated']::name[]
+         and coalesce(qual, '') like '%can_manage_memory_object%'
+     )
+     or exists (
+       select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects'
+         and cmd in ('ALL', 'INSERT', 'UPDATE')
+         and roles && array['public', 'anon', 'authenticated']::name[]
+     ) then
+    raise exception 'reviewed final storage.objects policies must be installed in Storage > Policies first';
+  end if;
 
   -- Fail closed if an authenticated SECURITY DEFINER RPC could recreate the
   -- client write path after direct privileges are removed. Dynamic SQL and
@@ -61,21 +77,9 @@ drop policy if exists "insert owned photos" on public.photos;
 drop policy if exists "update owned photos" on public.photos;
 revoke insert, update on public.photos from public, anon, authenticated;
 
-drop policy if exists "upload owned memory files" on storage.objects;
-drop policy if exists "move owned memory files" on storage.objects;
-
--- Restrictive policies compose with every current or future permissive policy.
--- They block only the memories bucket and leave other buckets to their own
--- grants and permissive policies.
-drop policy if exists "device local photos block memory inserts" on storage.objects;
-create policy "device local photos block memory inserts" on storage.objects
-as restrictive for insert to public
-with check (bucket_id <> 'memories');
-
-drop policy if exists "device local photos block memory updates" on storage.objects;
-create policy "device local photos block memory updates" on storage.objects
-as restrictive for update to public
-using (bucket_id <> 'memories')
-with check (bucket_id <> 'memories');
+-- No storage.objects DDL is attempted here. Its managed owner is intentionally
+-- preserved. With RLS enabled and no client-applicable INSERT, UPDATE or ALL
+-- policy, PostgreSQL denies new memory writes by default. The two ownership
+-- policies preserve temporary read/delete of historical objects.
 
 commit;

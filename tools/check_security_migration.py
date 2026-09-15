@@ -164,13 +164,13 @@ def main() -> int:
     check("shared photo files require an explicit projection", "join public.group_photos" in memory_read)
     check("shared photo files require current membership", "join public.group_members" in memory_read)
     check("photo file deletion is owner-only", "p.user_id = auth.uid()" in memory_manage)
-    check("authenticated owner can move a legacy photo only under their UUID prefix",
-          'create policy "move owned memory files"' in NORMAL and
-          "public.can_manage_memory_object(name)" in NORMAL and
-          "storage.foldername(name)" in NORMAL)
-    check("Storage grants are explicit and signed-in only",
-          "revoke select, insert, update, delete on storage.objects from public, anon" in NORMAL and
-          "grant select, insert, update, delete on storage.objects to authenticated" in NORMAL)
+    check("managed Storage ownership is preserved",
+          "alter table storage.objects" not in NORMAL and
+          not re.search(r"(?:create|drop) policy .* on storage\.objects", NORMAL))
+    check("Storage handoff fails closed on RLS or an active legacy uploader",
+          "storage.objects rls must remain enabled" in NORMAL and
+          "legacy storage upload policy must be disabled before migration" in NORMAL and
+          "coalesce(with_check, '') !~ '^[( ]*false[) ]*$'" in NORMAL)
     photo_path_guard = body("guard_photo_storage_path")
     check("photo metadata cannot alias another owner's Storage path",
           "storage.foldername(new.storage_path)" in photo_path_guard and

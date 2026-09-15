@@ -113,14 +113,16 @@
        native app uses private app files and does not copy the Wayfinder version to
        your gallery; the PWA uses that browser's IndexedDB storage. Wayfinder does
        not upload the new image or its related photo record to the RL Applications
-       backend or GitHub, and it does not sync to another device. Until the matching
-       server boundary is deployed, an older client may still use the former cloud-upload path. Signing out preserves them for the same account, while
+       backend or GitHub, and it does not sync to another device. The production
+       backend now blocks client photo-record and cloud-file uploads. Signing out preserves them for the same account, while
        uninstalling, clearing app data, or clearing browser/site storage can remove
        them permanently. There is no Wayfinder photo export or device-backup feature,
        so keep an independent copy. Native releases exclude Wayfinder's persistent
        app data from Android and iOS device or cloud backups. A PWA cannot control copies retained by browser,
-       operating-system or user-configured device backups. Older cloud photos remain
-       available read-only.</p>
+       operating-system or user-configured device backups. The active cloud-photo
+       store is empty. RL Applications retains a separate Desktop backup of 15
+       historical originals and migration snapshots pending a final retention
+       decision; those copies are not available through Wayfinder.</p>
   </details>
 
   <details>
@@ -128,7 +130,8 @@
     <p>After signing in on that device and loading the list, you can browse and save
        progress without signal. Changes queue until you reconnect. First sign-in,
        account recovery, group changes, purchases and account deletion need a connection.
-       Older cloud photos that have not loaded before may also need a connection.</p>
+       Device-local photos on this device remain available after signing in to
+       the same account, subject to local storage still being present.</p>
   </details>
 
   <details>
@@ -197,7 +200,7 @@
      explains the current route and limits. Do not send passwords or identity documents.</p>
   <p>For a manual request, RL Applications will verify ownership and confirm completion only after the
      relevant data and service-provider steps have been checked. The request is
-     intended to cover your account, progress, older cloud photos, trips, group memberships and
+     intended to cover your account, progress, trips, group memberships and
      Community contributions. Store transaction records and independently saved copies
      are separate; deleting an account does not issue a refund. See the
      <a href="https://rlapplications.com/wayfinder/privacy/">Wayfinder privacy supplement</a>

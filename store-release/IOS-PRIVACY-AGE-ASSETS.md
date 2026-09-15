@@ -4,11 +4,11 @@ Prepared 15 September 2026 from the current local native source. This is entry g
 
 ## Evidence reviewed
 
-- `ios/App/App/PrivacyInfo.xcprivacy`: eight collected-data declarations, no tracking, no tracking domains, and required-reason entries for UserDefaults (`CA92.1`) and file timestamps (`C617.1`).
+- `ios/App/App/PrivacyInfo.xcprivacy`: seven collected-data declarations, no tracking, no tracking domains, and required-reason entries for UserDefaults (`CA92.1`) and file timestamps (`C617.1`).
 - `ios/App/App/Info.plist`: camera, photo-library and foreground precise-location purpose strings; `ITSAppUsesNonExemptEncryption` is `false`.
 - `ios/App/App.xcodeproj/project.pbxproj`: deployment target iOS 15.0 and device families `1,2` (iPhone and iPad).
 - `package-lock.json` and native package configuration: RevenueCat Purchases, Supabase, Capacitor Geolocation and the other listed native dependencies are present.
-- Current application behavior and public policies: required email account; synced progress, notes and trips; device-local new photos; readable legacy cloud photos; optional Near me; RevenueCat-backed non-consumable plans; Community recommendations, votes, ratings, reports and blocks.
+- Current application behavior and public policies: required email account; synced progress, notes and trips; device-local new photos; optional Near me; RevenueCat-backed non-consumable plans; Community recommendations, votes, ratings, reports and blocks. On 15 September the 15 historical Storage objects and all 11 active photo-metadata rows were removed from production with non-photo fingerprints unchanged.
 - `data/adventures.json`: 5,358 stored entries, of which 5,341 have no unavailable marker. All 5,358 have `verified_at`; the shipped records do not contain per-row `source` or `sources` fields.
 - `THIRD-PARTY-NOTICES.md`: dependency licences, map provenance and the distinction between research citations and ownership of third-party sites or brands.
 
@@ -16,7 +16,7 @@ Apple requires app-level privacy answers to include the developer's practices an
 
 ## App privacy entry
 
-Choose **Yes, data is collected**. **No Data Collected is false** for the current build even though new photo files stay on the device: Wayfinder has accounts and hosted personal records, can display older hosted photos, sends optional coordinates to BigDataCloud, and integrates RevenueCat for purchases.
+Choose **Yes, data is collected**. **No Data Collected is false** even though new photo files stay on the device: Wayfinder has accounts and hosted personal records, sends optional coordinates to BigDataCloud, and integrates RevenueCat for purchases.
 
 Use this as the draft App Store Connect inventory. “Linked” and “not used for tracking” match the current app privacy manifest. Do not downgrade a declaration without evidence from the final archive and every active provider.
 
@@ -28,8 +28,11 @@ Use this as the draft App Store Connect inventory. “Linked” and “not used 
 | Purchases — Purchase History | App Functionality and Analytics | Yes | No | RevenueCat receipt validation, entitlements, customer history and charts. RevenueCat identifies both purposes as its minimum Purchase History disclosure. Purchases are account-bound, so anonymous/unlinked treatment is inappropriate. |
 | Usage Data — Product Interaction | App Functionality | Yes | No | Account-linked completion, shortlist, interaction and sharing state represented by the current manifest. Confirm the exact App Store wording against the final data flows. |
 | Location — Precise Location | App Functionality and Analytics | Yes | No | Near me sends coordinates to BigDataCloud only after the user selects it; the provider also receives normal network information and uses service observations to improve IP geolocation. Coordinates are not saved in the Wayfinder account. The current manifest uses the conservative linked declaration. |
-| User Content — Photos or Videos | App Functionality | Yes | No | New native photos remain in app-private, backup-excluded device storage and are not uploaded. This alone would not justify an off-device collection label. The current service still stores and displays legacy cloud photos associated with accounts, so Photos or Videos remains declared. |
 | User Content — Other User Content | App Functionality | Yes | No | Notes, trips, Community recommendations and associated reports/feedback are hosted and account-linked where those features operate. |
+
+Do not select **Photos or Videos** for the submitted version if final archive inspection confirms the current path: new images and their photo metadata stay on the device, normal clients cannot write `public.photos` or the `memories` bucket, and production remains at zero hosted photo rows and objects. Apple defines collection around data transmitted off the device for access beyond servicing the immediate request; local-only processing does not itself require a collected-data label. RL Applications still retains the explicitly owner-preserved Desktop backup of the 15 historical originals and database/storage snapshots for migration and rollback evidence. That retained historical copy must remain disclosed in the privacy policy and governed by a retention decision, but it is not a new-photo collection path in this build. If those files are restored to a live service, otherwise transmitted, or a later build uploads photos, add the label back before distribution.
+
+This draft uses Apple's [App privacy details definition of collection](https://developer.apple.com/app-store/app-privacy-details/) and its instruction to answer for the [specific distributed app version and integrated third-party partners](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy/). The answer remains conditional on the final signed archive, live service state and third-party SDK behavior; the local manifest alone cannot prove them.
 
 Do not select Device ID merely because RevenueCat is present. RevenueCat says Device ID is needed when an advertising identifier such as IDFA is used; no IDFA/advertising integration or `NSUserTrackingUsageDescription` was found in the reviewed source. Do not select tracking: the current manifest sets tracking false and has no tracking domains, and RevenueCat says it does not inherently track users across apps for advertising. Reassess both points after inspecting the final Xcode privacy report and every transitive SDK privacy manifest.
 
@@ -77,7 +80,7 @@ The current source is not by itself evidence of review readiness. Before submiss
 1. Supply an active, verified demo account to App Review through the private review fields. Use fictional review data, keep the backend available for the full review, and do not put credentials in Git. Apple requires full access for account-based apps and says a demo mode in place of an account needs prior approval.
 2. Add the owner's private App Review contact phone and confirm the monitored email. The phone is currently unknown in the prepared listing.
 3. Remove testing/placeholder behavior from the submitted experience or explain any intentionally unavailable feature. Apple says beta builds belong in TestFlight and rejects incomplete functionality, placeholder content and inaccessible backends.
-4. Explain non-obvious review paths: email verification/recovery; Near me permission; adding and deleting a device-local photo; viewing a legacy cloud photo if the demo account has one; account deletion; Community report/block; every enabled purchase and Restore purchases.
+4. Explain non-obvious review paths: email verification/recovery; Near me permission; adding and deleting a device-local photo; account deletion; Community report/block; every enabled purchase and Restore purchases.
 5. Make all eight intended non-consumable IAPs complete, visible and functional in Apple's sandbox/Review environment, submit them with the first app version, and attach their App Review screenshots. Explain that packs unlock digital guide content and do not buy travel or admission.
 6. Keep privacy, support and deletion URLs publicly reachable throughout review. Complete the live deletion, Community moderation, group-privacy and purchase/restore checks before describing them as production behavior.
 7. Ensure screenshots and review accounts contain fictional data and owned/licensed imagery. Apple places responsibility for screenshot and preview rights on the developer.

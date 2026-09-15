@@ -93,13 +93,14 @@ def main():
             'NSPrivacyCollectedDataTypeUserID',
             'NSPrivacyCollectedDataTypeName',
             'NSPrivacyCollectedDataTypeProductInteraction',
-            'NSPrivacyCollectedDataTypePhotosorVideos',
             'NSPrivacyCollectedDataTypeOtherUserContent',
             'NSPrivacyCollectedDataTypePurchaseHistory',
             'NSPrivacyCollectedDataTypePreciseLocation',
         }
         if not required_data.issubset(collected):
             problems.append('iOS privacy manifest omits account or user-content collection')
+        if 'NSPrivacyCollectedDataTypePhotosorVideos' in collected:
+            problems.append('iOS privacy manifest still declares photo collection despite device-local-only current capture and zero production photo rows')
         for data_type in ('NSPrivacyCollectedDataTypeUserID',
                           'NSPrivacyCollectedDataTypePurchaseHistory',
                           'NSPrivacyCollectedDataTypePreciseLocation'):

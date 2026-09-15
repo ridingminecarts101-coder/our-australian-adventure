@@ -2347,7 +2347,8 @@ async function retryConfirmedLocalAccountCleanup() {
 async function deleteAccount() {
   if (!sb || !userId || accountDeletionInProgress) return;
   if (!online) return toast('Reconnect before deleting your account');
-  const typed = prompt('This deletes your account, every tick, every photo and every trip. '
+  const typed = prompt('This deletes your Wayfinder account, saved progress and trips, and photos stored in Wayfinder on this device. '
+                     + 'Purchase-service data is queued for deletion. '
                      + 'It cannot be undone.\n\nType DELETE to confirm.');
   if (typed !== 'DELETE') { toast('Cancelled'); return; }
 
@@ -2386,7 +2387,7 @@ async function deleteAccount() {
     }
 
     try { await sb.auth.signOut(); } catch { /* identity has already been deleted */ }
-    await handleSignedOut('Account deleted.');
+    await handleSignedOut('Account deleted. Purchase-service cleanup is queued.');
     if (!localCleanupComplete) {
       toast('Account deleted. Some device-only photo cleanup will retry next time Wayfinder opens.');
     }

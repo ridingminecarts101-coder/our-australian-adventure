@@ -56,6 +56,7 @@ alter table public.progress enable row level security;
 alter table public.photos enable row level security;
 alter table public.trips enable row level security;
 create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
+alter table storage.objects enable row level security;
 create publication supabase_realtime;
 grant usage on schema public, auth, storage to authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;

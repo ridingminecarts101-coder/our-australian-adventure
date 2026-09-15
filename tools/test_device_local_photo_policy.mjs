@@ -41,6 +41,7 @@ alter table public.progress enable row level security;
 alter table public.photos enable row level security;
 alter table public.trips enable row level security;
 create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
+alter table storage.objects enable row level security;
 create publication supabase_realtime;
 grant usage on schema public, auth, storage to authenticated;
 grant select,insert,update,delete on all tables in schema public to authenticated;
@@ -72,6 +73,14 @@ await asUser(db, bob, 'select * from public.join_group_by_code($1,$2)', [group.j
 const photo = (await db.query(`insert into public.photos(adventure_id,storage_path,user_id)
   values (7,$1,$2) returning id`, [`${bob}/7/legacy.jpg`,bob])).rows[0];
 await db.query(`insert into storage.objects(bucket_id,name) values ('memories',$1)`, [`${bob}/7/legacy.jpg`]);
+await db.exec(`
+  create policy "read owned or projected memory files" on storage.objects
+    for select to authenticated
+    using (bucket_id = 'memories' and public.can_read_memory_object(name));
+  create policy "delete owned memory files" on storage.objects
+    for delete to authenticated
+    using (bucket_id = 'memories' and public.can_manage_memory_object(name));
+`);
 await db.exec(boundary);
 
 await denied('old client photo metadata INSERT is denied', () => asUser(db, bob,
@@ -87,21 +96,21 @@ console.log('PASS: old client memory object UPDATE changes no row');
 
 assert.equal((await asUser(db, bob, 'select count(*)::int n from public.photos where id=$1', [photo.id])).rows[0].n, 1);
 assert.equal((await asUser(db, bob, 'select count(*)::int n from storage.objects where name=$1', [`${bob}/7/legacy.jpg`])).rows[0].n, 1);
-console.log('PASS: owner can still read legacy metadata and object');
+console.log('PASS: owner can still read a historical object until administrative removal');
 await asUser(db, bob, 'insert into public.group_photos(group_id,photo_id,shared_by_id) values ($1,$2,$3)',
   [group.group_id,photo.id,bob]);
 assert.equal((await asUser(db, alice, 'select count(*)::int n from public.photos where id=$1', [photo.id])).rows[0].n, 1);
 console.log('PASS: existing legacy photo projection remains readable to a group member');
 await asUser(db, bob, 'delete from storage.objects where name=$1', [`${bob}/7/legacy.jpg`]);
 await asUser(db, bob, 'delete from public.photos where id=$1', [photo.id]);
-console.log('PASS: owner can still delete legacy object and metadata');
+console.log('PASS: owner can delete historical object and metadata before the cloud-original cleanup completes');
 await db.exec(boundary);
 console.log('PASS: migration replay preserves the device-local boundary');
 
 const guarded = await setup();
 await guarded.exec(`create policy "unexpected legacy uploader" on storage.objects
   for insert to authenticated with check (bucket_id='memories')`);
-await assert.rejects(guarded.exec(boundary), /Unreviewed permissive storage[.]objects write policy/);
-console.log('PASS: unknown permissive Storage writer aborts the candidate migration');
+await assert.rejects(guarded.exec(boundary), /reviewed final storage[.]objects policies must be installed/);
+console.log('PASS: missing or unexpected final Storage policy set aborts the candidate migration');
 
 console.log('device-local server boundary: 9 policy checks passed');
