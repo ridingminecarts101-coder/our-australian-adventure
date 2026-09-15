@@ -1,16 +1,17 @@
 # Wayfinder store submission draft
 
-Updated 15 September 2026 from the published `182f474` baseline and the current
-reviewed preparation changes. This is entry-ready metadata and a review
+Updated 15 September 2026 from the published `77d1a35` baseline and the current
+owner account decisions. This is prepared metadata and a review
 checklist, not evidence that a signed build, purchase or store review has passed.
 
-The owner requires **RL Applications** as the public developer name. An existing
-individual/sole-proprietor Apple enrolment is pending payment; it is not an
-approved organisation or an active distribution membership. The official
-organisation-conversion link currently denies that account access. Apple's
-Program Enrolment support form is prepared for the owner to clarify the correct
-route. Do not pay, withdraw the enrolment, invent an organisation or accept
-personal-name publication without the appropriate owner action.
+The owner has placed the Apple Developer membership order and confirms it is
+still being processed. They chose the individual/sole-trader route for the
+initial release and accept the Apple
+account's developer/seller identity for now, while **RL Applications** remains
+the studio brand. Root still needs to confirm membership activation, App Store
+Connect access after processing, and the exact seller string shown by Apple. The owner has sent
+Apple an enquiry about a possible later conversion; conversion is optional and
+is not an initial upload-preparation gate.
 
 Current iOS entry package:
 
@@ -204,22 +205,24 @@ actually wanted; if created later, keep it out of Git.
 
 ### iOS / App Store
 
-- Resolve an Apple organisation route compatible with **RL Applications** as
-  developer name. The current legal structure remains sole trader; a business
-  name and D-U-N-S alone do not create an eligible separate legal entity. The
-  owner's existing individual enrolment is not permission to publish under a
-  personal name. No Team ID is currently confirmed for signing.
-- The unsigned simulator workflow passed in Xcode 26.6 at source `8645ce2`
-  ([run 34820343129](https://github.com/ridingminecarts101-coder/our-australian-adventure/actions/runs/34820343129)).
-  The following support-only change copied matching iOS assets but was not
-  compiled again. Run a fresh exact-source compile after this preparation is
-  integrated; this still does not establish signing or device behaviour.
+- Confirm that the user-reported individual Apple membership is active, then
+  record the Team ID and exact developer/seller identity shown in App Store
+  Connect. The owner accepts that identity for the initial release. Keep RL
+  Applications as the studio brand; later account conversion remains optional
+  pending Apple's response.
+- The unsigned simulator workflow passed for published source `77d1a35`
+  ([run 34916632219](https://github.com/ridingminecarts101-coder/our-australian-adventure/actions/runs/34916632219)).
+  The current follow-up edits are documentation only. This compile does not
+  sign or validate an IPA; runtime/native changes need a new matching build.
 - On a Mac with Xcode 26 or a managed Mac service, select the developer team,
   configure capabilities, compile Release, archive, validate and upload. No iOS
   archive or IPA currently exists.
-- Configure the iOS RevenueCat public SDK key and the same eight non-consumable
-  products. Test purchase, cancel, restore, refund and account switches in the
-  Apple sandbox on both available iPhones.
+- RevenueCat project `1bce63b8` is signed in with verified email, all eight exact
+  entitlements exist, and **Keep with original App User ID** is saved. It still
+  has only the Test Store. Apple app creation was rejected because the required
+  IAP `.p8`, Key ID and Issuer ID were unavailable; no Apple products or Apple
+  public SDK key exist. Add and validate those, then test purchase, cancel,
+  restore, refund and account switches in the Apple sandbox on both iPhones.
 - Inspect the final archive's aggregated privacy report and align
   `PrivacyInfo.xcprivacy` with App Store Connect. Confirm purchase-history and
   location disclosures with the shipped RevenueCat SDK and BigDataCloud terms.

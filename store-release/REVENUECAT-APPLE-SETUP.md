@@ -4,16 +4,16 @@ Prepared 15 September 2026 from the actual Capacitor integration. This is a setu
 
 ## Account and project
 
-1. Sign in or create the owner's account at [RevenueCat](https://app.revenuecat.com/). Use an owner-controlled email; `help.rlapplications@gmail.com` is the confirmed customer-support address. Do not create a second account if one already exists.
-2. Create one project named **Wayfinder**. Keep future unrelated apps in separate projects, rather than merging their customer purchases into Wayfinder.
-3. Add an **App Store** app named **Wayfinder iOS**, bundle ID **`app.wayfinder.mobile`**. A new project's automatically supplied Test Store is not the Apple store and must not supply the public key shipped in the release.
-4. Set restore behaviour to **Keep with original App User ID**. This matches required Wayfinder accounts and individual purchase ownership. Recover the original Wayfinder account when a receipt belongs to another account. The same Apple receipt may prevent a second Wayfinder account from buying/restoring; do not silently transfer ownership or encourage a duplicate purchase. Exercise this case with sandbox accounts before release.
+1. The owner is signed in to the email-verified RevenueCat account. Use the existing **Wayfinder** project `1bce63b8`; do not create a duplicate project or account.
+2. All eight exact entitlement IDs below exist, and project restore behaviour is saved as **Keep with original App User ID**. This matches required Wayfinder accounts and individual purchase ownership. Recover the original Wayfinder account when a receipt belongs to another account. The same Apple receipt may prevent a second Wayfinder account from buying/restoring; do not silently transfer ownership or encourage a duplicate purchase. Exercise this case with sandbox accounts before release.
+3. The project currently contains only RevenueCat's Test Store. Its example products and key are not Apple configuration and must not be shipped.
+4. Adding the **App Store** app for bundle ID **`app.wayfinder.mobile`** was attempted but rejected because no Apple In-App Purchase `.p8`, Key ID or Issuer ID was available. No Apple products or Apple public SDK key have been created. Resume this step only after obtaining those exact Apple credentials.
 
 The client uses the signed-in Supabase UUID as its RevenueCat App User ID. It must not use a group ID, display name, email address or a fresh anonymous ID for purchases. Leaving a group does not revoke an individual's own entitlement.
 
 ## Apple prerequisites
 
-- An active Apple Developer membership and confirmed publisher identity. The present pending individual enrolment is not evidence that organisation membership or RL Applications naming is approved.
+- The owner has placed the Apple Developer individual/sole-trader membership order and is waiting for processing and activation. App Store Connect access is not available yet. The owner accepts Apple's individual-account developer/seller identity for the initial release. Keep RL Applications as studio branding and copy the exact seller string from Apple once visible. A possible later organisation conversion is optional and pending Apple's response.
 - Create the explicit App ID for **`app.wayfinder.mobile`**, then the iOS app record in App Store Connect. Check its availability under the selected team first; do not change the existing ID without a coordinated code/product migration.
 - Account Holder completes Apple's Paid Apps Agreement and banking/tax information. The app download is free; the eight guide unlocks are paid non-consumables.
 - Create all eight Apple products in the table below, complete localization/pricing/availability, and supply a real in-app-purchase review screenshot. For the first submission, include the in-app purchases with the app version as Apple requires.

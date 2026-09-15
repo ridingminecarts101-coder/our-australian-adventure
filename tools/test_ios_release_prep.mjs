@@ -41,5 +41,23 @@ assert.match(workflow, /ProvisionsAllDevices/,
   'enterprise profiles must be rejected');
 assert.match(workflow, /Export App Store IPA[\s\S]*set -euo pipefail/,
   'archive export must propagate pipeline failures');
+assert.match(workflow, /npx cap sync ios[\s\S]*git diff --exit-code[\s\S]*prepare_ios_store_release/,
+  'release staging must match committed native files before the public key is injected');
+assert.match(workflow, /test -f ios\/App\/App\.xcodeproj\/project\.xcworkspace\/xcshareddata\/swiftpm\/Package\.resolved/,
+  'signed delivery must require a reviewed Swift package resolution');
+assert.match(workflow, /-disableAutomaticPackageResolution/,
+  'signed delivery must not resolve different Swift dependency revisions');
+assert.doesNotMatch(workflow, /security import[^\n]*[\s\S]{0,200}\s-A(?:\s|$)/,
+  'the imported distribution identity must not be available to every runner process');
+assert(workflow.indexOf('- name: Remove signing material') < workflow.indexOf('- name: Save non-binary delivery evidence'),
+  'signing material must be removed before a third-party artifact action runs');
+
+const unsignedWorkflow = await readFile('.github/workflows/ios-compile.yml', 'utf8');
+assert.match(unsignedWorkflow, /npx cap sync ios[\s\S]*git diff --exit-code[\s\S]*xcodebuild/,
+  'unsigned compilation must not silently build generated changes outside its recorded commit');
+assert.match(unsignedWorkflow, /cp "\$RESOLVED" build\/Package\.resolved/,
+  'the bootstrap compile must export its generated Swift package resolution for review');
+assert.match(unsignedWorkflow, /build\/Package\.resolved/,
+  'the unsigned evidence artifact must retain the generated Swift package resolution');
 
 console.log('  iOS release preparation: public-key injection and guarded delivery workflow passed');

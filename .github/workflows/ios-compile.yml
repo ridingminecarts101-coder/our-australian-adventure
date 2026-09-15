@@ -47,6 +47,8 @@ jobs:
           node tools/test_ios_release_prep.mjs
           npm run stage
           npx cap sync ios
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
           plutil -lint ios/App/App/Info.plist ios/App/App/PrivacyInfo.xcprivacy
       - name: Compile unsigned iOS Simulator app
         run: |
@@ -61,6 +63,12 @@ jobs:
             -resultBundlePath build/ios-compile.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee build/ios-compile.log
+          RESOLVED=ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+          test -f "$RESOLVED"
+          cp "$RESOLVED" build/Package.resolved
+          if git ls-files --error-unmatch "$RESOLVED" >/dev/null 2>&1; then
+            git diff --exit-code -- "$RESOLVED"
+          fi
       - name: Save compilation evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -72,5 +80,6 @@ jobs:
             build/source-commit.txt
             build/ios-compile.log
             build/ios-compile.xcresult
+            build/Package.resolved
           if-no-files-found: warn
           retention-days: 7

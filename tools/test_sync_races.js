@@ -54,7 +54,7 @@ function harness() {
   vm.runInContext(fs.readFileSync('store.js', 'utf8'), context, { filename: 'store.js' });
   vm.runInContext(fs.readFileSync('app.js', 'utf8'), context, { filename: 'app.js' });
   vm.runInContext(`renderAll=()=>{}; renderPhotoStatus=()=>{}; renderTrips=()=>{};
-    refreshSyncBar=()=>{}; saveLocalTrips=()=>{}; toast=()=>{};`, context);
+    saveLocalTrips=()=>{}; toast=()=>{};`, context);
   return { context, values, elements };
 }
 
@@ -67,6 +67,39 @@ async function main() {
   const run = code => vm.runInContext(code, h.context);
   const ownerA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   const ownerB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+  // The sync banner is private account state: a queued change for A must not
+  // disclose a pending count after B takes over the same browser profile.
+  run(`userId='${ownerB}'; online=false; localStorage.setItem(LS.owner,userId);
+    writeLS(LS.outbox,[
+      {adventure_id:1,owner_id:'${ownerA}'},
+      {adventure_id:2,owner_id:'${ownerB}'},
+      {adventure_id:3}
+    ]);
+    writeLS(LS.tripOutbox,[
+      {id:'trip-a',owner_id:'${ownerA}'},
+      {id:'trip-b',owner_id:'${ownerB}'}
+    ]); refreshSyncBar()`);
+  assert.equal(h.elements.get('#syncBar').textContent, 'Offline — 3 changes waiting to sync');
+  run(`localStorage.setItem(LS.owner,'${ownerA}'); refreshSyncBar()`);
+  assert.equal(h.elements.get('#syncBar').textContent, 'Offline — 2 changes waiting to sync',
+    'foreign trip rows are excluded and legacy unowned rows belong only to the persisted owner');
+  run(`userId=null; localStorage.removeItem(LS.owner); writeLS(LS.outbox,[{adventure_id:4}]);
+    writeLS(LS.tripOutbox,[{id:'legacy-trip'}]); refreshSyncBar()`);
+  assert.equal(h.elements.get('#syncBar').textContent, 'Offline — no changes waiting to sync',
+    'the signed-out account lock must not expose a legacy queue count');
+
+  // A trip appears in the global status as soon as it is durably queued and
+  // disappears only after the server acknowledgement removes that exact row.
+  run(`userId='${ownerB}'; localStorage.setItem(LS.owner,userId); writeLS(LS.outbox,[]);
+    writeLS(LS.tripOutbox,[]); online=false; sb=null;
+    queueTripSync({id:'trip-status',name:'Status test'})`);
+  assert.equal(h.elements.get('#syncBar').textContent, 'Offline — 1 change waiting to sync');
+  h.context.mockSb = { from: () => ({ upsert: async () => ({ error: null }) }) };
+  await run(`online=true; sb=mockSb; flushTrips()`);
+  assert.deepEqual(JSON.parse(h.values.get('oaa.tripoutbox.v1')), []);
+  assert.doesNotMatch(h.elements.get('#syncBar').textContent, /1 change/,
+    'acknowledged trip must leave the global pending count');
 
   // A newer edit for the same row must survive acknowledgement of the older request.
   const first = deferred(), second = deferred();

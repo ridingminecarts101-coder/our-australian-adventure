@@ -193,7 +193,11 @@ function setSync(text, warn) {
   bar.classList.toggle('warn', !!warn);
 }
 function refreshSyncBar() {
-  const pending = readLS(LS.outbox, []).length;
+  const storedOwner = localStorage.getItem(LS.owner);
+  const ownedPending = key => userId ? readLS(key, []).filter(item =>
+    item.owner_id === userId || (!item.owner_id && storedOwner === userId)
+  ).length : 0;
+  const pending = ownedPending(LS.outbox) + ownedPending(LS.tripOutbox);
   if (!online)      return setSync(`Offline — ${pending || 'no'} change${pending === 1 ? '' : 's'} waiting to sync`, true);
   if (pending)      return setSync(`Syncing ${pending} change${pending === 1 ? '' : 's'}…`, true);
   if (!sb)          return setSync('Offline mode — progress saved on this phone only', true);
@@ -3102,17 +3106,18 @@ function queueTripSync(trip) {
     return false;
   }
   tripMutationRevision++;
+  refreshSyncBar();
   flushTrips();
   return true;
 }
 
 async function flushTrips() {
-  if (!sb || !online || accountDeletionInProgress) return;
+  if (!sb || !online || accountDeletionInProgress) return refreshSyncBar();
   if (flushTrips.busy) { flushTrips.requested = true; return; }
   flushTrips.busy = true;
   const runOwner = userId, runGeneration = authGeneration;
   const q = readLS(LS.tripOutbox, []);
-  if (!q.length) { flushTrips.busy = false; return; }
+  if (!q.length) { flushTrips.busy = false; return refreshSyncBar(); }
   try {
     for (const t of q) {
       if (runGeneration !== authGeneration || runOwner !== userId || t.owner_id !== runOwner) break;
@@ -3150,6 +3155,7 @@ async function flushTrips() {
     }
   } finally {
     flushTrips.busy = false;
+    refreshSyncBar();
     if (flushTrips.requested && runGeneration === authGeneration && runOwner === userId) {
       flushTrips.requested = false;
       queueMicrotask(flushTrips);

@@ -102,8 +102,11 @@ jobs:
           python3 -X utf8 tools/check_billing.py
           python3 -X utf8 tools/check_ios_products.py
           node tools/test_ios_release_prep.mjs
+          test -f ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
           npm run stage
           npx cap sync ios
+          git diff --exit-code
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
           node tools/prepare_ios_store_release.mjs
           python3 -X utf8 tools/check_billing.py --store-release --platform ios \
             --config-path ios/App/App/public/config.js
@@ -128,7 +131,7 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security import "$CERT_PATH" -k "$KEYCHAIN_PATH" \
-            -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12
+            -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign -t cert -f pkcs12
           security set-key-partition-list -S apple-tool:,apple: -s \
             -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
           security list-keychains -d user -s "$KEYCHAIN_PATH"
@@ -171,6 +174,7 @@ jobs:
             -scheme App \
             -configuration Release \
             -destination 'generic/platform=iOS' \
+            -disableAutomaticPackageResolution \
             -archivePath build/Wayfinder.xcarchive \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CODE_SIGN_STYLE=Manual \
@@ -249,6 +253,21 @@ jobs:
             --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" \
             --output-format json 2>&1 | tee build/app-store-upload.json
 
+      - name: Remove signing material
+        if: always()
+        env:
+          PROFILE_UUID: ${{ steps.signing.outputs.profile_uuid }}
+          KEYCHAIN_PATH: ${{ steps.signing.outputs.keychain_path }}
+        run: |
+          rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_$APP_STORE_CONNECT_KEY_ID.p8"
+          if [[ "$PROFILE_UUID" =~ ^[0-9A-Fa-f-]{36}$ ]]; then
+            rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          fi
+          if [ -n "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
+          rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/wayfinder.mobileprovision" "$RUNNER_TEMP/profile.plist"
+
       - name: Save non-binary delivery evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
@@ -265,18 +284,3 @@ jobs:
             build/app-store-upload.json
           if-no-files-found: warn
           retention-days: 14
-
-      - name: Remove signing material
-        if: always()
-        env:
-          PROFILE_UUID: ${{ steps.signing.outputs.profile_uuid }}
-          KEYCHAIN_PATH: ${{ steps.signing.outputs.keychain_path }}
-        run: |
-          rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_$APP_STORE_CONNECT_KEY_ID.p8"
-          if [[ "$PROFILE_UUID" =~ ^[0-9A-Fa-f-]{36}$ ]]; then
-            rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
-          fi
-          if [ -n "$KEYCHAIN_PATH" ]; then
-            security delete-keychain "$KEYCHAIN_PATH" || true
-          fi
-          rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/wayfinder.mobileprovision" "$RUNNER_TEMP/profile.plist"

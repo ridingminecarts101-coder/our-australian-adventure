@@ -45,6 +45,8 @@ assert "appUserID: runId" in STORE
 assert "await P.logOut()" not in STORE
 assert "alreadyConfigured && P.logIn" in STORE
 assert PROJECT.count("PRODUCT_BUNDLE_IDENTIFIER = app.wayfinder.mobile;") == 2
+assert PROJECT.count("com.apple.InAppPurchase") == 1
+assert re.search(r"com\.apple\.InAppPurchase\s*=\s*\{\s*enabled\s*=\s*1;", PROJECT)
 assert PACKAGE["dependencies"]["@revenuecat/purchases-capacitor"].startswith("^13.")
 
 with (ROOT / "ios/App/App/Info.plist").open("rb") as handle:
