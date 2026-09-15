@@ -1,0 +1,5 @@
+D067A6F01B6BFF93D62F063E89C8C29E2FE6AC82E325235BADE89CA84E4BFF43  Wayfinder-App-Store-Icon-1024.png
+
+Source: ../../ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+Copy method: byte-for-byte Copy-Item; verified 15 September 2026.
+Dimensions: 1024 x 1024; PNG RGB; no alpha/transparency; 73017 bytes.

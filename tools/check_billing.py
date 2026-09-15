@@ -22,12 +22,18 @@ def main():
                         help='also require live public SDK keys and sale-safe preview guards')
     parser.add_argument('--platform', choices=('android', 'ios', 'all'), default='all',
                         help='platform key required by --store-release (default: all)')
+    parser.add_argument('--config-path', default='config.js',
+                        help='config to validate, relative to the repository root')
     args = parser.parse_args()
     problems = []
 
     store = read('store.js')
     app = read('app.js')
-    config = read('config.js')
+    config_path = os.path.realpath(os.path.join(ROOT, args.config_path))
+    if os.path.commonpath((os.path.realpath(ROOT), config_path)) != os.path.realpath(ROOT):
+        parser.error('--config-path must remain inside the repository')
+    with io.open(config_path, encoding='utf-8') as handle:
+        config = handle.read()
     project = read(os.path.join('ios', 'App', 'App.xcodeproj', 'project.pbxproj'))
     privacy_path = os.path.join(ROOT, 'ios', 'App', 'App', 'PrivacyInfo.xcprivacy')
 
@@ -37,12 +43,14 @@ def main():
     prices = dict(re.findall(r"slug: '([^']+)'[\s\S]*?price: '([^']+)'", store))
     if prices != expected:
         problems.append('the one-time product catalogue is not the confirmed AUD 14.99 / AUD 2.99 set')
-    if "productCategory: 'NON_SUBSCRIPTION'" not in store:
+    if store.count("type: 'NON_SUBSCRIPTION'") != 2 or 'productCategory:' in store:
         problems.append('RevenueCat products are not requested as one-time purchases')
     if 'appUserID: runId' not in store or 'Billing.init(userId)' not in app:
         problems.append('RevenueCat is not tied to the authenticated Supabase user id')
-    if 'Billing.signOut()' not in app or 'await P.logOut()' not in store:
-        problems.append('sign-out does not clear the RevenueCat customer')
+    if ('Billing.signOut()' not in app or 'async signOut()' not in store
+            or 'await P.logOut()' in store
+            or 'alreadyConfigured && P.logIn' not in store):
+        problems.append('custom-ID billing does not clear local access and switch identified customers without anonymous logout')
     if '`${LS_ENTITLEMENTS}.${ownerId}`' not in store or '_generation' not in store:
         problems.append('billing cache and asynchronous results are not account-scoped')
     if 'allPurchasedProductIdentifiers' in store:
@@ -92,7 +100,8 @@ def main():
         }
         if not required_data.issubset(collected):
             problems.append('iOS privacy manifest omits account or user-content collection')
-        for data_type in ('NSPrivacyCollectedDataTypePurchaseHistory',
+        for data_type in ('NSPrivacyCollectedDataTypeUserID',
+                          'NSPrivacyCollectedDataTypePurchaseHistory',
                           'NSPrivacyCollectedDataTypePreciseLocation'):
             item = collected_rows.get(data_type, {})
             purposes = set(item.get('NSPrivacyCollectedDataTypePurposes', []))

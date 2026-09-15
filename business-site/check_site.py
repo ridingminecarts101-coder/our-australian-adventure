@@ -17,8 +17,9 @@ from urllib.parse import unquote, urljoin, urlparse
 
 ROOT = Path(__file__).resolve().parent / "public"
 APP_ROOT = ROOT.parent.parent
-CONTACT_PLACEHOLDER = "TO BE ASSIGNED"
+CONTACT = "help.rlapplications@gmail.com"
 ABN = "RL Applications · ABN 92 363 169 656"
+LEGAL_FOOTER = "Riley Nicholas Lawler - Sole Trader - Australia."
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36"
 
 ROUTES = {
@@ -45,14 +46,33 @@ REDIRECTS = {
     "/wayfinder/support.html": "/wayfinder/support/",
     "/wayfinder/delete-account.html": "/wayfinder/delete-account/",
 }
-CONTACT_STATUS_ROUTES = {
-    "/support/",
-    "/privacy/",
-    "/wayfinder/support/",
-    "/wayfinder/privacy/",
-    "/wayfinder/delete-account/",
+EXPECTED_MAILTOS = {
+    "/": {"mailto:help.rlapplications@gmail.com?subject=RL%20Applications%20enquiry"},
+    "/support/": {"mailto:help.rlapplications@gmail.com?subject=RL%20Applications%20support"},
+    "/privacy/": {"mailto:help.rlapplications@gmail.com?subject=RL%20Applications%20privacy"},
+    "/wayfinder/": set(),
+    "/wayfinder/support/": {
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support",
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20content%20correction",
+    },
+    "/wayfinder/privacy/": {"mailto:help.rlapplications@gmail.com?subject=Wayfinder%20privacy"},
+    "/wayfinder/delete-account/": {
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20account%20deletion",
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support",
+    },
 }
-CONTACT_STATUS_FILES = {ROUTES[route] for route in CONTACT_STATUS_ROUTES}
+APP_EXPECTED_MAILTOS = {
+    "privacy.html": {
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20account%20deletion",
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20privacy",
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support",
+    },
+    "support.html": {
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20account%20deletion",
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20content%20correction",
+        "mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support",
+    },
+}
 LIVE_HOSTS = (
     "https://rlapplications.com",
     "https://www.rlapplications.com",
@@ -214,6 +234,7 @@ def local_checks() -> tuple[list[str], set[str]]:
         rel = path.relative_to(ROOT).as_posix()
         text = path.read_text(encoding="utf-8")
         doc = parse_document(text)
+        expected_route = next((route for route, filename in ROUTES.items() if filename == rel), None)
         if doc.lang != "en-AU":
             errors.append(f"{rel}: expected lang=en-AU")
         if not doc.title:
@@ -236,12 +257,19 @@ def local_checks() -> tuple[list[str], set[str]]:
             errors.append(f"{rel}: duplicate id present")
         if ABN not in text:
             errors.append(f"{rel}: ABN footer missing")
-        if re.search(r"[\w.+-]+@gmail\.com", text, flags=re.I) or "help@rlapplications.com" in text.lower():
-            errors.append(f"{rel}: unavailable support address published")
-        if "mailto:" in text.lower():
-            errors.append(f"{rel}: mailto link published while support mailbox is unavailable")
-        if rel in CONTACT_STATUS_FILES and CONTACT_PLACEHOLDER not in text:
-            errors.append(f"{rel}: support mailbox placeholder missing")
+        if LEGAL_FOOTER not in text:
+            errors.append(f"{rel}: legal footer missing")
+        if "TO BE ASSIGNED" in text:
+            errors.append(f"{rel}: obsolete support mailbox placeholder published")
+        gmail_addresses = {value.lower() for value in re.findall(r"[\w.+-]+@gmail\.com", text, flags=re.I)}
+        if gmail_addresses - {CONTACT}:
+            errors.append(f"{rel}: unapproved Gmail address published")
+        mailto_links = {link for link in doc.links if urlparse(link).scheme == "mailto"}
+        expected_mailtos = EXPECTED_MAILTOS.get(expected_route, set())
+        if mailto_links != expected_mailtos:
+            errors.append(f"{rel}: mailto links are {sorted(mailto_links)!r}, expected {sorted(expected_mailtos)!r}")
+        if expected_mailtos and CONTACT not in text:
+            errors.append(f"{rel}: public support address is not visible")
         if "/cdn-cgi/l/email-protection" in text or "data-cfemail" in text:
             errors.append(f"{rel}: Cloudflare email rewriting markup present")
         for image in doc.images:
@@ -264,7 +292,6 @@ def local_checks() -> tuple[list[str], set[str]]:
                     if parsed.fragment not in linked.ids:
                         errors.append(f"{rel}: unresolved fragment {link}")
 
-        expected_route = next((route for route, filename in ROUTES.items() if filename == rel), None)
         expected_canonical = f"https://rlapplications.com{expected_route}" if expected_route else None
         if expected_canonical and doc.canonicals != [expected_canonical]:
             errors.append(f"{rel}: canonical URL is {doc.canonicals!r}, expected {[expected_canonical]!r}")
@@ -337,6 +364,27 @@ def local_checks() -> tuple[list[str], set[str]]:
         errors.append("index.html has inline script that the PWA CSP would block")
     if pwa.event_handlers:
         errors.append(f"index.html has inline event handlers blocked by CSP: {sorted(set(pwa.event_handlers))}")
+    for relative, expected_mailtos in APP_EXPECTED_MAILTOS.items():
+        app_policy_text = (APP_ROOT / relative).read_text(encoding="utf-8")
+        app_policy = parse_document(app_policy_text)
+        mailto_links = {
+            link for link in app_policy.links if urlparse(link).scheme == "mailto"
+        }
+        if mailto_links != expected_mailtos:
+            errors.append(
+                f"{relative}: mailto links are {sorted(mailto_links)!r}, "
+                f"expected {sorted(expected_mailtos)!r}"
+            )
+        gmail_addresses = {
+            value.lower()
+            for value in re.findall(r"[\w.+-]+@gmail\.com", app_policy_text, flags=re.I)
+        }
+        if gmail_addresses != {CONTACT}:
+            errors.append(f"{relative}: expected only the current public Gmail address")
+        if "TO BE ASSIGNED" in app_policy_text:
+            errors.append(f"{relative}: obsolete support mailbox placeholder published")
+        if ABN not in app_policy_text or LEGAL_FOOTER not in app_policy_text:
+            errors.append(f"{relative}: legal footer missing")
     app_config = (APP_ROOT / "config.js").read_text(encoding="utf-8")
     app_source = (APP_ROOT / "app.js").read_text(encoding="utf-8")
     for required_origin in ("https://ajyuozqoukigeeyhvuqc.supabase.co", "https://api.bigdatacloud.net"):
@@ -406,12 +454,21 @@ def live_checks() -> list[str]:
                 if "no-transform" not in headers.get("cache-control", ""):
                     errors.append(f"{label}: cache-control missing no-transform")
                 text = body.decode("utf-8", errors="replace")
-                if route in CONTACT_STATUS_ROUTES and CONTACT_PLACEHOLDER not in text:
-                    errors.append(f"{label}: support mailbox placeholder missing")
-                if "mailto:" in text.lower():
-                    errors.append(f"{label}: mailto link published while support mailbox is unavailable")
-                if re.search(r"[\w.+-]+@gmail\.com", text, flags=re.I) or "help@rlapplications.com" in text.lower():
-                    errors.append(f"{label}: unavailable support address published")
+                if "TO BE ASSIGNED" in text:
+                    errors.append(f"{label}: obsolete support mailbox placeholder published")
+                gmail_addresses = {
+                    value.lower() for value in re.findall(r"[\w.+-]+@gmail\.com", text, flags=re.I)
+                }
+                if gmail_addresses - {CONTACT}:
+                    errors.append(f"{label}: unapproved Gmail address published")
+                document = parse_document(text)
+                mailto_links = {link for link in document.links if urlparse(link).scheme == "mailto"}
+                expected_mailtos = EXPECTED_MAILTOS[route]
+                if mailto_links != expected_mailtos:
+                    errors.append(
+                        f"{label}: mailto links are {sorted(mailto_links)!r}, "
+                        f"expected {sorted(expected_mailtos)!r}"
+                    )
                 if "data-cfemail" in text or "/cdn-cgi/l/email-protection" in text:
                     errors.append(f"{label}: email rewriting detected")
                 if "<script" in text.lower():

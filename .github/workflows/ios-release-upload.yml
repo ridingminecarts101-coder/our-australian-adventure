@@ -1,0 +1,282 @@
+name: iOS signed archive and delivery
+
+# Manual, fail-closed distribution workflow. Configure the protected
+# `app-store` environment and its secrets/variables before attempting a run.
+# This workflow is intentionally separate from the unsigned compile check.
+"on":
+  workflow_dispatch:
+    inputs:
+      delivery:
+        description: Validate only, or upload the validated IPA
+        required: true
+        type: choice
+        options:
+          - validate-only
+          - upload
+      confirmation:
+        description: Type ARCHIVE_WAYFINDER or UPLOAD_WAYFINDER to match delivery
+        required: true
+        type: string
+      marketing_version:
+        description: App version, for example 1.0.0
+        required: true
+        default: 1.0.0
+        type: string
+      build_number:
+        description: New positive App Store build number
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-release-delivery
+  cancel-in-progress: false
+
+jobs:
+  archive-and-deliver:
+    if: >-
+      (inputs.delivery == 'validate-only' && inputs.confirmation == 'ARCHIVE_WAYFINDER') ||
+      (inputs.delivery == 'upload' && inputs.confirmation == 'UPLOAD_WAYFINDER')
+    runs-on: macos-26
+    timeout-minutes: 45
+    environment: app-store
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      APP_STORE_CONNECT_KEY_ID: ${{ vars.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ vars.APP_STORE_CONNECT_ISSUER_ID }}
+      REVENUECAT_IOS_PUBLIC_SDK_KEY: ${{ vars.REVENUECAT_IOS_PUBLIC_SDK_KEY }}
+      RELEASE_MARKETING_VERSION: ${{ inputs.marketing_version }}
+      RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Validate explicit release inputs
+        run: |
+          set -eu
+          test "$GITHUB_REF" = refs/heads/main
+          [[ "$RELEASE_MARKETING_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$RELEASE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          for name in APPLE_TEAM_ID APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID \
+            REVENUECAT_IOS_PUBLIC_SDK_KEY; do
+            test -n "${!name}" || { echo "Missing protected environment value: $name" >&2; exit 1; }
+          done
+          [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]
+          [[ "$APP_STORE_CONNECT_KEY_ID" =~ ^[A-Z0-9]{10}$ ]]
+          [[ "$APP_STORE_CONNECT_ISSUER_ID" =~ ^[0-9a-fA-F-]{36}$ ]]
+          [[ "$REVENUECAT_IOS_PUBLIC_SDK_KEY" =~ ^appl_[A-Za-z0-9]{10,}$ ]]
+          test -z "$(git status --porcelain=v1)"
+          mkdir -p build
+          git rev-parse HEAD > build/source-commit.txt
+          xcodebuild -version | tee build/xcode-version.txt
+
+      - name: Validate protected secrets are present
+        env:
+          CERTIFICATE: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_APP_STORE_PROVISIONING_PROFILE_BASE64 }}
+          API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY_P8_BASE64 }}
+        run: |
+          set -eu
+          test -n "$CERTIFICATE"
+          test -n "$CERTIFICATE_PASSWORD"
+          test -n "$PROFILE"
+          test -n "$API_PRIVATE_KEY"
+
+      - name: Install, test and stage native source
+        run: |
+          set -eu
+          npm ci
+          node tools/test_billing.js
+          python3 -X utf8 tools/check_billing.py
+          python3 -X utf8 tools/check_ios_products.py
+          node tools/test_ios_release_prep.mjs
+          npm run stage
+          npx cap sync ios
+          node tools/prepare_ios_store_release.mjs
+          python3 -X utf8 tools/check_billing.py --store-release --platform ios \
+            --config-path ios/App/App/public/config.js
+          plutil -lint ios/App/App/Info.plist ios/App/App/PrivacyInfo.xcprivacy
+
+      - name: Import distribution identity
+        id: signing
+        env:
+          CERTIFICATE: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_APP_STORE_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          set -eu
+          KEYCHAIN_PATH="$RUNNER_TEMP/wayfinder-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          CERT_PATH="$RUNNER_TEMP/distribution.p12"
+          PROFILE_PATH="$RUNNER_TEMP/wayfinder.mobileprovision"
+          printf '%s' "$CERTIFICATE" | base64 -D > "$CERT_PATH"
+          printf '%s' "$PROFILE" | base64 -D > "$PROFILE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "keychain_path=$KEYCHAIN_PATH" >> "$GITHUB_OUTPUT"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -k "$KEYCHAIN_PATH" \
+            -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
+          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
+          PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")"
+          PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")"
+          PROFILE_TEAM="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST")"
+          PROFILE_PREFIX="$(/usr/libexec/PlistBuddy -c 'Print :ApplicationIdentifierPrefix:0' "$PROFILE_PLIST")"
+          PROFILE_APP_ID="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PROFILE_PLIST")"
+          PROFILE_DEBUG="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:get-task-allow' "$PROFILE_PLIST")"
+          test "$PROFILE_TEAM" = "$APPLE_TEAM_ID"
+          [[ "$PROFILE_UUID" =~ ^[0-9A-Fa-f-]{36}$ ]]
+          test "$PROFILE_APP_ID" = "$PROFILE_PREFIX.app.wayfinder.mobile"
+          test "$PROFILE_DEBUG" = false
+          python3 - "$PROFILE_PLIST" <<'PY'
+          import datetime, plistlib, sys
+          with open(sys.argv[1], 'rb') as handle:
+              profile = plistlib.load(handle)
+          expiry = profile.get('ExpirationDate')
+          if not expiry or expiry <= datetime.datetime.now():
+              raise SystemExit('The App Store provisioning profile is expired.')
+          if profile.get('ProvisionedDevices'):
+              raise SystemExit('A development or ad hoc provisioning profile is not valid for App Store delivery.')
+          if profile.get('ProvisionsAllDevices'):
+              raise SystemExit('An enterprise provisioning profile is not valid for App Store delivery.')
+          PY
+          echo "profile_uuid=$PROFILE_UUID" >> "$GITHUB_OUTPUT"
+          echo "profile_name=$PROFILE_NAME" >> "$GITHUB_OUTPUT"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+
+      - name: Archive signed Release build
+        env:
+          PROFILE_NAME: ${{ steps.signing.outputs.profile_name }}
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/Wayfinder.xcarchive \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY='Apple Distribution' \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            CURRENT_PROJECT_VERSION="$RELEASE_BUILD_NUMBER" \
+            MARKETING_VERSION="$RELEASE_MARKETING_VERSION" \
+            2>&1 | tee build/ios-archive.log
+
+      - name: Verify archive identity and embedded billing config
+        run: |
+          set -eu
+          APP_PATH=build/Wayfinder.xcarchive/Products/Applications/App.app
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")" = app.wayfinder.mobile
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PATH/Info.plist")" = "$RELEASE_BUILD_NUMBER"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PATH/Info.plist")" = "$RELEASE_MARKETING_VERSION"
+          grep -Fq "ios: '$REVENUECAT_IOS_PUBLIC_SDK_KEY'" "$APP_PATH/public/config.js"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH" 2>&1 | tee build/codesign-verify.log
+
+      - name: Export App Store IPA
+        env:
+          PROFILE_NAME: ${{ steps.signing.outputs.profile_name }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, plistlib
+          payload = {
+              'method': 'app-store-connect',
+              'destination': 'export',
+              'signingStyle': 'manual',
+              'teamID': os.environ['APPLE_TEAM_ID'],
+              'signingCertificate': 'Apple Distribution',
+              'provisioningProfiles': {'app.wayfinder.mobile': os.environ['PROFILE_NAME']},
+              'stripSwiftSymbols': True,
+              'uploadSymbols': True,
+          }
+          with open('build/ExportOptions.plist', 'wb') as handle:
+              plistlib.dump(payload, handle)
+          PY
+          xcodebuild -exportArchive \
+            -archivePath build/Wayfinder.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist build/ExportOptions.plist \
+            2>&1 | tee build/ios-export.log
+          IPA="$(find build/export -maxdepth 1 -name '*.ipa' -type f -print -quit)"
+          test -n "$IPA"
+          shasum -a 256 "$IPA" > build/ipa-sha256.txt
+
+      - name: Install App Store Connect API key
+        env:
+          API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY_P8_BASE64 }}
+        run: |
+          set -eu
+          KEY_DIR="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$KEY_DIR"
+          printf '%s' "$API_PRIVATE_KEY" | base64 -D \
+            > "$KEY_DIR/AuthKey_$APP_STORE_CONNECT_KEY_ID.p8"
+          chmod 600 "$KEY_DIR/AuthKey_$APP_STORE_CONNECT_KEY_ID.p8"
+
+      - name: Validate with App Store Connect
+        run: |
+          set -o pipefail
+          IPA="$(find build/export -maxdepth 1 -name '*.ipa' -type f -print -quit)"
+          xcrun altool --validate-app -f "$IPA" -t ios \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" \
+            --output-format json 2>&1 | tee build/app-store-validation.json
+
+      - name: Upload validated build
+        if: inputs.delivery == 'upload' && inputs.confirmation == 'UPLOAD_WAYFINDER'
+        run: |
+          set -o pipefail
+          IPA="$(find build/export -maxdepth 1 -name '*.ipa' -type f -print -quit)"
+          xcrun altool --upload-app -f "$IPA" -t ios \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" \
+            --output-format json 2>&1 | tee build/app-store-upload.json
+
+      - name: Save non-binary delivery evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ios-release-evidence-${{ github.run_number }}
+          path: |
+            build/source-commit.txt
+            build/xcode-version.txt
+            build/ios-archive.log
+            build/codesign-verify.log
+            build/ios-export.log
+            build/ipa-sha256.txt
+            build/app-store-validation.json
+            build/app-store-upload.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Remove signing material
+        if: always()
+        env:
+          PROFILE_UUID: ${{ steps.signing.outputs.profile_uuid }}
+          KEYCHAIN_PATH: ${{ steps.signing.outputs.keychain_path }}
+        run: |
+          rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_$APP_STORE_CONNECT_KEY_ID.p8"
+          if [[ "$PROFILE_UUID" =~ ^[0-9A-Fa-f-]{36}$ ]]; then
+            rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          fi
+          if [ -n "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
+          rm -f "$RUNNER_TEMP/distribution.p12" "$RUNNER_TEMP/wayfinder.mobileprovision" "$RUNNER_TEMP/profile.plist"

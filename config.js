@@ -24,10 +24,11 @@ window.OAA_CONFIG = {
    * Android one starts goog_, the Apple one appl_.
    *
    * Before either key is added to a release build, RevenueCat must contain an
-   * entitlement for each exact pack slug in store.js, with its Apple and
-   * Google products attached. Only entitlements currently active for that
-   * customer unlock content. Historical product ids are deliberately not
-   * accepted because they can represent refunded or otherwise inactive buys.
+   * entitlement for each exact pack slug in tools/ios-products.json, with its
+   * matching Apple and Google products attached. The optional RevenueCat
+   * Offering is not read by this client: it requests the eight permanent
+   * product IDs directly and grants only active entitlements. Never ship a
+   * RevenueCat Test Store key or a secret dashboard/API key.
    */
   revenueCat: {
     android: '',

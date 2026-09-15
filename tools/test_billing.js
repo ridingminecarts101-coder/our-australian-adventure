@@ -112,12 +112,22 @@ function harness({ native = false, platform = 'web', key = '', confirmResult = t
   };
   const state = {
     customerInfo, listeners: new Map(), listenerHistory: [], nextListener: 0,
-    invalidateGate: null,
+    invalidateGate: null, removeGate: null, configureGate: null,
+    configureFailures: 0, warnings: [],
   };
   const purchases = {
-    async configure(options) { calls.push(['configure', options]); },
+    async configure(options) {
+      calls.push(['configure', options]);
+      if (state.configureFailures > 0) {
+        state.configureFailures--;
+        throw new Error('configure failed');
+      }
+      if (state.configureGate) await state.configureGate;
+    },
     async getCustomerInfo() { calls.push(['getCustomerInfo']); return { customerInfo: state.customerInfo }; },
     async getProducts(options) {
+      assert.equal(options.type, 'NON_SUBSCRIPTION',
+        'RevenueCat getProducts must use the v13 GetProductOptions type field');
       calls.push(['getProducts', options]);
       return {
         products: options.productIdentifiers.map(identifier => ({ identifier, priceString: 'local price' })),
@@ -141,12 +151,14 @@ function harness({ native = false, platform = 'web', key = '', confirmResult = t
     },
     async removeCustomerInfoUpdateListener({ listenerToRemove }) {
       calls.push(['removeListener', listenerToRemove]);
+      if (state.removeGate) await state.removeGate;
       return { wasRemoved: state.listeners.delete(listenerToRemove) };
     },
+    async logIn({ appUserID }) { calls.push(['logIn', appUserID]); return { customerInfo: state.customerInfo }; },
     async logOut() { calls.push(['logOut']); },
   };
   const context = {
-    console,
+    console: { ...console, warn(...args) { state.warnings.push(args); } },
     location: { hostname },
     confirm() { calls.push(['confirm']); return confirmResult; },
     localStorage: {
@@ -212,7 +224,8 @@ async function main() {
   const configured = native.calls.find(([name]) => name === 'configure');
   assert.deepEqual({ ...configured[1] }, { apiKey: 'goog_PUBLIC_TEST_KEY', appUserID: userId });
   const catalogue = native.calls.find(([name]) => name === 'getProducts')[1];
-  assert.equal(catalogue.productCategory, 'NON_SUBSCRIPTION');
+  assert.equal(catalogue.type, 'NON_SUBSCRIPTION');
+  assert.equal('productCategory' in catalogue, false);
   assert.equal(catalogue.productIdentifiers.length, 8);
   assert(catalogue.productIdentifiers.includes('app.wayfinder.mobile.gems.all'));
   assert(catalogue.productIdentifiers.includes('app.wayfinder.mobile.gems.middle_east'));
@@ -221,9 +234,85 @@ async function main() {
   assert.equal(bought.ok, true);
   assert.equal(native.calls.some(([name, id]) => name === 'purchase' && id.endsWith('north_america')), true);
   await vm.runInContext('Billing.signOut()', native.context);
-  assert.equal(native.calls.some(([name]) => name === 'logOut'), true);
+  assert.equal(native.calls.some(([name]) => name === 'logOut'), false,
+    'custom-ID-only billing must not create an anonymous RevenueCat customer on sign-out');
   assert.equal(vm.runInContext('owned.size', native.context), 0);
   assert.equal(native.state.listeners.size, 0, 'sign-out must remove the CustomerInfo listener');
+  await vm.runInContext(`Billing.init('${accountB}')`, native.context);
+  assert.equal(native.calls.filter(([name]) => name === 'configure').length, 1,
+    'the RevenueCat SDK must be configured once per app process');
+  assert(native.calls.some(([name, id]) => name === 'logIn' && id === accountB),
+    'the next authenticated UUID must switch the configured SDK with logIn');
+
+  const switching = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  await vm.runInContext(`Billing.init('${accountA}')`, switching.context);
+  let releaseRemoval;
+  switching.state.removeGate = new Promise(resolve => { releaseRemoval = resolve; });
+  const leavingA = vm.runInContext('Billing.signOut()', switching.context);
+  await new Promise(resolve => setImmediate(resolve));
+  const enteringB = vm.runInContext(`Billing.init('${accountB}')`, switching.context);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(switching.calls.some(([name, id]) => name === 'logIn' && id === accountB), false,
+    'account B must wait until account A listener cleanup finishes');
+  releaseRemoval();
+  await Promise.all([leavingA, enteringB]);
+  assert(switching.calls.some(([name, id]) => name === 'logIn' && id === accountB));
+  assert.equal(switching.state.listeners.size, 1,
+    'concurrent sign-out and sign-in must leave account B listener installed');
+
+  const firstConfigureSwitch = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  let releaseFirstConfigure;
+  firstConfigureSwitch.state.configureGate = new Promise(resolve => { releaseFirstConfigure = resolve; });
+  const configuringA = vm.runInContext(`Billing.init('${accountA}')`, firstConfigureSwitch.context);
+  await new Promise(resolve => setImmediate(resolve));
+  const enteringDuringConfigure = vm.runInContext(`Billing.init('${accountB}')`, firstConfigureSwitch.context);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(firstConfigureSwitch.calls.filter(([name]) => name === 'configure').length, 1);
+  assert.equal(firstConfigureSwitch.calls.some(([name]) => name === 'logIn'), false,
+    'account B must wait while the first SDK configuration is pending');
+  releaseFirstConfigure();
+  await Promise.all([configuringA, enteringDuringConfigure]);
+  assert.equal(firstConfigureSwitch.calls.filter(([name]) => name === 'configure').length, 1,
+    'the SDK must not be configured twice when account A finishes before B resumes');
+  assert(firstConfigureSwitch.calls.some(([name, id]) => name === 'logIn' && id === accountB),
+    'account B must switch with logIn after the serialized first configuration');
+
+  const failedConfigure = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  failedConfigure.state.configureFailures = 1;
+  assert.equal(await vm.runInContext(`Billing.init('${accountA}')`, failedConfigure.context), false);
+  assert.equal(vm.runInContext('Billing._ready', failedConfigure.context), null,
+    'failed configuration must remain retryable');
+  assert.equal(vm.runInContext('Billing._configuredPlugin', failedConfigure.context), null,
+    'a rejected configure call must not mark the native SDK configured');
+  assert.equal(await vm.runInContext(`Billing.init('${accountB}')`, failedConfigure.context), true);
+  assert.equal(failedConfigure.calls.filter(([name]) => name === 'configure').length, 2,
+    'the next account must retry configure rather than log in to an unconfigured SDK');
+  assert.equal(failedConfigure.calls.some(([name]) => name === 'logIn'), false);
+  assert.equal(failedConfigure.state.warnings.length, 1,
+    'the rejected native configuration must be observable');
+
+  const syncConfigureFailure = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  syncConfigureFailure.context.Capacitor.Plugins.Purchases.configure = () => {
+    throw new Error('synchronous bridge failure');
+  };
+  assert.equal(await vm.runInContext(`Billing.init('${accountA}')`, syncConfigureFailure.context), false);
+  assert.equal(vm.runInContext('Billing._ready', syncConfigureFailure.context), null,
+    'a synchronous native bridge failure must also remain retryable');
+
+  const failClosed = harness({ native: true, platform: 'ios', key: 'appl_PUBLIC_TEST_KEY' });
+  failClosed.state.configureFailures = 3;
+  const failedBuy = await vm.runInContext(
+    `Billing.init('${accountA}').then(() => Billing.buy('asia'))`, failClosed.context);
+  assert.equal(failedBuy.ok, false);
+  assert.match(failedBuy.reason, /could not connect/);
+  assert.equal(failClosed.calls.some(([name]) => name === 'purchase'), false,
+    'purchase must not run after RevenueCat initialization fails');
+  const failedRestore = await vm.runInContext('Billing.restore()', failClosed.context);
+  assert.equal(failedRestore.ok, false);
+  assert.match(failedRestore.reason, /could not connect/);
+  assert.equal(failClosed.calls.some(([name]) => name === 'restore'), false,
+    'restore must not run after RevenueCat initialization fails');
+  assert.equal(failClosed.state.warnings.length, 3);
 
   const inactive = harness({ native: true, platform: 'android', key: 'goog_PUBLIC_TEST_KEY' });
   inactive.state.customerInfo = {

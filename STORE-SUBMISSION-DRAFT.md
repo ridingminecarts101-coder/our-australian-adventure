@@ -1,8 +1,25 @@
 # Wayfinder store submission draft
 
-Prepared 14 September 2026 from source commit
-`64be2dbb61edb953b41f658a4682a723fb8ea033`. This is paste-ready metadata and
-a review checklist, not evidence that a store build has passed review.
+Updated 15 September 2026 from the published `182f474` baseline and the current
+reviewed preparation changes. This is entry-ready metadata and a review
+checklist, not evidence that a signed build, purchase or store review has passed.
+
+The owner requires **RL Applications** as the public developer name. An existing
+individual/sole-proprietor Apple enrolment is pending payment; it is not an
+approved organisation or an active distribution membership. The official
+organisation-conversion link currently denies that account access. Apple's
+Program Enrolment support form is prepared for the owner to clarify the correct
+route. Do not pay, withdraw the enrolment, invent an organisation or accept
+personal-name publication without the appropriate owner action.
+
+Current iOS entry package:
+
+- [`store-release/ios-listing.json`](store-release/ios-listing.json): exact listing
+  text and review-contact fields; null values identify required owner input.
+- [`store-release/REVENUECAT-APPLE-SETUP.md`](store-release/REVENUECAT-APPLE-SETUP.md):
+  all eight non-consumables, entitlement mapping, credentials and sandbox checks.
+- [`store-release/IOS-PRIVACY-AGE-ASSETS.md`](store-release/IOS-PRIVACY-AGE-ASSETS.md):
+  privacy/age/export entry guidance and genuine asset requirements.
 
 Do not upload the existing Android bundle. It was built on 11 September, before
 the current account, catalogue and release changes. Create a fresh candidate
@@ -16,7 +33,7 @@ Use English (Australia) as the primary locale.
 | --- | --- |
 | App name | Wayfinder |
 | iOS subtitle | Real adventures worldwide |
-| Google Play short description | Discover 5,100+ real adventures worldwide. Save, plan and remember your trips. |
+| Google Play short description | Discover 5,300+ real adventures worldwide. Save, plan and remember your trips. |
 | Primary category | Travel |
 | Secondary iOS category | Lifestyle |
 | Marketing URL | `https://rlapplications.com/wayfinder/` |
@@ -26,18 +43,19 @@ Use English (Australia) as the primary locale.
 | iOS keywords | `adventure,bucket list,trip planner,hidden gems,travel journal,passport,memories` |
 | Copyright | `2026 Riley Nicholas Lawler trading as RL Applications` |
 
-Public support mailbox: **TO BE ASSIGNED**. Email support is temporarily
-unavailable. A dedicated RL Applications mailbox must be able to send, receive
-and recover access before commercial release; then keep the public pages and
-both store consoles in sync. The verified Resend no-reply transactional sender
-is for account messages and is not a monitored support mailbox.
+Public support mailbox: **help.rlapplications@gmail.com**, supplied by the owner
+on 15 September 2026. Publish it consistently across the app, website and store
+contact fields. Sending, receiving and recovery of this mailbox have not been
+independently exercised in this preparation pass. Assign support/moderation
+responsibility before commercial release. The verified Resend no-reply sender
+is for account messages and is separate from this support mailbox.
 
 ### Description
 
 Wayfinder turns a world of possibilities into a personal list of places worth
 going.
 
-Browse more than 5,100 adventures across 228 countries and territories. Each
+Browse more than 5,300 adventures around the world. Each
 entry gives practical context such as what makes it worthwhile, the likely cost
 and the best time to go. Current travel-advisory warnings remain visible, and
 destinations marked “do not travel” are excluded from automatic suggestions.
@@ -46,9 +64,9 @@ Save ideas to a shortlist, organise them into trips, add personal notes and
 photos, and mark experiences complete. Previously loaded catalogue content is
 available offline; account changes sync after the device reconnects.
 
-Your progress belongs to your account. Optional groups can share completion
-ticks while personal notes, ratings and shortlist choices remain private. You
-can stop sharing or leave a group without losing your personal history.
+Your progress belongs to your account. New photos stay inside Wayfinder on the
+device where you add them; they do not sync to another device. Keep independent
+copies of important photos before uninstalling or clearing the app's data.
 
 Classic adventures are included. Optional one-time purchases unlock researched
 hidden-gem collections by geography or all continents together. Antarctica is
@@ -58,10 +76,11 @@ are separate from the in-app purchase.
 Wayfinder is a discovery and planning guide. It does not book travel or replace
 current advice from authorities, venues and operators.
 
-Do not submit this description while groups are still showing maintenance, the
-account email service is not operational, or purchases cannot be exercised by
-store review. If a feature is deliberately omitted from the submitted build,
-remove its paragraph from the listing and its screenshots.
+The exact iOS description is in `store-release/ios-listing.json`. It avoids
+promising currently unavailable group sharing. Account email delivery has
+passed live tests, but native device and final backend checks remain. Do not
+submit a listing that promises purchases until store review can exercise them.
+If a feature is omitted from the submitted build, omit its claims/screenshots.
 
 ## In-app products
 
@@ -73,13 +92,13 @@ are controlled by the store.
 | Product ID | Display name | Australian base price |
 | --- | --- | ---: |
 | `app.wayfinder.mobile.gems.all` | All continents | AUD $14.99 |
-| `app.wayfinder.mobile.gems.oceania` | Oceania hidden gems | AUD $2.99 |
-| `app.wayfinder.mobile.gems.europe` | Europe hidden gems | AUD $2.99 |
-| `app.wayfinder.mobile.gems.north_america` | North America hidden gems | AUD $2.99 |
-| `app.wayfinder.mobile.gems.asia` | Asia hidden gems | AUD $2.99 |
-| `app.wayfinder.mobile.gems.middle_east` | Middle East hidden gems | AUD $2.99 |
-| `app.wayfinder.mobile.gems.south_america` | South America hidden gems | AUD $2.99 |
-| `app.wayfinder.mobile.gems.africa` | Africa hidden gems | AUD $2.99 |
+| `app.wayfinder.mobile.gems.oceania` | Oceania gems | AUD $2.99 |
+| `app.wayfinder.mobile.gems.europe` | Europe gems | AUD $2.99 |
+| `app.wayfinder.mobile.gems.north_america` | North America gems | AUD $2.99 |
+| `app.wayfinder.mobile.gems.asia` | Asia gems | AUD $2.99 |
+| `app.wayfinder.mobile.gems.middle_east` | Middle East gems | AUD $2.99 |
+| `app.wayfinder.mobile.gems.south_america` | South America gems | AUD $2.99 |
+| `app.wayfinder.mobile.gems.africa` | Africa gems | AUD $2.99 |
 
 There is no standalone Antarctica product. Attach the store-required review
 screenshot to every Apple in-app purchase and verify that Restore purchases
@@ -108,8 +127,8 @@ graphic or final native screenshots.
 
 ## Reviewer access and notes
 
-Create one disposable, verified Wayfinder review account after production email
-delivery works. Use that account on both platforms and seed only harmless test
+Create or select one disposable, verified Wayfinder review account and confirm
+its current login works. Use that account on both platforms and seed only harmless test
 content. Put its credentials in each store's private review-access field, never
 in this repository, release notes or screenshots. Confirm immediately before
 submission that it can sign in without a one-time link or reviewer-owned email
@@ -133,16 +152,18 @@ Community is monitored until an operator and response process are active.
 
 ### Shared product and backend
 
-- Apply and verify `supabase/schema-personal-ownership.sql`, then
-  `supabase/schema-community-hardening.sql`, using the dated database preflight
-  and verification scripts. The current production backend still has the
-  legacy group and Community authorization defects.
-- Configure production transactional email and verify sign-up, verification,
-  recovery and anonymous upgrade on both iPhones. A required-account app cannot
-  be reviewed reliably while email delivery is unavailable.
+- Resolve the previously recorded historical-data discrepancy, then apply only
+  the reviewed production migrations in their documented order, with preservation
+  checks. Ownership/group administration, Community and the old-client photo
+  upload block remain unverified in production. Do not silently accept that
+  outstanding data decision or broaden the migration scope.
+- Production Resend confirmation, recovery and same-ID account conversion passed
+  live tests. Repeat the actual native app flows on both iPhones, including link
+  handling and return to the app; web email success does not establish this.
 - Complete two-account, two-device tests for ownership, optional completion
   sharing, revocation, leaving, offline edits and sign-out.
-- Verify in-app deletion removes all account data and uploaded objects. Establish
+- Verify in-app deletion removes the current account's local photos and the
+  intended hosted account data, including legacy objects where applicable. Establish
   server-side or monitored RevenueCat customer deletion before claiming complete
   provider deletion.
 - Assign a Community moderator and exercise filter, report, block, takedown and
@@ -163,7 +184,7 @@ Community is monitored until an operator and response process are active.
   minimum foreground scope and verify denial/manual fallback on physical
   Android devices.
 - Configure the Android RevenueCat public SDK key, matching products,
-  entitlements and offering. Run sandbox purchase, cancel, restore, refund and
+  entitlements; an Offering is optional. Run sandbox purchase, cancel, restore, refund and
   A-to-B account-switch tests.
 - Build a new signed AAB from the reviewed commit with a new, unused
   `versionCode`. Verify its merged manifest, signature and embedded web-asset
@@ -183,15 +204,16 @@ actually wanted; if created later, keep it out of Git.
 
 ### iOS / App Store
 
-- Enrol Riley Lawler as an individual/sole proprietor unless the legal structure
-  changes. Apple says an individual/sole proprietor does not need D-U-N-S and
-  lists apps under the person's legal name; it does not accept a trading name as
-  an organization. The developer project currently has no Team ID.
-- The existing unsigned simulator workflow passed in Xcode 26.6 at commit
-  `64be2dbb61edb953b41f658a4682a723fb8ea033`; retain
-  [run 34791919097](https://github.com/ridingminecarts101-coder/our-australian-adventure/actions/runs/34791919097)
-  and its seven-day artifact as compile evidence. This is compilation evidence
-  only.
+- Resolve an Apple organisation route compatible with **RL Applications** as
+  developer name. The current legal structure remains sole trader; a business
+  name and D-U-N-S alone do not create an eligible separate legal entity. The
+  owner's existing individual enrolment is not permission to publish under a
+  personal name. No Team ID is currently confirmed for signing.
+- The unsigned simulator workflow passed in Xcode 26.6 at source `8645ce2`
+  ([run 34820343129](https://github.com/ridingminecarts101-coder/our-australian-adventure/actions/runs/34820343129)).
+  The following support-only change copied matching iOS assets but was not
+  compiled again. Run a fresh exact-source compile after this preparation is
+  integrated; this still does not establish signing or device behaviour.
 - On a Mac with Xcode 26 or a managed Mac service, select the developer team,
   configure capabilities, compile Release, archive, validate and upload. No iOS
   archive or IPA currently exists.

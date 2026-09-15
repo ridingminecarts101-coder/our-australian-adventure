@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "platform": "ios",
+  "bundle_id": "app.wayfinder.mobile",
+  "product_type": "NON_CONSUMABLE",
+  "catalog_status": "planned; verify creation in App Store Connect and RevenueCat before release",
+  "family_sharing": false,
+  "currency": "AUD",
+  "revenuecat": {
+    "app_user_id": "authenticated Supabase user UUID",
+    "access_source": "CustomerInfo.entitlements.active",
+    "restore_behavior_required": "Keep with original App User ID",
+    "restore_behavior_reason": "Wayfinder requires an account before purchase and purchases must remain with the original individual account.",
+    "offering_required_by_client": false,
+    "offering_note": "The client fetches these exact product IDs directly. No offering or package identifier is part of the runtime API contract. An optional current offering may wrap them in eight custom packages without changing runtime access."
+  },
+  "products": [
+    { "slug": "all", "product_id": "app.wayfinder.mobile.gems.all", "entitlement_id": "all", "display_name": "All continents", "aud_price": "14.99" },
+    { "slug": "oceania", "product_id": "app.wayfinder.mobile.gems.oceania", "entitlement_id": "oceania", "display_name": "Oceania gems", "aud_price": "2.99" },
+    { "slug": "europe", "product_id": "app.wayfinder.mobile.gems.europe", "entitlement_id": "europe", "display_name": "Europe gems", "aud_price": "2.99" },
+    { "slug": "north-america", "product_id": "app.wayfinder.mobile.gems.north_america", "entitlement_id": "north-america", "display_name": "North America gems", "aud_price": "2.99" },
+    { "slug": "asia", "product_id": "app.wayfinder.mobile.gems.asia", "entitlement_id": "asia", "display_name": "Asia gems", "aud_price": "2.99" },
+    { "slug": "middle-east", "product_id": "app.wayfinder.mobile.gems.middle_east", "entitlement_id": "middle-east", "display_name": "Middle East gems", "aud_price": "2.99" },
+    { "slug": "south-america", "product_id": "app.wayfinder.mobile.gems.south_america", "entitlement_id": "south-america", "display_name": "South America gems", "aud_price": "2.99" },
+    { "slug": "africa", "product_id": "app.wayfinder.mobile.gems.africa", "entitlement_id": "africa", "display_name": "Africa gems", "aud_price": "2.99" }
+  ]
+}

@@ -12,7 +12,7 @@ Run `node tools/test_community_security.mjs`. It exercises actual PostgreSQL pri
 
 ## Operator process to establish before public launch
 
-The owner must assign a person to monitor Community reports and a published support mailbox, set a review schedule and define what content is removed. Public support mailbox: **TO BE ASSIGNED**; email contact is temporarily unavailable. A working, monitored mailbox and moderation contact route remain release gates. The verified Resend no-reply transactional sender is not a moderation or support inbox. No moderation account or outside service was registered by this work.
+The owner must assign a person to monitor Community reports, set a review schedule and define what content is removed. The owner supplied **help.rlapplications@gmail.com** as the working, monitored public support and moderation contact route; this implementation pass did not independently send or receive a message. The verified Resend no-reply transactional sender is not a moderation or support inbox. No moderation account or outside service was registered by this work.
 
 Use an authorised Supabase dashboard session or a protected server tool for operator actions. Never grant mobile clients permission to update `hidden`, aggregate counters or another person's post. Never put a service-role key into the PWA, native assets or GitHub Pages.
 

@@ -1,0 +1,50 @@
+{
+  "prepared_on": "2026-09-15",
+  "status": "Draft for the final tested candidate; not submitted to Apple",
+  "app": {
+    "platform": "iOS",
+    "bundle_id": "app.wayfinder.mobile",
+    "sku": "wayfinder-ios-001",
+    "version": "1.0.0",
+    "primary_locale": "en-AU",
+    "name": "Wayfinder",
+    "subtitle": "Real adventures worldwide",
+    "primary_category": "Travel",
+    "secondary_category": "Lifestyle",
+    "developer_name_required": "RL Applications",
+    "copyright": "2026 Riley Nicholas Lawler trading as RL Applications",
+    "app_download_price_aud": "0.00",
+    "release_mode": "Manual release after approval",
+    "availability": null,
+    "content_rights": "Select that the app contains third-party content and the necessary rights only after the content/licence review is confirmed; see THIRD-PARTY-NOTICES.md."
+  },
+  "localization": {
+    "promotional_text": "Find memorable places, build your adventure list and keep your travel notes together. Explore classic experiences and optional one-time hidden-gem collections.",
+    "description": "Make your next adventure one to remember.\n\nWayfinder helps you discover real places worth going, save the experiences that interest you and keep track of the ones you have completed. Browse more than 5,300 adventures around the world, with practical context about the experience, indicative costs and the best time to visit.\n\nPLAN YOUR OWN WAY\nExplore destinations by continent and country, save a shortlist and organise adventures into trips. Use Near me when you choose, or browse manually without sharing your location. Travel warnings remain visible, and destinations marked do not travel are excluded from automatic suggestions.\n\nKEEP YOUR MEMORIES\nAdd notes, ratings and photos to your completed adventures. Photos added in the current version stay inside Wayfinder on the device where you add them; they do not sync to another phone. Sign in to the same Wayfinder account to access your synced progress across devices. Previously loaded content remains available offline.\n\nDISCOVER HIDDEN GEMS\nClassic adventures are included. Optional one-time purchases unlock hidden-gem guide collections for individual geographic packs or all continents together. The All continents collection also includes Antarctica. Purchases belong to your individual Wayfinder account.\n\nWayfinder provides discovery and planning information, not bookings. Travel, admission, permits, accommodation and guide fees are separate. Costs and opening or access information can change, so check current information with the relevant venue or authority before travelling.\n\nAn account is required. Keep an independent copy of important photos: uninstalling the app or clearing its data can remove device-local memories.\n\nDeveloped by RL Applications. Support: help.rlapplications@gmail.com",
+    "keywords": "adventure,bucket list,trip planner,hidden gems,travel journal,passport,memories",
+    "marketing_url": "https://rlapplications.com/wayfinder/",
+    "support_url": "https://rlapplications.com/wayfinder/support/",
+    "privacy_policy_url": "https://rlapplications.com/wayfinder/privacy/",
+    "privacy_choices_url": "https://rlapplications.com/wayfinder/delete-account/"
+  },
+  "review_contact": {
+    "first_name": "Riley",
+    "last_name": "Lawler",
+    "email": "help.rlapplications@gmail.com",
+    "phone": null,
+    "sign_in_required": true,
+    "demo_username": null,
+    "demo_password": null,
+    "notes": "Wayfinder is a travel checklist and guide. Use the private verified review-account credentials supplied in App Review Information. Purchases unlock digital guide content, not travel or admission. The Me tab includes Restore purchases, Privacy, Support, and Delete my account and all my data. New photos are stored privately on the device and do not sync with progress. Near me requests foreground location only after it is selected; manual browsing is available. Use the hidden-gem store to test each non-consumable pack; All continents covers every geographic pack and Antarctica. Group and Community functionality must match the final review build and the additional test steps supplied with it. Do not submit these notes until all referenced features have passed their final live tests."
+  },
+  "submission_gates": [
+    "Active Apple membership and confirmed RL Applications developer-name route",
+    "Confirm bundle ID and app-name availability in the selected Apple team before creating immutable records",
+    "Owner chooses initial storefront availability and enters an App Review contact phone privately",
+    "Signed current Release archive/IPA and physical-iPhone testing",
+    "Configured Apple and RevenueCat products, valid credentials, purchase and restore tests",
+    "Live backend/privacy/deletion/group/Community verification and documented moderation responsibility",
+    "Final native screenshots, IAP review screenshots and verified private review credentials",
+    "Final app privacy, age rating, export compliance, content-rights, agreements, banking and tax declarations"
+  ]
+}

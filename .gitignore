@@ -23,9 +23,13 @@ DerivedData/
 # Signing material. These sign releases as you; they never go in a public repo.
 *.jks
 *.keystore
+*.p8
+*.p12
+*.mobileprovision
 keystore.properties
 android/keystore/
 dist/
+build/
 android-sim.html
 android-sim-nokey.html
 

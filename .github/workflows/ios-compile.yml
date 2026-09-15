@@ -41,6 +41,10 @@ jobs:
         run: |
           node --check app.js
           node --check store.js
+          node tools/test_billing.js
+          python3 -X utf8 tools/check_billing.py
+          python3 -X utf8 tools/check_ios_products.py
+          node tools/test_ios_release_prep.mjs
           npm run stage
           npx cap sync ios
           plutil -lint ios/App/App/Info.plist ios/App/App/PrivacyInfo.xcprivacy

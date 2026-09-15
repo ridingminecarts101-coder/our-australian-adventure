@@ -59,9 +59,11 @@ until every current and future subdomain is HTTPS-only and separately reviewed.
 Every indexable page declares its preferred apex URL so the `www` and Pages
 aliases do not compete with the canonical site in search results.
 
-The former personal support address has been removed. The public site must show
-`TO BE ASSIGNED` and contain no `mailto:` link until the new Gmail support
-mailbox has been created, tested for sending, receiving and recovery, and
-approved for publication. When it is ready, replace the visible placeholder
-and add the verified address only to the intended contact actions, then update
-the checker and repeat the local, live and email-link checks.
+The former personal support address has been removed. The owner supplied
+`help.rlapplications@gmail.com` as the working, monitored public mailbox for
+studio support and Wayfinder support, privacy and deletion requests. This
+implementation pass did not independently send or receive a message. The site
+checker requires the exact published address and reviewed subject lines and
+rejects other Gmail addresses in the public runtime. If the mailbox changes,
+update the intended contact actions and checker together, then repeat the
+local, live and email-link checks.

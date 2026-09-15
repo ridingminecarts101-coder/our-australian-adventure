@@ -190,9 +190,11 @@ function onNativePlatform() {
 
 const Billing = {
   _plugin: null,
+  _configuredPlugin: null,
   _ready: null,
   _appUserId: null,
   _generation: 0,
+  _cleanupReady: null,
   _customerInfoListener: null,
   _listenerPlugin: null,
   onChange: null,
@@ -222,6 +224,7 @@ const Billing = {
   init(appUserId = null) {
     const requestedId = appUserId || this._appUserId;
     const previousReady = this._ready;
+    const previousCleanup = this._cleanupReady;
     if (requestedId !== this._appUserId) {
       this._generation++;
       this._ready = null;
@@ -234,15 +237,21 @@ const Billing = {
 
     const P = window.Capacitor.Plugins.Purchases;
     const runId = this._appUserId, runGeneration = this._generation;
-    const alreadyConfigured = this._plugin === P;
     this._plugin = P;
-    this._ready = (async () => {
+    let attempt;
+    attempt = (async () => {
       try {
+        if (previousCleanup) await previousCleanup;
         if (previousReady) await previousReady;
         if (runGeneration !== this._generation || runId !== this._appUserId) return false;
         await this._removeCustomerInfoListener();
-        if (alreadyConfigured && P.logIn) await P.logIn({ appUserID: runId });
-        else await P.configure({ apiKey: this._key(), appUserID: runId });
+        const alreadyConfigured = this._configuredPlugin === P;
+        if (alreadyConfigured && P.logIn) {
+          await P.logIn({ appUserID: runId });
+        } else {
+          await P.configure({ apiKey: this._key(), appUserID: runId });
+          this._configuredPlugin = P;
+        }
         if (runGeneration !== this._generation || runId !== this._appUserId) return false;
         await this._addCustomerInfoListener(P, runGeneration, runId);
         if (runGeneration !== this._generation || runId !== this._appUserId) return false;
@@ -255,7 +264,11 @@ const Billing = {
         return false;
       }
     })();
-    return this._ready;
+    this._ready = attempt;
+    attempt.then(ok => {
+      if (!ok && this._ready === attempt) this._ready = null;
+    });
+    return attempt;
   },
 
   _acceptCustomerInfo(customerInfo, expectedGeneration, expectedId) {
@@ -321,7 +334,7 @@ const Billing = {
       const wanted = PACKS.filter(p => !p.unreleased);
       const { products } = await this._plugin.getProducts({
         productIdentifiers: wanted.map(p => productId(p.slug)),
-        productCategory: 'NON_SUBSCRIPTION',
+        type: 'NON_SUBSCRIPTION',
       });
       if (expectedGeneration !== this._generation || expectedId !== this._appUserId) return null;
       for (const pack of wanted) {
@@ -361,12 +374,14 @@ const Billing = {
       return { ok: true, slug, simulated: true };
     }
 
-    await this.init();
+    if (!await this.init()) {
+      return { ok: false, reason: 'the shop could not connect; try again' };
+    }
     const runId = this._appUserId, runGeneration = this._generation;
     try {
       const { products } = await this._plugin.getProducts({
         productIdentifiers: [productId(slug)],
-        productCategory: 'NON_SUBSCRIPTION',
+        type: 'NON_SUBSCRIPTION',
       });
       if (runGeneration !== this._generation || runId !== this._appUserId) {
         return { ok: false, reason: 'account changed' };
@@ -405,7 +420,9 @@ const Billing = {
     if (!this.native) {
       return { ok: true, restored: [...owned], simulated: true };
     }
-    await this.init();
+    if (!await this.init()) {
+      return { ok: false, reason: 'the shop could not connect; try again' };
+    }
     const runId = this._appUserId, runGeneration = this._generation;
     try {
       const { customerInfo } = await this._plugin.restorePurchases();
@@ -423,7 +440,7 @@ const Billing = {
   async foreground() {
     if (!this.native || !this._appUserId) return [...owned];
     const requestedId = this._appUserId, requestedGeneration = this._generation;
-    await this.init();
+    if (!await this.init()) return [...owned];
     if (requestedGeneration !== this._generation || requestedId !== this._appUserId) return [];
     const P = this._plugin;
     try {
@@ -446,27 +463,38 @@ const Billing = {
     this._appUserId = null;
     entitlementOwner = null;
     owned = new Set();
-    try {
+    const cleanup = (async () => {
       if (previousReady) await previousReady;
       await this._removeCustomerInfoListener();
-    } catch (e) { console.warn('billing account cleanup', e); }
+    })().catch(e => { console.warn('billing account cleanup', e); });
+    this._cleanupReady = cleanup;
+    await cleanup;
+    if (this._cleanupReady === cleanup) this._cleanupReady = null;
     return true;
   },
 
   async signOut() {
-    const P = this._plugin;
     const previousReady = this._ready;
     this._generation++;
-    this._plugin = null;
     this._ready = null;
     this._appUserId = null;
     entitlementOwner = null;
     owned = new Set();
-    try {
+    const cleanup = (async () => {
       if (previousReady) await previousReady;
       await this._removeCustomerInfoListener();
-      if (P && P.logOut) await P.logOut();
-    } catch (e) { console.warn('billing logout', e); }
+    })().catch(e => { console.warn('billing logout', e); });
+    this._cleanupReady = cleanup;
+    await cleanup;
+    if (this._cleanupReady === cleanup) this._cleanupReady = null;
+
+    /* Wayfinder always configures RevenueCat with the authenticated Supabase
+     * UUID. RevenueCat recommends that custom-ID-only apps do not call logOut:
+     * logOut creates an anonymous customer which can later be aliased during a
+     * restore or login. Keep the SDK configured but make all local access
+     * ownerless; the next signed-in UUID is selected with logIn(), which
+     * switches between two identified customers without merging them.
+     */
   },
 };
 
