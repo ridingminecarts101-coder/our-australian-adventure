@@ -67,11 +67,15 @@ assert.doesNotMatch(startupWorkflow, /environment: app-store|secrets\.|TEST_RUNN
 assert.match(testSource, /XCUIScreen\.main\.screenshot\(\)/);
 assert.match(testSource, /func testStartupDiagnostic\(\)/);
 const diagnostic = testSource.slice(testSource.indexOf('func testStartupDiagnostic()'), testSource.indexOf('func testCaptureStoreSubmissionScreens()'));
-assert(diagnostic.indexOf('startup-actual-screen') < diagnostic.indexOf('XCTAssertTrue(webViewFound'),
-  'diagnostic screenshot must be attached before failure assertion');
-assert(diagnostic.indexOf('startup-accessibility-tree') < diagnostic.indexOf('XCTAssertTrue(webViewFound'),
-  'diagnostic accessibility tree must be attached before failure assertion');
+assert(diagnostic.indexOf('attachStartupEvidence()') < diagnostic.indexOf('XCTAssertTrue(webViewFound'),
+  'diagnostic screen and accessibility tree must be attached before failure assertion');
 assert.doesNotMatch(diagnostic, /reviewEmail|reviewPassword|WAYFINDER_REVIEW_/);
+assert.match(testSource, /let accountGateFound = signIn\.waitForExistence\(timeout: 45\)/);
+assert.match(testSource, /if !accountGateFound \{ attachStartupEvidence\(\) \}/);
+assert(testSource.indexOf('if !accountGateFound { attachStartupEvidence() }') < testSource.indexOf('emailField.tap(); emailField.typeText(email)'),
+  'a failed pre-login gate must attach evidence before typing credentials');
+assert.match(testSource, /screenshot\.name = "startup-actual-screen"/);
+assert.match(testSource, /tree\.name = "startup-accessibility-tree"/);
 assert.match(testSource, /WAYFINDER_REVIEW_EMAIL/);
 assert.match(testSource, /WAYFINDER_REVIEW_PASSWORD/);
 assert.match(testSource, /throw XCTSkip\("A private, verified review account/);

@@ -226,6 +226,9 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PATH/Info.plist")" = "$RELEASE_BUILD_NUMBER"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PATH/Info.plist")" = "$RELEASE_MARKETING_VERSION"
           grep -Fq "ios: '$REVENUECAT_IOS_PUBLIC_SDK_KEY'" "$APP_PATH/public/config.js"
+          test -s notices.html
+          test -s "$APP_PATH/public/notices.html"
+          cmp -s notices.html "$APP_PATH/public/notices.html"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH" 2>&1 | tee build/codesign-verify.log
 
       - name: Export App Store IPA

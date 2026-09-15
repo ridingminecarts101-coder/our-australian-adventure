@@ -50,6 +50,12 @@ assert.match(workflow, /test -f ios\/App\/App\.xcodeproj\/project\.xcworkspace\/
   'signed delivery must require a reviewed Swift package resolution');
 assert.match(workflow, /-disableAutomaticPackageResolution/,
   'signed delivery must not resolve different Swift dependency revisions');
+const archiveIdentityStep = workflow.match(/- name: Verify archive identity and embedded billing config[\s\S]*?(?=\n      - name: )/)?.[0] || '';
+assert.match(archiveIdentityStep, /APP_PATH=build\/Wayfinder\.xcarchive\/Products\/Applications\/App\.app/);
+assert.match(archiveIdentityStep, /test -s notices\.html[\s\S]*test -s "\$APP_PATH\/public\/notices\.html"[\s\S]*cmp -s notices\.html "\$APP_PATH\/public\/notices\.html"/,
+  'the signed archive must contain the complete third-party notices file byte-for-byte');
+assert(archiveIdentityStep.indexOf('cmp -s notices.html') < archiveIdentityStep.indexOf('codesign --verify'),
+  'the notices payload must be checked before accepting the archive signature');
 const archiveStep = workflow.match(/- name: Archive signed Release build[\s\S]*?(?=\n      - name: )/)?.[0] || '';
 const archiveArgs = archiveStep.match(/xcodebuild archive \\\n([\s\S]*?)2>&1 \| tee build\/ios-archive\.log/)?.[1] || '';
 assert(archiveArgs, 'signed archive command must be present');

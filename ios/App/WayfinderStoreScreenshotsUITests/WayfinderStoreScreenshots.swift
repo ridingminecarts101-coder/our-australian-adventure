@@ -18,24 +18,7 @@ final class WayfinderStoreScreenshots: XCTestCase {
         let signInFound = app.buttons["Sign in"].waitForExistence(timeout: 30)
         let retryFound = app.buttons["Try again"].exists
 
-        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        screenshot.name = "startup-actual-screen"
-        screenshot.lifetime = .keepAlways
-        add(screenshot)
-
-        let accessibility = app.debugDescription
-        let emailPattern = try! NSRegularExpression(
-            pattern: "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}",
-            options: [.caseInsensitive]
-        )
-        let redacted = emailPattern.stringByReplacingMatches(
-            in: accessibility, range: NSRange(accessibility.startIndex..., in: accessibility),
-            withTemplate: "[redacted-email]"
-        )
-        let tree = XCTAttachment(string: redacted)
-        tree.name = "startup-accessibility-tree"
-        tree.lifetime = .keepAlways
-        add(tree)
+        attachStartupEvidence()
 
         XCTAssertTrue(webViewFound, "The native WebView did not become available")
         XCTAssertFalse(retryFound, "Wayfinder reached the recoverable startup-error screen")
@@ -87,7 +70,9 @@ final class WayfinderStoreScreenshots: XCTestCase {
 
     private func signInIfRequired() throws {
         let signIn = app.buttons["Sign in"]
-        XCTAssertTrue(signIn.waitForExistence(timeout: 12),
+        let accountGateFound = signIn.waitForExistence(timeout: 45)
+        if !accountGateFound { attachStartupEvidence() }
+        XCTAssertTrue(accountGateFound,
                       "A fresh native install must show the required account gate")
         let env = ProcessInfo.processInfo.environment
         let reviewEmail = env["WAYFINDER_REVIEW_EMAIL"]
@@ -135,5 +120,26 @@ final class WayfinderStoreScreenshots: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    private func attachStartupEvidence() {
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "startup-actual-screen"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+
+        let accessibility = app.debugDescription
+        let emailPattern = try! NSRegularExpression(
+            pattern: "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}",
+            options: [.caseInsensitive]
+        )
+        let redacted = emailPattern.stringByReplacingMatches(
+            in: accessibility, range: NSRange(accessibility.startIndex..., in: accessibility),
+            withTemplate: "[redacted-email]"
+        )
+        let tree = XCTAttachment(string: redacted)
+        tree.name = "startup-accessibility-tree"
+        tree.lifetime = .keepAlways
+        add(tree)
     }
 }
