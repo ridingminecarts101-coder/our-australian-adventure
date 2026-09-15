@@ -44,12 +44,23 @@ try{
   await db.exec(await source('schema-community-premoderation.sql'));
   const legacy=(await user(users[0],`insert into public.recommendations
     (created_by,title,place,country) values($1,'Legacy no consent','QA reserve','AU') returning id`,[users[0]])).rows[0].id;
+  const legacyApproved=(await user(users[0],`insert into public.recommendations
+    (created_by,title,place,country) values($1,'Previously reviewed place','QA reserve','AU') returning id`,[users[0]])).rows[0].id;
+  await db.query(`update public.recommendations set moderation_status='approved',hidden=false where id=$1`,[legacyApproved]);
+  assert.equal((await user(users[1],`select id from public.recommendations where id=$1`,[legacyApproved])).rows.length,1,
+    'previous manual approval is public before the email migration');
   const sql=await migration();
   await db.exec(sql);
   assert.equal((await rec(legacy)).moderation_revision,0);
   assert.equal((await rec(legacy)).hidden,true);
   assert.equal((await outbox(legacy)).length,0);
   pass('legacy no-consent content held without mail queue');
+  assert.equal((await rec(legacyApproved)).moderation_revision,0);
+  assert.equal((await rec(legacyApproved)).moderation_status,'approved');
+  assert.equal((await rec(legacyApproved)).hidden,false);
+  assert.equal((await user(users[1],`select id from public.recommendations where id=$1`,[legacyApproved])).rows.length,1);
+  assert.equal((await outbox(legacyApproved)).length,0);
+  pass('already manually approved no-consent post stays public without entering AI email review');
   await assert.rejects(user(users[0],`insert into public.recommendations
     (created_by,title,place,country) values($1,'Old client post','QA reserve','AU')`,[users[0]]),
     /Confirm Community email\/AI review/);
@@ -58,6 +69,11 @@ try{
     /Confirm Community email\/AI review for each edit/);
   assert.equal((await outbox(legacy)).length,0);
   pass('old clients cannot submit or edit without fresh consent');
+  await db.query(`update public.recommendations set moderation_status='approved',hidden=false where id=$1`,[legacy]);
+  assert.equal((await rec(legacy)).moderation_revision,0);
+  assert.equal((await user(users[1],`select id from public.recommendations where id=$1`,[legacy])).rows.length,1);
+  assert.equal((await outbox(legacy)).length,0);
+  pass('pending no-consent legacy post remains manually reviewable through the protected SQL role');
 
   const first=await submit(users[0]);
   assert.equal((await rec(first)).moderation_revision,1);
@@ -213,6 +229,10 @@ try{
 
   const beforeReplay=(await db.query(`select count(*)::int as n from public.community_review_decisions`)).rows[0].n;
   await db.exec(sql);
+  assert.equal((await rec(legacyApproved)).moderation_status,'approved');
+  assert.equal((await rec(legacyApproved)).moderation_revision,0);
+  assert.equal((await user(users[1],`select id from public.recommendations where id=$1`,[legacyApproved])).rows.length,1);
+  assert.equal((await outbox(legacyApproved)).length,0);
   assert.equal((await rec(first)).moderation_status,'approved');
   assert.equal((await rec(denied)).moderation_status,'pending');
   assert.equal((await rec(denied)).moderation_revision,3);

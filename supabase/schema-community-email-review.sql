@@ -76,19 +76,9 @@ begin
   end if;
 end $constraints$;
 
--- Historical posts have not consented to email/AI review. Hold them only on
--- first application; future replay cannot undo a reviewed decision.
-do $legacy_hold$
-begin
-  if not exists(select 1 from public.wayfinder_schema_migrations
-      where migration_key='community-email-review-v1') then
-    update public.recommendations set moderation_status='pending',
-      approved_at=null, moderation_reason=null, hidden=true
-      where moderation_consent_version is distinct from 'community-ai-2026-09-15';
-    insert into public.wayfinder_schema_migrations(migration_key)
-      values('community-email-review-v1');
-  end if;
-end $legacy_hold$;
+-- Do not unpublish recommendations that an operator already approved under
+-- the prior manual-review contract. Revision-zero rows never enter the new
+-- email/AI outbox; fresh consent is required for any later author edit.
 
 -- Rate events deliberately have no recommendation FK: deleting a post does not
 -- reset its author's rolling 3/hour or 20/day budget. Auth deletion cascades.
@@ -185,6 +175,7 @@ declare client_session boolean := current_user='authenticated';
 declare content_changed boolean;
 declare resubmitted boolean;
 declare review_gate boolean := current_setting('wayfinder.community_review_function',true)='on';
+declare legacy_manual boolean;
 begin
   if tg_op='INSERT' then
     if not client_session and not operator_session then
@@ -256,6 +247,9 @@ begin
   if not operator_session then
     raise exception using errcode='42501',message='Community server update role denied';
   end if;
+  legacy_manual := old.moderation_revision=0 and new.moderation_revision=0 and
+    old.moderation_consent_version is null and new.moderation_consent_version is null and
+    old.moderation_consent_nonce is null and new.moderation_consent_nonce is null;
   if content_changed or new.moderation_consent_nonce is distinct from old.moderation_consent_nonce or
      new.moderation_consent_version is distinct from old.moderation_consent_version then
     raise exception 'Operator must not edit customer submission text or consent';
@@ -266,14 +260,15 @@ begin
   if (new.moderation_status is distinct from old.moderation_status or
       new.moderation_reason is distinct from old.moderation_reason or
       new.approved_at is distinct from old.approved_at or
-      (old.hidden and not new.hidden)) and not review_gate then
+      (old.hidden and not new.hidden)) and not review_gate and not legacy_manual then
     raise exception 'Use the locked Community review function for decisions';
   end if;
   if new.moderation_status='approved' then
     if (old.moderation_status is distinct from 'approved' or (old.hidden and not new.hidden)) and
-       (new.moderation_consent_version is distinct from 'community-ai-2026-09-15' or
-        new.moderation_consent_nonce is null or new.moderation_revision < 1 or
-        new.report_count >= 3 or new.hidden) then
+       (new.report_count >= 3 or new.hidden or
+        (not legacy_manual and
+         (new.moderation_consent_version is distinct from 'community-ai-2026-09-15' or
+          new.moderation_consent_nonce is null or new.moderation_revision < 1))) then
       raise exception 'Approval requires current consent, revision and no report hold';
     end if;
     if old.moderation_status is distinct from 'approved' then
@@ -303,8 +298,11 @@ create policy "read visible recommendations" on public.recommendations
   for select to authenticated using (
     (created_by=auth.uid() or
       (moderation_status='approved' and not hidden and report_count<3 and
-       moderation_revision>0 and moderation_consent_version='community-ai-2026-09-15' and
-       moderation_consent_nonce is not null and approved_at is not null))
+       approved_at is not null and
+       ((moderation_revision=0 and moderation_consent_version is null and
+         moderation_consent_nonce is null) or
+        (moderation_revision>0 and moderation_consent_version='community-ai-2026-09-15' and
+         moderation_consent_nonce is not null))))
     and not exists(select 1 from public.blocked_authors b
       where b.user_id=auth.uid() and b.blocked_id=recommendations.created_by)
   );
