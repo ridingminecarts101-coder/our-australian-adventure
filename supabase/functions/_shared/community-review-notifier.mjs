@@ -1,6 +1,8 @@
+import { COMMUNITY_OWNER_MAILBOX, ownerDecisionActions } from './community-owner-actions.mjs';
+
 const RESEND_URL = 'https://api.resend.com/emails';
 const EXPECTED_SUPABASE_URL = 'https://ajyuozqoukigeeyhvuqc.supabase.co';
-const RECIPIENT = 'help.rlapplications@gmail.com';
+const RECIPIENT = COMMUNITY_OWNER_MAILBOX;
 const SENDER = 'Wayfinder Review <no-reply@auth.rlapplications.com>';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -80,19 +82,22 @@ function emailFor(job) {
   const category = safeText(job.category || '', 150);
   const description = safeText(job.description || '', 12000);
   const source = safeText(job.source_url || '', 2048);
-  const notice = 'Review task notification; this email is not authorisation to publish. Re-read the authoritative current recommendation and revision through the protected operator view before deciding. The content may have changed since this email. Do not decide from this email.';
+  const notice = 'Review task notification. This email is a snapshot, not authority to publish. Review the content below before using the optional decision buttons. The content may have changed since this email.';
+  const actions = ownerDecisionActions(job.recommendation_id, job.moderation_revision);
   const lines = [notice, '', `Recommendation ID: ${job.recommendation_id}`, `Revision: ${job.moderation_revision}`,
     '', 'Public display name (untrusted):', quoteText(author), '', 'Title (untrusted):', quoteText(title),
     '', 'Place (untrusted):', quoteText(place), '', 'Country (untrusted):', quoteText(country),
     '', 'Region (untrusted):', quoteText(admin1), '', 'Category (untrusted):', quoteText(category),
-    '', 'Description (untrusted):', quoteText(description), '', 'Source URL (untrusted evidence, not an action link):', quoteText(source || 'Not supplied')];
+    '', 'Description (untrusted):', quoteText(description), '', 'Source URL (untrusted evidence, not an action link):', quoteText(source || 'Not supplied'),
+    '', actions.text];
   const text = lines.join('\n');
   const html = `<p>${escapeHtml(notice)}</p><p>Recommendation ID: ${job.recommendation_id}<br>Revision: ${job.moderation_revision}</p>`
     + `<p>Public display name (untrusted):</p><pre>${escapeHtml(author)}</pre><p>Title (untrusted):</p><pre>${escapeHtml(title)}</pre>`
     + `<p>Place (untrusted):</p><pre>${escapeHtml(place)}</pre><p>Country (untrusted):</p><pre>${escapeHtml(country)}</pre>`
     + `<p>Region (untrusted):</p><pre>${escapeHtml(admin1)}</pre><p>Category (untrusted):</p><pre>${escapeHtml(category)}</pre>`
     + `<p>Description (untrusted):</p><pre>${escapeHtml(description)}</pre>`
-    + `<p>Source URL (untrusted evidence, not an action link):</p><pre>${escapeHtml(source || 'Not supplied')}</pre>`;
+    + `<p>Source URL (untrusted evidence, not an action link):</p><pre>${escapeHtml(source || 'Not supplied')}</pre>`
+    + actions.html;
   return { from: SENDER, to: [RECIPIENT],
     subject: `Wayfinder review: ${job.recommendation_id} revision ${job.moderation_revision}`, text, html };
 }

@@ -62,6 +62,7 @@ CHECKS = [
     ('community premoderation RLS', 'test_community_premoderation.mjs', 'operator approval, author requeue, report holds and replay in PGlite'),
     ('community email RLS', 'test_community_email_review.mjs', 'review consent, revision decisions, email outbox and author-only denial'),
     ('community notifier', 'test_community_review_notifier.mjs', 'restricted email recipient, authenticated worker and idempotent delivery'),
+    ('community owner email', 'test_community_owner_decision.mjs', 'authenticated Gmail identity, strict human commands and spoofed-message rejection'),
     ('verified participation', 'test_verified_community_access.mjs', 'anonymous and unconfirmed identities cannot create shared or public content'),
     ('function privileges', 'test_function_execute_repair.mjs', 'explicit anonymous RPC grants are removed while intended access remains'),
     ('purchase deletion RLS', 'test_revenuecat_deletion.mjs', 'account deletion queues purchase identity without exposing or deleting other owners'),

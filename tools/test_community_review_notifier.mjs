@@ -78,12 +78,42 @@ function harness({ jobs = [JOB], resend = () => answer({ id: 'provider-email-id'
   assert.ok(body.html.includes('&lt;script&gt;'));
   assert.ok(body.html.includes('&lt;svg onload=&quot;attack()&quot;&gt;'));
   assert.ok(body.html.includes('a=1&amp;b=2'));
-  assert.ok(!body.html.includes('<a '), 'no action links');
+  assert.equal((body.html.match(/<a /g) || []).length, 2, 'only the two compose actions are links');
+  assert.ok(body.html.includes('>Approve</a>'));
+  assert.ok(body.html.includes('>Reject</a>'));
+  assert.ok(body.html.includes('mailto:help.rlapplications@gmail.com?'));
+  assert.ok(body.html.includes('&amp;body='), 'query separators are escaped in HTML attributes');
+  assert.ok(!body.html.includes('&body='), 'raw URL ampersands never enter HTML');
+  assert.ok(body.text.includes('Compose APPROVE decision: mailto:help.rlapplications@gmail.com?'));
+  assert.ok(body.text.includes('Compose REJECT decision: mailto:help.rlapplications@gmail.com?'));
+  assert.ok(body.text.includes('only compose a draft'));
+  assert.ok(body.text.includes('optional Approve and Reject'));
+  assert.ok(body.text.includes('Keep only the four draft lines and remove any email signature'));
+  assert.ok(body.text.includes('send the message from help.rlapplications@gmail.com'));
+  assert.ok(body.text.includes('fresh revision, consent, source evidence, and safety state'));
+  assert.ok(body.text.includes('Stale decisions are ignored'));
+  assert.ok(body.text.includes('rejection reason is shown in the app'));
+  const actionHrefs = [...body.html.matchAll(/href="([^"]+)"/g)]
+    .map(match => match[1].replaceAll('&amp;', '&'));
+  assert.equal(actionHrefs.length, 2);
+  for (const href of actionHrefs) {
+    assert.ok(href.startsWith('mailto:help.rlapplications@gmail.com?'));
+    assert.ok(href.includes(encodeURIComponent(ID)));
+    assert.ok(href.includes('revision%203'));
+    for (const forbidden of [JOB.author_name, JOB.title, JOB.place, JOB.country, JOB.admin1,
+      JOB.category, JOB.description, JOB.source_url, JOB.author_id, JOB.author_email, LEASE,
+      env.RESEND_COMMUNITY_REVIEW_API_KEY, env.SUPABASE_SECRET_KEY]) {
+      assert.ok(!decodeURIComponent(href.replaceAll('+', ' ')).includes(forbidden),
+        `action URL excludes untrusted/private value: ${forbidden}`);
+    }
+  }
+  for (const content of [body.text, body.html]) {
+    assert.ok(content.includes('REPLACE%20THIS%20PLACEHOLDER%20WITH%20A%20SPECIFIC%20REASON'));
+    assert.ok(!content.includes('must-not-leak'));
+  }
   assert.ok(!body.html.includes('<script>'));
-  assert.ok(body.text.includes('protected operator view before deciding'));
+  assert.ok(body.text.includes('snapshot, not authority to publish'));
   assert.ok(body.text.includes('| A nice walk\n| <svg'), 'plain-text lines are marked untrusted');
-  assert.ok(!body.text.includes('must-not-leak'));
-  assert.ok(!body.html.includes('must-not-leak'));
   assert.equal(calls.find(c => c.name === 'ack_community_review_notification').options.body,
     JSON.stringify({ p_recommendation_id: ID, p_moderation_revision: 3, p_lease_token: LEASE }));
 }
