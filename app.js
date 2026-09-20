@@ -2480,7 +2480,9 @@ async function deleteAccount() {
   if (!sb || !userId || accountDeletionInProgress) return;
   if (!online) return toast('Reconnect before deleting your account');
   const typed = prompt('This deletes your Wayfinder account, saved progress and trips, and photos stored in Wayfinder on this device. '
-                     + 'Purchase-service data is queued for deletion. '
+                     + 'Creating another account with the same email will not recover this account or its progress. '
+                     + 'Purchase-service data is queued for deletion, but Apple keeps its transaction history; eligible purchases can be restored separately. '
+                     + 'Contact support if paid access is not restored. '
                      + 'It cannot be undone.\n\nType DELETE to confirm.');
   if (typed !== 'DELETE') { toast('Cancelled'); return; }
 

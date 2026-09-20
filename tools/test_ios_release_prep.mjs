@@ -65,6 +65,27 @@ assert.match(archiveStep, /trap 'cp build\/unsigned-project\.pbxproj "\$PROJECT"
   'the App-only archive override must restore the committed project even when archiving fails');
 
 const project = await readFile('ios/App/App.xcodeproj/project.pbxproj', 'utf8');
+const listing = JSON.parse(await readFile('store-release/ios-listing.json', 'utf8'));
+const workflowMarketingVersion = workflow.match(
+  /marketing_version:[\s\S]*?^\s+default:\s*['"]?([0-9]+\.[0-9]+\.[0-9]+)['"]?\s*$/m)?.[1];
+const workflowBuildNumber = workflow.match(
+  /build_number:[\s\S]*?^\s+default:\s*['"]?([1-9][0-9]*)['"]?\s*$/m)?.[1];
+assert(workflowMarketingVersion, 'the signed workflow must have a semantic marketing-version default');
+assert(workflowBuildNumber, 'the signed workflow must have a positive internal-build default');
+const projectMarketingVersions = [...project.matchAll(/MARKETING_VERSION = ([^;]+);/g)]
+  .map(match => match[1]);
+const projectBuildNumbers = [...project.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)]
+  .map(match => match[1]);
+assert.equal(projectMarketingVersions.length, 2,
+  'committed iOS Debug and Release configurations must each declare a marketing version');
+assert.equal(projectBuildNumbers.length, 2,
+  'committed iOS Debug and Release configurations must each declare an internal build number');
+assert(projectMarketingVersions.every(version => version === workflowMarketingVersion),
+  'iOS Debug and Release marketing versions must match the signed-workflow default');
+assert(projectBuildNumbers.every(build => build === workflowBuildNumber),
+  'iOS Debug and Release build numbers must match the signed-workflow default');
+assert.equal(listing.app.version, workflowMarketingVersion,
+  'the prepared App Store listing must match the iOS project and workflow marketing version');
 const appReleasePattern = /\t\t504EC3181FED79650016851F \/\* Release \*\/ = \{[\s\S]*?\n\t\t\};/;
 const sourceAppRelease = project.match(appReleasePattern)?.[0] || '';
 assert.match(sourceAppRelease, /CODE_SIGN_STYLE = Automatic;/,

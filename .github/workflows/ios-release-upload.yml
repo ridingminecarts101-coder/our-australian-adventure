@@ -18,13 +18,14 @@ name: iOS signed archive and delivery
         required: true
         type: string
       marketing_version:
-        description: App version, for example 1.0.0
+        description: Public App Store version; keep 1.0.4 for its TestFlight retries
         required: true
-        default: 1.0.0
+        default: 1.0.4
         type: string
       build_number:
-        description: New positive App Store build number
+        description: Internal build; increment for every upload, including retries
         required: true
+        default: '5'
         type: string
 
 permissions:

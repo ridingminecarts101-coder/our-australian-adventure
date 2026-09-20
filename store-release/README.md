@@ -2,6 +2,12 @@
 
 Prepared 15 September 2026. This folder contains reviewed preparation material, not an App Store submission or approval. The owner has chosen Apple's individual/sole-trader route for the initial release and accepts the Apple account's developer/seller identity. Keep **RL Applications** as the studio brand; confirm the exact Apple-displayed seller string in App Store Connect rather than inventing it here. The support address is **help.rlapplications@gmail.com**.
 
+## iOS version rule
+
+The initial public App Store version is **1.0.4**. Each later public release increments the patch version, so the next public update is **1.0.5**. TestFlight replacements and rejected-upload retries do not consume a public version: keep the intended marketing version and increment only the positive internal build number. The next replacement candidate is therefore **1.0.4 (build 5)**. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
+
+The legacy `tools/release.py` command is an Android-oriented helper that currently updates both native projects together. Do not use it for an iOS-only release or TestFlight replacement; set the iOS project and signed-workflow defaults deliberately as part of that release instead.
+
 ## Use these files in order
 
 1. **Apple account access is verified.** On 15 September 2026 the signed-in individual/sole-trader account opened App Store Connect Apps, Users and Access, and Business. There are no apps yet, and New App offers no Bundle ID. Create and verify the explicit App ID, record the selected Team ID and confirm the exact seller string shown by Apple; the account menu name alone is not that confirmation. The owner has sent Apple an enquiry about a possible later conversion; conversion is optional and is not an initial upload-preparation gate.

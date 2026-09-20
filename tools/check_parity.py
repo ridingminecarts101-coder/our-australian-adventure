@@ -60,8 +60,20 @@ i_code = (re.search(r'CURRENT_PROJECT_VERSION = ([^;]+);', pbx) or [None, None])
 print('\n  %-26s %-22s %-22s' % ('', 'ANDROID', 'iOS'))
 print('  ' + '-' * 72)
 compare('bundle id', a_id, i_id)
-compare('version name', a_name, i_name, 'tools/release.py bumps both')
-compare('build number', a_code, i_code, 'tools/release.py bumps both')
+version_ok = bool(re.fullmatch(r'\d+\.\d+\.\d+', a_name or '')) and bool(
+    re.fullmatch(r'\d+\.\d+\.\d+', i_name or ''))
+build_ok = bool(re.fullmatch(r'[1-9]\d*', a_code or '')) and bool(
+    re.fullmatch(r'[1-9]\d*', i_code or ''))
+print('  %-26s %-22s %-22s %s' % (
+    'store versions', a_name or '-', i_name or '-', 'valid' if version_ok else 'INVALID'))
+print('  %-26s %-22s %-22s %s' % (
+    'internal build numbers', a_code or '-', i_code or '-', 'valid' if build_ok else 'INVALID'))
+if not version_ok:
+    problems.append('Android and iOS store versions must each use semantic version format')
+if not build_ok:
+    problems.append('Android and iOS internal build numbers must each be positive integers')
+if a_name != i_name or a_code != i_code:
+    notes.append('store versions and internal build numbers are platform-specific and may differ')
 compare('app id in capacitor', cap.get('appId'), a_id)
 
 # ── The web build, which is the app ──────────────────────────────────
@@ -210,7 +222,7 @@ if problems:
     for p in problems:
         print('    - %s' % p)
 else:
-    print('  The two apps agree everywhere this can check.')
+    print('  Native parity checks passed.')
 for n in notes:
     print('    note: %s' % n)
 print('=' * 74 + '\n')
