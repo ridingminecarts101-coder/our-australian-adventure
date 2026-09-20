@@ -4,7 +4,7 @@ Prepared 15 September 2026. This folder contains reviewed preparation material, 
 
 ## iOS version rule
 
-The initial public App Store version is **1.0.4**. Each later public release increments the patch version, so the next public update is **1.0.5**. TestFlight replacements and rejected-upload retries do not consume a public version: keep the intended marketing version and increment only the positive internal build number. The next replacement candidate is therefore **1.0.4 (build 5)**. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
+Every new iOS upload uses matching values: internal build **N** has marketing version **1.0.N**. The already uploaded and validated **1.0.4 (build 5)** cannot be renamed and is not the App Review candidate. Replace it before App Review with **1.0.6 (build 6)**. The next upload after that must be **1.0.7 (build 7)**, including any replacement or retry. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
 
 The legacy `tools/release.py` command is an Android-oriented helper that currently updates both native projects together. Do not use it for an iOS-only release or TestFlight replacement; set the iOS project and signed-workflow defaults deliberately as part of that release instead.
 

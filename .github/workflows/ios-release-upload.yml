@@ -18,14 +18,14 @@ name: iOS signed archive and delivery
         required: true
         type: string
       marketing_version:
-        description: Public App Store version; keep 1.0.4 for its TestFlight retries
+        description: Public App Store version; build N must use version 1.0.N
         required: true
-        default: 1.0.4
+        default: 1.0.6
         type: string
       build_number:
-        description: Internal build; increment for every upload, including retries
+        description: Internal build N; increment every upload and pair with version 1.0.N
         required: true
-        default: '5'
+        default: '6'
         type: string
 
 permissions:
@@ -69,6 +69,7 @@ jobs:
           test "$GITHUB_REF" = refs/heads/main
           [[ "$RELEASE_MARKETING_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           [[ "$RELEASE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          test "$RELEASE_MARKETING_VERSION" = "1.0.$RELEASE_BUILD_NUMBER"
           for name in APPLE_TEAM_ID APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID \
             REVENUECAT_IOS_PUBLIC_SDK_KEY; do
             test -n "${!name}" || { echo "Missing protected environment value: $name" >&2; exit 1; }
