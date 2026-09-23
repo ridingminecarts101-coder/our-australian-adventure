@@ -53,6 +53,10 @@
 	<string>To attach your own photos to the places you have been.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>When you choose Near me, your coordinates and IP address go to BigDataCloud to find your region and improve its location service using anonymous pairings. Your location is not saved in your Wayfinder account. You can browse countries without location access.</string>
+	<!-- Required by Capacitor Geolocation's native dependency. Wayfinder only
+	     requests location for Near me; background location is not enabled. -->
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>When you choose Near me, your coordinates and IP address go to BigDataCloud to find your region and improve its location service using anonymous pairings. Your location is not saved in your Wayfinder account. You can browse countries without location access.</string>
 	<!-- HTTPS and password-protected photo exports use operating-system
 	     encryption only (WKWebView Web Crypto AES-GCM/PBKDF2). No bundled
 	     cryptographic implementation is introduced by photo transfer. -->

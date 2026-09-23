@@ -6,8 +6,24 @@ import plistlib
 from pathlib import Path
 
 
+REQUIRED_PURPOSE_STRINGS = (
+    'NSCameraUsageDescription',
+    'NSPhotoLibraryUsageDescription',
+    'NSLocationWhenInUseUsageDescription',
+    'NSLocationAlwaysAndWhenInUseUsageDescription',
+)
+
+
 def audit(app_path, declared_path):
     expected = plistlib.loads(declared_path.read_bytes())
+    reviewed_info_path = declared_path.with_name('Info.plist')
+    archived_info_path = app_path / 'Info.plist'
+    if not reviewed_info_path.is_file():
+        raise ValueError('Reviewed source Info.plist is missing')
+    if not archived_info_path.is_file():
+        raise ValueError('Archive has no main-app Info.plist')
+    reviewed_info = plistlib.loads(reviewed_info_path.read_bytes())
+    archived_info = plistlib.loads(archived_info_path.read_bytes())
     declared = {row['NSPrivacyCollectedDataType']: row
                 for row in expected.get('NSPrivacyCollectedDataTypes', [])}
     paths = sorted(app_path.rglob('PrivacyInfo.xcprivacy'))
@@ -17,6 +33,20 @@ def audit(app_path, declared_path):
     if not app_manifest.is_file() or plistlib.loads(app_manifest.read_bytes()) != expected:
         raise ValueError('Main archived privacy manifest differs from reviewed source')
     inventory, issues = [], []
+    for key in REQUIRED_PURPOSE_STRINGS:
+        archived_value = archived_info.get(key)
+        reviewed_value = reviewed_info.get(key)
+        if not isinstance(reviewed_value, str) or not reviewed_value.strip():
+            issues.append('Reviewed source Info.plist has missing or blank ' + key)
+        if not isinstance(archived_value, str) or not archived_value.strip():
+            issues.append('Archived Info.plist has missing or blank ' + key)
+        elif archived_value != reviewed_value:
+            issues.append('Archived Info.plist differs from reviewed source for ' + key)
+    background_modes = archived_info.get('UIBackgroundModes', [])
+    if isinstance(background_modes, str):
+        background_modes = [background_modes]
+    if 'location' in background_modes:
+        issues.append('Archived Info.plist enables background location mode')
     for path in paths:
         raw = path.read_bytes()
         manifest = plistlib.loads(raw)

@@ -4,7 +4,9 @@ Prepared 15 September 2026. This folder contains reviewed preparation material, 
 
 ## iOS version rule
 
-Every new iOS upload uses matching values: internal build **N** has marketing version **1.0.N**. The already uploaded and validated **1.0.4 (build 5)** cannot be renamed and is not the App Review candidate. Replace it before App Review with **1.0.6 (build 6)**. The next upload after that must be **1.0.7 (build 7)**, including any replacement or retry. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
+Every new iOS upload uses matching values: internal build **N** has marketing version **1.0.N**. **1.0.6 (build 6)** was submitted with all eight purchases on 20 September 2026 and remains Waiting for Review at the 23 September check. **1.0.7 (build 7)** is prepared to correct Apple's 90683 location-purpose warning. Preparing or uploading this correction does not replace the pending App Review submission. Any subsequent upload must use **1.0.8 (build 8)**, including replacements or retries. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
+
+The Capacitor Geolocation plugin requires both `NSLocationWhenInUseUsageDescription` and `NSLocationAlwaysAndWhenInUseUsageDescription`, as documented in its [iOS setup](https://capacitorjs.com/docs/apis/geolocation#ios). Both describe the existing optional Near me lookup and its BigDataCloud disclosure. Wayfinder does not enable background location or request Always authorization. The signed archive audit checks the purpose strings against reviewed source before delivery.
 
 The legacy `tools/release.py` command is an Android-oriented helper that currently updates both native projects together. Do not use it for an iOS-only release or TestFlight replacement; set the iOS project and signed-workflow defaults deliberately as part of that release instead.
 

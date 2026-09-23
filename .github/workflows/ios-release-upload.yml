@@ -20,12 +20,12 @@ name: iOS signed archive and delivery
       marketing_version:
         description: Public App Store version; build N must use version 1.0.N
         required: true
-        default: 1.0.6
+        default: 1.0.7
         type: string
       build_number:
         description: Internal build N; increment every upload and pair with version 1.0.N
         required: true
-        default: '6'
+        default: '7'
         type: string
 
 permissions:
@@ -104,6 +104,7 @@ jobs:
           python3 -X utf8 tools/check_billing.py
           python3 -X utf8 tools/check_ios_products.py
           node tools/test_ios_release_prep.mjs
+          python3 -X utf8 tools/test_archive_privacy.py
           test -f ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
           npm run stage
           npx cap sync ios
