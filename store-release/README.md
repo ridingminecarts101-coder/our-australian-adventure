@@ -1,10 +1,10 @@
 # Wayfinder iOS entry package
 
-Prepared 15 September 2026. This folder contains reviewed preparation material, not an App Store submission or approval. The owner has chosen Apple's individual/sole-trader route for the initial release and accepts the Apple account's developer/seller identity. Keep **RL Applications** as the studio brand; confirm the exact Apple-displayed seller string in App Store Connect rather than inventing it here. The support address is **help.rlapplications@gmail.com**.
+Originally prepared 15 September 2026. Current release receipts in `release-2026-09-23` of the coordination workspace supersede historical setup notes below. The owner uses Apple's individual/sole-trader route for the initial release, with **RL Applications** as the studio brand and **help.rlapplications@gmail.com** for support.
 
 ## iOS version rule
 
-Every new iOS upload uses matching values: internal build **N** has marketing version **1.0.N**. **1.0.6 (build 6)** was submitted with all eight purchases on 20 September 2026 and remains Waiting for Review at the 23 September check. **1.0.7 (build 7)** is prepared to correct Apple's 90683 location-purpose warning. Preparing or uploading this correction does not replace the pending App Review submission. Any subsequent upload must use **1.0.8 (build 8)**, including replacements or retries. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
+Every new iOS upload uses matching values: internal build **N** has marketing version **1.0.N**. **1.0.7 (build 7)** and the eight purchases are Waiting for Review at the 23 September check, with manual public release selected. **1.0.8 (build 8)** packages PWA v64 for internal TestFlight testing and does not replace the in-review submission. A later upload must use **1.0.9 (build 9)**, including retries. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
 
 The Capacitor Geolocation plugin requires both `NSLocationWhenInUseUsageDescription` and `NSLocationAlwaysAndWhenInUseUsageDescription`, as documented in its [iOS setup](https://capacitorjs.com/docs/apis/geolocation#ios). Both describe the existing optional Near me lookup and its BigDataCloud disclosure. Wayfinder does not enable background location or request Always authorization. The signed archive audit checks the purpose strings against reviewed source before delivery.
 

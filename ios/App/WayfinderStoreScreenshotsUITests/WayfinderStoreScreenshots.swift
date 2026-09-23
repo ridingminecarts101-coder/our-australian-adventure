@@ -52,11 +52,26 @@ final class WayfinderStoreScreenshots: XCTestCase {
         XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", "Unlocked")).count, 0,
                        "The private screenshot account must not already own the eight packs")
         capture("06-paid-collections")
-        for (name, slug) in products {
+        for (index, product) in products.enumerated() {
+            let (name, slug) = product
+            if index == 1 {
+                let regionalCollections = button(containing: "Continent-specific collections")
+                XCTAssertTrue(scrollTo(regionalCollections), "The regional collection picker was not reachable")
+                regionalCollections.tap()
+                XCTAssertTrue(app.staticTexts["Continent-specific collections"].waitForExistence(timeout: 10),
+                              "The regional collection dialog did not open")
+                XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", "Mobile app")).count, 0,
+                               "The native regional purchase rows are unavailable; do not submit a store screenshot")
+                XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", "Unlocked")).count, 0,
+                               "The private screenshot account must not already own the regional packs")
+            }
             let label = app.staticTexts[name]
             XCTAssertTrue(scrollTo(label), "Missing visible IAP row: \(name)")
             capture("iap-\(slug)")
         }
+        let closeCollections = button(containing: "Close continent collections")
+        XCTAssertTrue(scrollTo(closeCollections, swipeUp: false), "The regional collection dialog could not be closed")
+        closeCollections.tap()
         adventures.tap()
         let oceania = button(containing: "Oceania")
         XCTAssertTrue(oceania.waitForExistence(timeout: 15))
@@ -125,10 +140,10 @@ final class WayfinderStoreScreenshots: XCTestCase {
         capture(file)
     }
 
-    private func scrollTo(_ element: XCUIElement) -> Bool {
+    private func scrollTo(_ element: XCUIElement, swipeUp: Bool = true) -> Bool {
         for _ in 0..<10 {
             if element.exists && element.isHittable { return true }
-            app.swipeUp()
+            if swipeUp { app.swipeUp() } else { app.swipeDown() }
         }
         return element.exists && element.isHittable
     }
