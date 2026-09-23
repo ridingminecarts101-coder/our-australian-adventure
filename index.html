@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#8c3d1f" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#191512" media="(prefers-color-scheme: dark)">
-<meta name="description" content="Wayfinder — 5,300+ real places worth going, ticked off together.">
+<meta name="description" content="Wayfinder — 5,400+ real places worth going, ticked off together.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Wayfinder">
@@ -135,6 +135,10 @@
       <h2 id="passportName">Traveller</h2>
       <div id="passportTotals" class="passport-totals"></div>
     </div>
+    <details id="achievementsPanel" class="passport-achievements">
+      <summary>Achievements <span id="achCount" class="muted"></span></summary>
+      <div id="achList" class="achlist"></div>
+    </details>
     <h2>Stamps</h2>
     <p class="muted">A country earns its stamp the first time you complete something in it.</p>
     <div id="stampGrid" class="stampgrid"></div>
@@ -188,16 +192,12 @@
 
     <h2>Our numbers</h2>
     <div id="usStats" class="usstats"></div>
-    <h2>Achievements</h2>
-    <div id="achList" class="achlist"></div>
-    <h2>Sharing</h2>
-    <p class="muted">Your list always belongs to you. A group can see only the progress you choose to share.</p>
-    <div id="groupPanel" class="settings"></div>
-
     <h2>Paid collections</h2>
     <p class="muted">Unlock hidden gems by continent, or choose All continents for
        every gem and the exclusive Antarctica collection.</p>
     <div id="storePanel" class="storelist"></div>
+    <button id="continentPacksBtn" class="btn-ghost wide" aria-haspopup="dialog" aria-controls="continentPacksSheet">Continent-specific collections</button>
+    <p id="storeFinePrint" class="fineprint"></p>
     <button id="restoreBtn" class="btn-ghost">Restore purchases</button>
     <p id="storeStatus" class="muted" role="status" aria-live="polite"></p>
     <div id="previewRow" class="settings hidden">
@@ -205,6 +205,10 @@
       <p class="fineprint">Unlocks the paid entries on this device so you can read
          them. Not a purchase, and it disappears once the app is on a store.</p>
     </div>
+
+    <h2>Sharing</h2>
+    <p class="muted">Your list always belongs to you. A group can see only the progress you choose to share.</p>
+    <div id="groupPanel" class="settings"></div>
 
     <h2>Settings</h2>
     <div class="settings">
@@ -242,6 +246,18 @@
     <button class="tab" data-tab="tab-community" aria-current="false"><span>🗺️</span>Community</button>
     <button class="tab" data-tab="tab-me" aria-current="false"><span>❤️</span>Me</button>
   </nav>
+</div>
+
+<!-- Continent packs stay available without crowding the main Me screen. -->
+<div id="continentPacksSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="continentPacksTitle" tabindex="-1">
+  <div class="sheet-backdrop" data-packclose></div>
+  <div class="sheet-card">
+    <button class="sheet-close" data-packclose aria-label="Close continent collections">✕</button>
+    <h2 id="continentPacksTitle">Continent-specific collections</h2>
+    <p class="muted">Choose one continent at a time. All Continents on the Me screen includes every collection and Antarctica.</p>
+    <div id="continentStorePanel" class="storelist"></div>
+    <p id="continentStoreStatus" class="muted" role="status" aria-live="polite"></p>
+  </div>
 </div>
 
 <!-- ───────────────────────── Detail sheet ───────────────────────── -->
@@ -309,6 +325,7 @@
 <script src="config.js"></script>
 <script src="countries.js"></script>
 <script src="store.js"></script>
+<script src="booking-links.js"></script>
 <script src="partners.js"></script>
 <script src="land.js"></script>
 <script src="world.js"></script>

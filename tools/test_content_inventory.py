@@ -1,4 +1,4 @@
-"""Boundary checks for the exact 20% content-planning arithmetic."""
+"""Checks for content inventory and optional historical planning arithmetic."""
 import os
 import sys
 import unittest
@@ -72,7 +72,7 @@ class AdditionsNeededTests(unittest.TestCase):
         self.assertEqual(thin[0][0], 'note')
         self.assertIn('BB/Saint Andrew: 2', thin[0][3])
 
-    def test_do_not_travel_gem_shortfall_stays_visible_without_becoming_filler_quota(self):
+    def test_zero_gem_gaps_are_informational_without_becoming_filler_quota(self):
         check_quality.findings.clear()
         check_quality.check_gem_coverage([
             {'country': 'AF', 'continent': 'Asia', 'hidden_gem': False},
@@ -83,6 +83,7 @@ class AdditionsNeededTests(unittest.TestCase):
         ordinary = [f for f in check_quality.findings
                     if f[1] == 'country gem coverage']
         self.assertEqual(held[0][0], 'note')
+        self.assertEqual(ordinary[0][0], 'note')
         self.assertTrue(any(line.startswith('AF:') for line in held[0][3]))
         self.assertTrue(any(line.startswith('FJ:') for line in ordinary[0][3]))
 
@@ -95,7 +96,8 @@ class AdditionsNeededTests(unittest.TestCase):
         ])
         ordinary = next(f for f in check_quality.findings
                         if f[1] == 'country gem coverage')
-        self.assertTrue(any(line.startswith('FJ: 0/1;') for line in ordinary[3]))
+        self.assertEqual(ordinary[0], 'note')
+        self.assertTrue(any(line.startswith('FJ: 0/1 ') for line in ordinary[3]))
 
     def test_unknown_cost_is_neither_cheap_nor_proven_expensive(self):
         rows = [{'country': 'FJ', 'admin1': 'Central Division',

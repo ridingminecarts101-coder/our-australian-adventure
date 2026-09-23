@@ -2245,18 +2245,21 @@ async function deleteOwnedGroup(groupId) {
  */
 let storeStatusOwner = null;
 function setStoreStatus(message) {
-  const status = $('#storeStatus');
-  if (!status) return;
   storeStatusOwner = userId;
-  status.textContent = message;
+  for (const selector of ['#storeStatus', '#continentStoreStatus']) {
+    const status = $(selector);
+    if (status) status.textContent = message;
+  }
 }
 
 function renderStore() {
   const el = $('#storePanel');
   if (!el) return;
-  const status = $('#storeStatus');
-  if (status && storeStatusOwner !== userId) {
-    status.textContent = '';
+  if (storeStatusOwner !== userId) {
+    for (const selector of ['#storeStatus', '#continentStoreStatus']) {
+      const status = $(selector);
+      if (status) status.textContent = '';
+    }
     storeStatusOwner = userId;
   }
   const restore = $('#restoreBtn');
@@ -2273,7 +2276,7 @@ function renderStore() {
   const packs = sellablePacks(ADV);
   const hasAll = ownsPack('all');
 
-  el.innerHTML = packs.map(p => {
+  const packRow = p => {
     const n = counts[p.slug] || 0;
     const got = ownsPack(p.slug);
     const sub = p.slug === 'all'
@@ -2289,10 +2292,25 @@ function renderStore() {
               ? '<span class="packowned">Mobile app</span>'
               : `<button class="btn-buy" data-buy="${esc(p.slug)}"${Billing.busy ? ' disabled' : ''}>${esc(priceFor(p.slug))}</button>`}
     </div>`;
-  }).join('') + (hasAll ? '' :
-    '<p class="fineprint">One payment for your account, with no subscription. ' +
-    'The all-continents bundle includes every hidden gem, Antarctica and future additions. ' +
-    'Travel, admission and guide fees are separate.</p>');
+  };
+  el.innerHTML = packs.filter(p => p.slug === 'all').map(packRow).join('');
+  $('#storeFinePrint').textContent = hasAll ? ''
+    : 'One payment for your account, with no subscription. The all-continents bundle includes every hidden gem, Antarctica and future additions. Travel, admission and guide fees are separate.';
+  $('#storeFinePrint').classList.toggle('hidden', hasAll);
+  const continentPanel = $('#continentStorePanel');
+  if (continentPanel) {
+    const focusedBuy = typeof continentPanel.contains === 'function'
+      && continentPanel.contains(document.activeElement)
+      && document.activeElement.dataset?.buy;
+    continentPanel.innerHTML = packs.filter(p => p.slug !== 'all').map(packRow).join('');
+    // Billing changes busy state while the store sheet is open. Replacing the
+    // tapped button otherwise strands keyboard focus outside the modal.
+    if (focusedBuy) {
+      const replacement = [...continentPanel.querySelectorAll('[data-buy]')]
+        .find(b => b.dataset.buy === focusedBuy && !b.disabled);
+      (replacement || $('#continentPacksSheet button[data-packclose]'))?.focus();
+    }
+  }
 }
 
 // Buying, from wherever the button was pressed.
@@ -2314,6 +2332,9 @@ async function buyPack(slug) {
     : 'Purchase verified for this Wayfinder account. Collection unlocked.');
   toast(res.simulated ? 'Unlocked (simulated)' : 'Unlocked. Enjoy.');
   renderAll();
+  const packsSheet = $('#continentPacksSheet');
+  if (packsSheet && !packsSheet.classList.contains('hidden'))
+    hideManagedDialog('#continentPacksSheet');
   if (openId !== null) renderSheet(openId);
 }
 
@@ -3693,6 +3714,7 @@ function handleDialogKeydown(event) {
     event.preventDefault();
     if (dialog.id === 'lightbox') closeLightbox();
     else if (dialog.id === 'photoBackupSheet') window.WayfinderPhotoTransfer.close();
+    else if (dialog.id === 'continentPacksSheet') hideManagedDialog('#continentPacksSheet');
     else if (dialog.id === 'recSheet') closeRecSheet();
     else if (dialog.id === 'tripSheet') closeTripSheet();
     else closeSheet();
@@ -3816,14 +3838,14 @@ const ACHIEVEMENTS = [
   ['⭐', 'Critics',          'Rate 20 adventures',                             d => d.ratings >= 20],
 ];
 
-function achievementData() {
+function achievementData(owned = progress) {
   const d = { done: 0, gems: 0, states: 0, countries: 0, hard: 0, free: 0, memories: 0, ratings: 0, dogs: 0, tags: new Map() };
   const states = new Set();
   const countries = new Set();
   const continents = new Set();
   for (const a of ADV) {
     if (!countable(a)) continue;
-    const r = row(a.id);
+    const r = owned.get(a.id) || { completed: false, rating: null, memory: null };
     if (r.memory) d.memories++;
     if (r.rating) d.ratings++;
     if (!r.completed) continue;
@@ -3850,6 +3872,8 @@ function achievementData() {
 
 function renderMe() {
   const d = achievementData();
+  const passportAchievements = progressView === 'group'
+    ? achievementData(personalProgress) : d;
   const rated = ADV.map(a => row(a.id).rating).filter(Boolean);
   const avg = rated.length ? (rated.reduce((s, n) => s + n, 0) / rated.length).toFixed(1) : '—';
   const shortlisted = [...progress.values()].filter(r => r.shortlisted && !r.completed).length;
@@ -3887,10 +3911,12 @@ function renderMe() {
 
   // An achievement nobody can reach is not an achievement, it is a nag. The
   // optional fifth element says whether it applies at all right now.
-  $('#achList').innerHTML = ACHIEVEMENTS
-    .filter(([, , , , available]) => !available || available(d))
+  const availableAchievements = ACHIEVEMENTS
+    .filter(([, , , , available]) => !available || available(passportAchievements));
+  $('#achCount').textContent = `${availableAchievements.filter(([, , , test]) => test(passportAchievements)).length} / ${availableAchievements.length}`;
+  $('#achList').innerHTML = availableAchievements
     .map(([icon, name, desc, test]) =>
-      `<div class="ach ${test(d) ? '' : 'locked'}">
+      `<div class="ach ${test(passportAchievements) ? '' : 'locked'}">
          <span class="ach-icon">${icon}</span>
          <div><b>${esc(name)}</b><span>${esc(typeof desc === 'function' ? desc() : desc)}</span></div>
        </div>`).join('');
@@ -3948,8 +3974,7 @@ function renderSheet(id) {
     : (ph.length
       ? 'Tap a photo to see it full size. New photos use this browser’s site storage on this device; browser retention is best effort.'
       : 'Photos are resized and saved in this browser’s site storage on this device. Browser retention is best effort, and clearing site data removes them. They are not synced to other devices.');
-  // null unless an affiliate id is configured and this is the kind of thing
-  // anybody books. See partners.js.
+  // Only reviewed products matched to this adventure can appear. See partners.js.
   const book = bookingLink(a);
 
   // Site-specific operational holds remain explicitly browseable so an old tick,
@@ -4040,14 +4065,15 @@ function renderSheet(id) {
         <button class="btn-ghost" data-act="short">${r.shortlisted ? '⭐ On shortlist' : '☆ Add to shortlist'}</button>
         <a class="btn-ghost" href="${maps}" target="_blank" rel="noopener">📍 ${IS_IOS ? 'Apple Maps' : 'Open in Maps'}</a>
       </div>
+      ${book ? `<a class="btn-ghost booking" href="${esc(book.url)}" target="_blank" rel="noopener noreferrer nofollow sponsored">
+        ↗ ${esc(book.label)}
+      </a>
+      <p class="fineprint"><strong>${esc(book.title)}</strong><br>${esc(book.details)} ${esc(book.note)}</p>
+      <p class="fineprint disclosure">${esc(BOOKING_DISCLOSURE)}</p>` : ''}
       <button class="btn-ghost" data-act="share">↗ Share this adventure</button>
       ${TOURISM[a.admin1] ? `<a class="btn-ghost" href="${TOURISM[a.admin1]}" target="_blank" rel="noopener">
         Check current access on ${esc(a.admin1 === 'AUS' ? 'australia.com' : regionName(a) + ' tourism')}
       </a>` : ''}
-      ${book ? `<a class="btn-ghost booking" href="${esc(book.url)}" target="_blank" rel="noopener nofollow sponsored">
-        ↗ Find a tour or ticket on ${esc(book.site)}
-      </a>
-      <p class="fineprint disclosure">${esc(BOOKING_DISCLOSURE)}</p>` : ''}
     </div>
 
     <h3>Add to a trip</h3>
@@ -4368,6 +4394,9 @@ function wireUI() {
 
   $('#privacyBtn').onclick = () => window.location.assign('privacy.html');
   $('#supportBtn').onclick = () => window.location.assign('support.html');
+  $('#continentPacksBtn').onclick = () => showManagedDialog('#continentPacksSheet');
+  $$('#continentPacksSheet [data-packclose]').forEach(b =>
+    b.onclick = () => hideManagedDialog('#continentPacksSheet'));
 
   // Only offered while there is no real store to buy from.
   $('#previewBtn').onclick = () => {
@@ -5288,7 +5317,7 @@ function showAccountLock(message = '') {
 
 function hideAndClearPrivateOverlays() {
   if (window.WayfinderPhotoTransfer) window.WayfinderPhotoTransfer.close(true);
-  for (const id of ['#sheet', '#tripSheet', '#recSheet', '#lightbox']) {
+  for (const id of ['#sheet', '#tripSheet', '#recSheet', '#continentPacksSheet', '#lightbox']) {
     const overlay = $(id);
     if (overlay) overlay.classList.add('hidden');
   }
