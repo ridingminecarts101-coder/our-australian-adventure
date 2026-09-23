@@ -1,5 +1,12 @@
 # Making Wayfinder pay, without turning it into something else
 
+> Historical brainstorming. The early catalogue counts, example prices and print-book
+> concept below are not current release facts or approved plans. As of 23 September
+> 2026, Wayfinder has 5,412 active adventures and 1,156 hidden gems. The eight
+> one-time products are AUD $14.99 for All Continents and AUD $2.99 per existing
+> continent pack; Antarctica is bundle-only. Memory photos remain on the user's
+> phone, with user-controlled export/import, and are not uploaded by RL Applications.
+
 Wayfinder is a curated list of 2,356 real places worth going to, which two or
 three people tick off together. That sentence is the constraint on everything
 below. A change that makes more money but makes that sentence less true is not
@@ -94,9 +101,11 @@ the only thing the string affects is what a browser shows.
 
 ## 2. Reviewed Viator experience links
 
-The owner registered a Viator partner account on 23 September 2026 and reports
-account verification is pending. The signed-in link builder generated public
-partner ID `P00321485`, campaign `wayfinder`, medium `link`, mcid `42383`.
+The owner verified the Viator partner account and authorised Basic Affiliate API
+access. The production API's product URLs include public partner ID `P00321485`
+and attribution parameters. Wayfinder preserves those returned URLs exactly;
+it does not invent or append tracking fields. Partner payout readiness has not
+been independently confirmed.
 
 The separate `codex/viator-links` branch prepares this feature; it is not in the
 1.0.7 build submitted to Apple. `viatorEnabled` remains false until account
@@ -141,7 +150,8 @@ part of Prodigi) so no stock is ever held.
 Wayfinder already holds every input that book is made of, and has since before
 this was a revenue idea:
 
-- photos, per adventure, already uploaded and already scoped to the person
+- photos, per adventure, stored privately on the person's phone (a printed-book
+  service would require a new, explicit, user-initiated transfer design)
 - the memory written against each one
 - the star rating
 - the date and time it was ticked

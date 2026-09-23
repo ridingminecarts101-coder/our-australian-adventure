@@ -30,13 +30,21 @@ function bookingLink(a) {
       || !/^\/tours\/[^/]+\/[^/]+\/d\d+-[A-Za-z0-9_]+$/.test(url.pathname)
       || !url.pathname.endsWith('-' + entry.product_code)) return null;
   const p = partnerConfig();
-  url.searchParams.set('pid', p.viatorPartnerId);
-  url.searchParams.set('mcid', '42383');
-  url.searchParams.set('medium', 'link');
-  // Fixed campaign only: no account ID, email, progress or device data.
-  url.searchParams.set('campaign', 'wayfinder');
+  let affiliate;
+  try { affiliate = new URL(entry.affiliate_url); } catch { return null; }
+  if (affiliate.protocol !== 'https:' || affiliate.hostname !== 'www.viator.com'
+      || affiliate.username || affiliate.password || affiliate.port || affiliate.hash
+      || !/^\/(?:[a-z]{2}-[A-Z]{2}\/)?tours\/[^/]+\/[^/]+\/d\d+-[A-Za-z0-9_]+$/.test(affiliate.pathname)
+      || !affiliate.pathname.endsWith('-' + entry.product_code)
+      || [...affiliate.searchParams].length !== 4
+      || affiliate.searchParams.get('pid') !== p.viatorPartnerId
+      || affiliate.searchParams.get('mcid') !== '42383'
+      || affiliate.searchParams.get('medium') !== 'api'
+      || affiliate.searchParams.get('api_version') !== '2.0') return null;
+  // Viator says its API productUrl contains affiliate attribution. Keep that
+  // URL byte-for-byte; rebuilding or extending it can lose commission credit.
   return {
-    url: url.toString(), site: 'Viator',
+    url: entry.affiliate_url, site: 'Viator',
     details: entry.match_note,
     title: entry.product_title,
     label: entry.match_type === 'guided_option' ? 'View matching option on Viator' : 'View experience on Viator',

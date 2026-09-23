@@ -74,11 +74,11 @@ already inside the character limits:
 
 **Short description** (80 max, 79 used):
 
-> 5,300+ adventures across 228 countries and territories. Tick them off together.
+> 5,400+ adventures across 228 countries and territories. Tick them off together.
 
 **Full description** (4,000 max):
 
-> Wayfinder is a list of places that are actually worth the trip — 5,300+ of
+> Wayfinder is a list of places that are actually worth the trip — 5,400+ of
 > them, across 228 countries and territories, with notes on what each adventure involves, how
 > hard it is, plus pricing and timing details where verified.
 >

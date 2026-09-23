@@ -19,4 +19,6 @@ with tempfile.TemporaryDirectory(prefix='wayfinder-booking-registry-') as temp:
  check({'product_status_evidence':'https://api.viator.com/partner/products/other'},False)
  check({'product_status_checked_at':'2099-01-01T00:00:00+00:00'},False)
  check({'verification':'product_api','evidence_url':'https://api.viator.com/partner/products/'+record['product_code']},True)
-print('7 booking-registry checks passed: ACTIVE product, current/future schedule and dated evidence required')
+ check({'affiliate_url':record['affiliate_url']+'&account=private'},False)
+ check({'affiliate_url':record['affiliate_url'].replace('pid=P00321485','pid=P99999999')},False)
+print('9 booking-registry checks passed: ACTIVE product, current/future schedule, dated evidence and intact affiliate URL required')

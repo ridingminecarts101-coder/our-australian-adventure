@@ -52,7 +52,7 @@ run(`ADV=catalogue; owned=new Set(['all']); userId='test-owner'; who='Test trave
 run('renderSheet(529)');
 const html = elements.get('#sheetBody').innerHTML;
 assert.match(html, /View experience on Viator/);
-assert.match(html, /pid=P00321485&amp;mcid=42383&amp;medium=link&amp;campaign=wayfinder/);
+assert.match(html, /mcid=42383&amp;pid=P00321485&amp;medium=api&amp;api_version=2.0/);
 assert.match(html, /underground glowworm boat ride/);
 assert.ok(html.indexOf('data-act="short"') < html.indexOf('class="btn-ghost booking"'));
 assert.ok(html.indexOf('class="btn-ghost booking"') < html.indexOf('data-act="share"'));

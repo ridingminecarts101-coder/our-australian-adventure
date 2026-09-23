@@ -36,8 +36,8 @@ entries have more results beyond that limit. No whole Viator inventory was inges
   suitability and date availability.
 - Locked gems, paused adventures and do-not-travel country advisories suppress
   links. Changing the adventure title or place invalidates its pinned match.
-- Attribution uses public partner ID P00321485 and fixed campaign wayfinder.
-  No Wayfinder account ID, email, progress, location or photo is appended. No
+- Attribution uses Viator's unchanged API product URL with public partner ID
+  P00321485. No Wayfinder account ID, email, progress, location or photo is appended. No
   Viator script, pixel or private API credential ships in the client.
 - Catalogue/link assets remain public offline assets. Purchase gating controls
   the UI; it is not encryption of the content files.

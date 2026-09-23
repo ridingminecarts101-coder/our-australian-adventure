@@ -7,7 +7,8 @@ const base = { country: 'NZ', place: 'Waitomo Glowworm Caves', status: 'verified
   adventure_title: 'Float under the glowworms in the Waitomo Caves',
   match_note: 'Guided visit includes the underground boat ride.',
   match_type: 'exact', product_code: '3930P3',
-  viator_url: 'https://www.viator.com/tours/Waitomo/Waitomo-Glowworm-Caves-Guided-Tour/d27469-3930P3' };
+  viator_url: 'https://www.viator.com/tours/Waitomo/Waitomo-Glowworm-Caves-Guided-Tour/d27469-3930P3',
+  affiliate_url: 'https://www.viator.com/en-AU/tours/Waitomo/Waitomo-Glowworm-Caves-Guided-Tour/d27469-3930P3?mcid=42383&pid=P00321485&medium=api&api_version=2.0' };
 const adventure = {id: 529, country: 'NZ', place: base.place, title: base.adventure_title};
 function context(change = {}, config = {}, flags = {}) {
   const c = { URL, window: null, OAA_CONFIG: { partners: {
@@ -21,8 +22,9 @@ function link(c, a = adventure) { c.a = a; return vm.runInContext('bookingLink(a
 function absent(c,a) { assert.equal(link(c,a),null); checks++; }
 const good = link(context());
 const u = new URL(good.url);
-assert.equal(u.search, '?pid=P00321485&mcid=42383&medium=link&campaign=wayfinder'); checks++;
-assert.equal(u.pathname, new URL(base.viator_url).pathname); checks++;
+assert.equal(good.url, base.affiliate_url, 'the API productUrl must be returned unchanged'); checks++;
+assert.equal(u.search, '?mcid=42383&pid=P00321485&medium=api&api_version=2.0'); checks++;
+assert.equal(u.pathname.replace('/en-AU', ''), new URL(base.viator_url).pathname); checks++;
 assert.equal(good.label, 'View experience on Viator'); checks++;
 assert.match(link(context({match_type:'guided_option'})).note,/Check the itinerary and options/); checks++;
 absent(context({}, {viatorEnabled:false}));
@@ -47,6 +49,14 @@ for (const viator_url of [
  'https://www.viator.com/searchResults/all?text=Waitomo',
  base.viator_url+'?account=private', base.viator_url+'#private',
 ]) absent(context({viator_url}));
+for (const affiliate_url of [
+  'javascript:alert(1)', base.affiliate_url.replace('https:', 'http:'),
+  base.affiliate_url.replace('www.viator.com', 'www.viator.com.evil.test'),
+  base.affiliate_url.replace('P00321485', 'P99999999'),
+  base.affiliate_url.replace('medium=api', 'medium=link'),
+  base.affiliate_url + '&email=private@example.test',
+  base.affiliate_url + '#private',
+]) absent(context({affiliate_url}));
 const noRegistry = context(); delete noRegistry.VIATOR_BOOKING_LINKS; absent(noRegistry);
 const app = fs.readFileSync('app.js','utf8');
 assert.match(app,/rel="noopener noreferrer nofollow sponsored"/); checks++;
