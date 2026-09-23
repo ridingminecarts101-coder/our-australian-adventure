@@ -425,11 +425,11 @@ def check_field_health(rows):
 
 
 def check_gem_coverage(rows):
-    """Paid discoveries must form at least 20% of each country and pack.
+    """Report places and packs that currently have no genuine hidden gems.
 
-    This intentionally reports the current backlog. Editors must not satisfy it
-    by reclassifying famous sights or adding filler; any evidence-based quality
-    exception belongs in the research record and remains visible here.
+    Gem counts are editorial context, not a fixed ratio or release gate. A
+    smaller catalogue may reasonably contain fewer gems, and editors should
+    add only worthwhile discoveries rather than filler chosen to meet a quota.
     """
     rows = [a for a in rows if is_active(a)]
     by_country = collections.defaultdict(list)
@@ -444,37 +444,34 @@ def check_gem_coverage(rows):
                f'{len(missing)} registry countries or territories have no adventures',
                missing[:12])
 
-    low_countries, safety_held = [], []
+    zero_countries, safety_held = [], []
     for country, items in sorted(by_country.items()):
         gems = sum(a['hidden_gem'] for a in items)
-        if gems * 5 < len(items):
-            needed = max(0, -((gems * 5 - len(items)) // 4))
-            line = (f'{country}: {gems}/{len(items)}; mathematical shortfall '
-                    f'{needed} genuine gem-only row{("s" if needed != 1 else "")}')
+        if not gems:
+            line = f'{country}: 0/{len(items)} genuine hidden gems'
             if ADVISORIES.get(country, ('', ''))[0] == 'avoid':
-                safety_held.append(line + '; do not fill while countrywide advice is do not travel')
+                safety_held.append(
+                    line + '; countrywide advice is do not travel, so no gap-filling is expected')
             else:
-                low_countries.append(line)
-    if low_countries:
-        report('problem', 'country gem coverage',
-               f'{len(low_countries)} {"country is" if len(low_countries) == 1 else "countries are"} below 20% genuine hidden gems',
-               low_countries[:12])
+                zero_countries.append(line)
+    if zero_countries:
+        report('note', 'country gem coverage',
+               f'{len(zero_countries)} populated {"country has" if len(zero_countries) == 1 else "countries have"} no genuine hidden gems yet',
+               zero_countries[:12])
     if safety_held:
         report('note', 'safety-held country gem coverage',
-               f'{len(safety_held)} do-not-travel countries are below 20%; the shortfall remains visible without unsafe filler',
+               f'{len(safety_held)} do-not-travel {"country has" if len(safety_held) == 1 else "countries have"} no genuine hidden gems; the gap remains informational',
                safety_held[:12])
 
-    low_continents = []
+    zero_continents = []
     for continent, items in sorted(by_continent.items()):
         gems = sum(a['hidden_gem'] for a in items)
-        if gems * 5 < len(items):
-            needed = max(0, -((gems * 5 - len(items)) // 4))
-            low_continents.append(
-                f'{continent}: {gems}/{len(items)}; mathematical shortfall {needed} genuine gem-only rows')
-    if low_continents:
-        report('problem', 'continent-pack gem coverage',
-               f'{len(low_continents)} continent packs are below 20% genuine hidden gems',
-               low_continents)
+        if not gems:
+            zero_continents.append(f'{continent}: 0/{len(items)} genuine hidden gems')
+    if zero_continents:
+        report('note', 'continent-pack gem coverage',
+               f'{len(zero_continents)} populated continent {"pack has" if len(zero_continents) == 1 else "packs have"} no genuine hidden gems yet',
+               zero_continents)
 
 
 def main():

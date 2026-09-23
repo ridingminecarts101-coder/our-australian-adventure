@@ -1,8 +1,9 @@
 """Report Wayfinder country and continent coverage from generated content.
 
 This is an editorial planning check. It never rewrites source rows or ids. The
-``minimum_gem_additions`` figure assumes every added row is a genuine hidden
-gem and solves (gems + x) / (entries + x) >= 20%.
+``minimum_gem_additions`` field preserves an optional historical planning
+benchmark: it assumes every added row is a genuine hidden gem and solves
+(gems + x) / (entries + x) >= 20%. It is not a content or release requirement.
 
     python tools/content_inventory.py
     python tools/content_inventory.py --csv
@@ -52,7 +53,7 @@ def load_countries():
 
 
 def additions_needed(entries, gems):
-    """Minimum gem-only rows needed for an exact one-in-five share.
+    """Gem-only rows needed for the optional historical one-in-five benchmark.
 
     Integer arithmetic avoids floating-point overstatement at exact boundaries.
     Solving 5(g + x) >= n + x gives x >= (n - 5g) / 4.
@@ -132,13 +133,13 @@ def print_summary(inventory):
           f"{len(UN_STATE_CODES & populated_codes)}/{len(UN_STATE_CODES)}")
     print("UN member/observer states absent from registry: " +
           " ".join(sorted(UN_STATE_CODES - registry_codes)))
-    print("minimum new gem-only rows for populated countries to reach 20%: "
+    print("optional historical 20% planning benchmark, gem-only rows for populated countries: "
           f"{sum(r['minimum_gem_additions'] for r in inventory if r['entries'] and r['advisory'] != 'avoid')} "
-          "outside countrywide do-not-travel holds")
+          "outside countrywide do-not-travel holds; not a requirement")
     held = [r for r in inventory
             if r['entries'] and r['advisory'] == 'avoid' and r['minimum_gem_additions']]
-    print("safety-held mathematical gem shortfall: "
-          f"{sum(r['minimum_gem_additions'] for r in held)} rows across {len(held)} countries; do not fill for quota")
+    print("optional historical benchmark in safety-held countries: "
+          f"{sum(r['minimum_gem_additions'] for r in held)} rows across {len(held)} countries; informational only")
     print()
     for continent in CONTINENTS:
         subset = [r for r in inventory if r["continent"] == continent]

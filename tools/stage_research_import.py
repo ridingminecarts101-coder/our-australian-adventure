@@ -654,17 +654,17 @@ def render_report(canonical, staged, batches, canonical_hash, ids_hash,
                       f"{total} adventures; {gems} gems; {100*gems/total:.1f}% gem share.", ""]
         lines.append("")
 
-    lines += ["## Proposal effect after strict reclassifications", "",
-              "These figures apply every structurally valid addition/correction for arithmetic only. They do not mean the proposals are approved or recommend adding activities in countries under an `avoid` advisory. Wayfinder retains existing historical browse rows with warnings unless a site-specific closure or harm decision is approved.", ""]
+    lines += ["## Optional historical planning benchmark after strict reclassifications", "",
+              "These figures apply every structurally valid addition/correction to the former 20% planning benchmark for arithmetic and backwards-compatible reporting only. The benchmark is not a catalogue requirement, quality gate or recommendation to add activities. The figures do not mean the proposals are approved or recommend adding activities in countries under an `avoid` advisory. Wayfinder retains existing historical browse rows with warnings unless a site-specific closure or harm decision is approved.", ""]
     short = []
     for code in sorted(projected):
         total, gems = projected[code]
         need = additions_needed(total, gems)
         if total and need:
             short.append((country_continent.get(code, "Unknown"), code, total, gems, need))
-    lines += [f"Countries below 20% after the staged strict reclassifications: **{len(short)}**.",
-              f"Minimum additional genuine gem rows needed: **{sum(x[4] for x in short)}**.", "",
-              "| Continent | Country | Advisory | Projected adventures | Projected gems | Genuine additions needed |",
+    lines += [f"Countries below the optional historical 20% benchmark after the staged strict reclassifications: **{len(short)}**.",
+              f"Gem-only rows in the benchmark calculation: **{sum(x[4] for x in short)}**.", "",
+              "| Continent | Country | Advisory | Projected adventures | Projected gems | Benchmark gem-only rows |",
               "|---|---|---|---:|---:|---:|"]
     for continent, code, total, gems, need in short:
         name = registry.get(code, (code,))[0]

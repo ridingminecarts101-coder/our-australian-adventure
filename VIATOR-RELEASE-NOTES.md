@@ -1,68 +1,67 @@
 # Viator links — prepared future update
 
-This branch is separate from the owner's submitted iOS 1.0.7 (build 7). No
-production publication or Apple review change is part of this preparation.
+Prepared on 23 September 2026, separately from submitted iOS 1.0.7 (build 7).
+No production publication or Apple submission change occurred.
 
-The first registry contains **176 adventure matches, 128 distinct products and
-61 countries/territories**, checked on 23 September 2026. The separate owner
-review list contains **46 proposed new ideas across 36 countries**. None were
-added to the catalogue automatically. This is a first batch, not exhaustive
-coverage of all 5,341 active adventures or Viator inventory.
+The catalogue includes 45 suitable owner-approved additions and 18 new gems.
+One original proposal was excluded because the product did not establish the
+specific Certovka canal experience. The owner removed the forced 20% quota:
+use genuine discoveries and worthwhile, reasonably balanced paid packs, without
+filler or relabelling famous attractions as gems.
+
+All 5,386 active adventures have dated targeted production API search records.
+The registry contains 272 individually verified adventure matches, 208 ACTIVE
+products and 87 countries/territories. Product-page or full-product API itinerary
+review establishes the activity match; a separate API status check rejects
+inactive products. Search snippets alone are insufficient. Eighty researched
+adventure links were excluded after their 61 products were inactive or unavailable
+through the API. Fourteen additional ideas remain in the owner review report.
+
+This is not a complete yes/no determination: 4,597 adventures still have unreviewed
+search candidates, 437 had no result in the recorded searches, and 80 need
+replacement products. Search results cannot establish permanent absence.
+Searches use the named place, retry activity wording on zero results, and filter
+by destination country where mapped. The first 50 results are recorded; 2,631
+entries have more results beyond that limit. No whole Viator inventory was ingested.
 
 ## Behaviour
 
-- Only individually reviewed product-page matches can receive a link. No generic
-  search links, guessed product IDs or automatic catalogue additions.
-- The option appears below Maps / Add to shortlist. Provider name, important tour
-  details and a commission disclosure accompany it. A tour may include several
-  adventures; customers must check the itinerary, options and departure city.
-- Locked gems, paused adventures and country-level do-not-travel advisories
-  suppress the link. A change to the adventure title or place invalidates the
-  stored match until reviewed again.
-- Only the public partner ID and a fixed campaign are added to the product URL.
-  There is no Viator SDK, pixel, account identifier, user photo or API credential
-  in the client. Viator's external website has its own privacy/cookie practices.
-- All current matches are classic adventures. A rendering test checks that a
-  synthetic locked gem suppresses its link and an owned pack reveals it. This
-  is UI purchase gating, not encrypted catalogue secrecy: the existing offline
-  catalogue and any future generated booking registry are public client assets.
-- Tours are physical services booked with Viator/providers. Wayfinder's digital
-  gem purchases continue through the existing Apple/RevenueCat implementation.
+- Only individually reviewed ACTIVE products receive links. No generic search
+  buttons or guessed product IDs.
+- Links appear below Maps / Add to shortlist, with provider name, relevant tour
+  conditions and commission disclosure. Combination tours may be longer than the
+  adventure itself. Customers must check options, departure city, admission,
+  suitability and date availability.
+- Locked gems, paused adventures and do-not-travel country advisories suppress
+  links. Changing the adventure title or place invalidates its pinned match.
+- Attribution uses public partner ID P00321485 and fixed campaign wayfinder.
+  No Wayfinder account ID, email, progress, location or photo is appended. No
+  Viator script, pixel or private API credential ships in the client.
+- Catalogue/link assets remain public offline assets. Purchase gating controls
+  the UI; it is not encryption of the content files.
+- Tours are physical services booked externally. Digital gem purchases retain
+  the existing Apple/RevenueCat purchase path.
 
-## Release steps still required
+## Account and release state
 
-1. Confirm Viator partner readiness. The owner reported verification submitted;
-   a working link builder does not establish programme approval or payout setup.
-2. Review the linked-product registry and owner standby list. Keep proposed new
-   adventures out of the catalogue until the owner accepts them. Recheck exact
-   products before publication; prices/time-slot availability are not cached.
-3. Set `viatorEnabled` to true only for the deliberate release. Regenerate and
-   validate with `python tools/build_booking_links.py --write` then `--check`.
-4. Advance the PWA cache version (currently v63); sync native assets; run the
-   focused booking, access, availability, service-worker and website checks.
-5. The next fresh iOS upload must be **1.0.8 (build 8)**, unless another upload
-   already consumed that pair. Compile/sign and test external-browser opening
-   and return on an iPhone. No native build/device test is claimed by this branch.
-6. Publish the prepared support/privacy changes alongside activation. Reassess
-   App Privacy against the exact implementation; do not silently change the
-   current submitted version's declarations.
-7. For the future store description, explain optional disclosed Viator links,
-   provider handling of bookings/payments/cancellations, and separate gem IAPs.
-   Do not edit the listing currently awaiting review for this dormant feature.
+The owner authorised the API licence and credential creation, verified their
+partner email, and production API requests succeeded. Sandbox and production
+keys are secured outside Git, OneDrive and the app with restricted local access.
+Programme payout readiness is not established by API access.
 
-Apple's guideline 3.1.3(e) addresses physical goods/services consumed outside the
-app; this does not guarantee approval of a future implementation:
-https://developer.apple.com/app-store/review/guidelines/#goods-and-services-outside-of-the-app
+viatorEnabled remains false in this prepared branch until deliberate release.
+Before activation, recheck product status, bump the PWA cache from v63, sync
+native assets and run release checks. The next fresh iOS upload must use 1.0.8
+(build 8), unless another upload has consumed that pair. Signing, iPhone external
+browser open/return testing and submission are separate steps, not claimed here.
+Publish the prepared support/privacy disclosures alongside activation and review
+App Privacy for that exact build.
 
-Viator privacy statement: https://www.viator.com/support/privacyPolicy
+Product status and itinerary checks do not guarantee future dates or operation.
+The app does not quote provider prices or operate bookings/cancellations.
 
-## Scaling research
-
-The first batch is not an exhaustive catalogue search. The coordination report
-retains every remaining active adventure as a research queue. Viator's official
-Affiliate API setup was located in the owner's existing account; its separate
-licence agreement awaits the owner. No API key was generated or copied during
-this preparation. If enabled later, use it only as licensed, keep credentials
-outside Git/OneDrive/client code, and never activate fuzzy suggestions without
-product-level review. Public website/API availability and dated itinerary checks
-do not guarantee that a specific future departure can be booked.
+References:
+- https://docs.viator.com/partner-api/technical/
+- https://partnerresources.viator.com/travel-commerce/affiliate/basic-access/golden-path/
+- https://www.viator.com/support/privacyPolicy
+- https://developer.apple.com/app-store/review/guidelines/#goods-and-services-outside-of-the-app

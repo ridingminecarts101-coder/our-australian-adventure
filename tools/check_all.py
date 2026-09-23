@@ -73,6 +73,7 @@ CHECKS = [
     ('billing',        'check_billing.py',   'prices, account identity and native release guards'),
     ('booking links',  'test_booking_links.js', 'reviewed product matching, paywall/advisory gates and outbound privacy'),
     ('booking registry', 'build_booking_links.py', 'strict product-page registry validation and generated-file freshness'),
+    ('booking evidence', 'test_booking_registry.py', 'inactive products and unverified search suggestions cannot be published as matches'),
     ('booking rendering', 'test_booking_render.js', 'real adventure-sheet links, details, placement and disabled state'),
     ('archive privacy', 'test_archive_privacy.py', 'bundled SDK collection and source manifest mismatch detection'),
     ('bundle access',  'test_bundle_access.js', 'Antarctica exclusivity and locked-content privacy'),

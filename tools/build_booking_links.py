@@ -31,8 +31,15 @@ def build():
         assert r['adventure_title'] == a['title']
         assert a.get('availability', {}).get('status') != 'unavailable'
         assert r['match_type'] in ('exact', 'guided_option')
-        assert r['match_note'].strip() and r['evidence_url'].startswith('https://www.viator.com/tours/')
-        assert r['verification'] == 'product_page'
+        assert r['match_note'].strip()
+        assert r['verification'] in ('product_page', 'product_api')
+        if r['verification'] == 'product_page':
+            assert r['evidence_url'].startswith('https://www.viator.com/tours/')
+        else:
+            assert r['evidence_url'] == 'https://api.viator.com/partner/products/' + r['product_code']
+        assert r['product_status'] == 'ACTIVE', 'Inactive products must never receive a booking link'
+        assert r['product_status_evidence'] == 'https://api.viator.com/partner/products/' + r['product_code']
+        assert datetime.datetime.fromisoformat(r['product_status_checked_at']).date() <= datetime.date.today()
         assert datetime.date.fromisoformat(r['checked_at']) <= datetime.date.today()
         u = urlsplit(r['viator_url'])
         assert u.scheme == 'https' and u.netloc == 'www.viator.com'
