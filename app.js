@@ -2298,7 +2298,19 @@ function renderStore() {
     : 'One payment for your account, with no subscription. The all-continents bundle includes every hidden gem, Antarctica and future additions. Travel, admission and guide fees are separate.';
   $('#storeFinePrint').classList.toggle('hidden', hasAll);
   const continentPanel = $('#continentStorePanel');
-  if (continentPanel) continentPanel.innerHTML = packs.filter(p => p.slug !== 'all').map(packRow).join('');
+  if (continentPanel) {
+    const focusedBuy = typeof continentPanel.contains === 'function'
+      && continentPanel.contains(document.activeElement)
+      && document.activeElement.dataset?.buy;
+    continentPanel.innerHTML = packs.filter(p => p.slug !== 'all').map(packRow).join('');
+    // Billing changes busy state while the store sheet is open. Replacing the
+    // tapped button otherwise strands keyboard focus outside the modal.
+    if (focusedBuy) {
+      const replacement = [...continentPanel.querySelectorAll('[data-buy]')]
+        .find(b => b.dataset.buy === focusedBuy && !b.disabled);
+      (replacement || $('#continentPacksSheet button[data-packclose]'))?.focus();
+    }
+  }
 }
 
 // Buying, from wherever the button was pressed.
@@ -3826,14 +3838,14 @@ const ACHIEVEMENTS = [
   ['⭐', 'Critics',          'Rate 20 adventures',                             d => d.ratings >= 20],
 ];
 
-function achievementData() {
+function achievementData(owned = progress) {
   const d = { done: 0, gems: 0, states: 0, countries: 0, hard: 0, free: 0, memories: 0, ratings: 0, dogs: 0, tags: new Map() };
   const states = new Set();
   const countries = new Set();
   const continents = new Set();
   for (const a of ADV) {
     if (!countable(a)) continue;
-    const r = row(a.id);
+    const r = owned.get(a.id) || { completed: false, rating: null, memory: null };
     if (r.memory) d.memories++;
     if (r.rating) d.ratings++;
     if (!r.completed) continue;
@@ -3860,6 +3872,8 @@ function achievementData() {
 
 function renderMe() {
   const d = achievementData();
+  const passportAchievements = progressView === 'group'
+    ? achievementData(personalProgress) : d;
   const rated = ADV.map(a => row(a.id).rating).filter(Boolean);
   const avg = rated.length ? (rated.reduce((s, n) => s + n, 0) / rated.length).toFixed(1) : '—';
   const shortlisted = [...progress.values()].filter(r => r.shortlisted && !r.completed).length;
@@ -3898,11 +3912,11 @@ function renderMe() {
   // An achievement nobody can reach is not an achievement, it is a nag. The
   // optional fifth element says whether it applies at all right now.
   const availableAchievements = ACHIEVEMENTS
-    .filter(([, , , , available]) => !available || available(d));
-  $('#achCount').textContent = `${availableAchievements.filter(([, , , test]) => test(d)).length} / ${availableAchievements.length}`;
+    .filter(([, , , , available]) => !available || available(passportAchievements));
+  $('#achCount').textContent = `${availableAchievements.filter(([, , , test]) => test(passportAchievements)).length} / ${availableAchievements.length}`;
   $('#achList').innerHTML = availableAchievements
     .map(([icon, name, desc, test]) =>
-      `<div class="ach ${test(d) ? '' : 'locked'}">
+      `<div class="ach ${test(passportAchievements) ? '' : 'locked'}">
          <span class="ach-icon">${icon}</span>
          <div><b>${esc(name)}</b><span>${esc(typeof desc === 'function' ? desc() : desc)}</span></div>
        </div>`).join('');
