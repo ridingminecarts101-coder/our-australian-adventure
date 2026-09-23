@@ -4,7 +4,7 @@ Originally prepared 15 September 2026. Current release receipts in `release-2026
 
 ## iOS version rule
 
-Every new iOS upload uses matching values: internal build **N** has marketing version **1.0.N**. **1.0.7 (build 7)** and the eight purchases are Waiting for Review at the 23 September check, with manual public release selected. **1.0.8 (build 8)** packages PWA v64 for internal TestFlight testing and does not replace the in-review submission. A later upload must use **1.0.9 (build 9)**, including retries. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
+Every new iOS upload uses matching values: internal build **N** has marketing version **1.0.N**. **1.0.7 (build 7)** and the eight purchases are Waiting for Review at the 23 September check, with manual public release selected. **1.0.8 (build 8)** is valid in internal TestFlight. **1.0.9 (build 9)** packages the Passport and Viator layout fixes for the next internal test; it does not replace the in-review submission. A later upload must use **1.0.10 (build 10)**, including retries. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
 
 The Capacitor Geolocation plugin requires both `NSLocationWhenInUseUsageDescription` and `NSLocationAlwaysAndWhenInUseUsageDescription`, as documented in its [iOS setup](https://capacitorjs.com/docs/apis/geolocation#ios). Both describe the existing optional Near me lookup and its BigDataCloud disclosure. Wayfinder does not enable background location or request Always authorization. The signed archive audit checks the purpose strings against reviewed source before delivery.
 

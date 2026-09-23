@@ -338,7 +338,15 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .memory b { font-size: 15px; }
 .memory .card-meta { margin-bottom: 6px; }
-.memory p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
+.memory-open {
+  display: block; width: 100%; padding: 0; border: 0; background: transparent;
+  color: inherit; font: inherit; text-align: left;
+}
+.memory-open .card-meta, .memory-note { display: block; }
+.memory-note { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
+.memory-open:focus-visible, .tripitem-body:focus-visible {
+  outline: 3px solid var(--ochre); outline-offset: 3px; border-radius: 4px;
+}
 .memory .nomemory { color: var(--muted); font-style: italic; }
 
 /* ── World map + place navigation ────────────────────────────────── */
@@ -413,6 +421,7 @@ input, select, textarea { font: inherit; color: inherit; }
   padding: 12px 14px; cursor: pointer; list-style: none; font-weight: 700;
 }
 .passport-achievements summary::-webkit-details-marker { display: none; }
+.passport-achievements #achCount { margin: 0; line-height: 1.2; white-space: nowrap; }
 .passport-achievements summary::after {
   content: '›'; margin-left: auto; color: var(--muted); font-size: 22px;
 }
@@ -501,7 +510,11 @@ input, select, textarea { font: inherit; color: inherit; }
   border-radius: 10px; padding: 9px 10px; margin-bottom: 6px;
 }
 .tripitem.done .card-title { color: var(--muted); text-decoration: line-through; }
-.tripitem-body { flex: 1; min-width: 0; }
+.tripitem-body {
+  flex: 1; min-width: 0; padding: 0; border: 0; background: transparent;
+  color: inherit; font: inherit; text-align: left;
+}
+.tripitem-body .card-title, .tripitem-body .card-meta { display: block; }
 .tripitem-remove { color: var(--muted); font-size: 14px; padding: 4px 6px; flex: none; }
 
 .trippicker { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -747,8 +760,11 @@ input, select, textarea { font: inherit; color: inherit; }
  * that is what it is - the moment it starts competing with "Mark as
  * completed" the app has changed into something else.
  */
-.btn-ghost.booking { border-style: dashed; }
-.fineprint.disclosure { margin: -2px 0 0; opacity: .85; }
+.btn-ghost.booking {
+  border-style: dashed; display: flex; align-items: center;
+  justify-content: space-between; gap: 8px; text-align: left; min-height: 44px;
+}
+.booking-paid { font-size: 11px; font-weight: 700; white-space: nowrap; color: var(--muted); }
 
 
 /* Pull to refresh.

@@ -3143,7 +3143,7 @@ function renderPassport() {
   for (const a of ADV) {
     let t = tally.get(a.country);
     if (!t) tally.set(a.country, t = { total: 0, done: 0, first: null });
-    if (isLocked(a)) continue;               // locked gems count for nothing
+    if (!countable(a)) continue;             // locked and paused rows cannot be completed
     t.total++;
     if (!personalDone(a)) continue;
     t.done++;
@@ -3425,6 +3425,14 @@ function closeTripSheet() {
 function renderTripSheet(id) {
   const t = trips.find(x => x.id === id);
   if (!t) return closeTripSheet();
+  const notesBox = $('#tripNotes');
+  const sameDraft = openTripId === id && notesBox
+    && notesBox.dataset?.ownerId === String(userId || '')
+    && notesBox.dataset?.tripId === String(id)
+    && !$('#tripSheet').classList.contains('hidden');
+  const draft = sameDraft ? {
+    starts: $('#tripStart').value, ends: $('#tripEnd').value, notes: notesBox.value,
+  } : null;
   const items = tripAdventures(t);
   const done = items.filter(a => isDone(a.id)).length;
 
@@ -3441,8 +3449,8 @@ function renderTripSheet(id) {
 
     <h3>Dates</h3>
     <div class="daterow">
-      <label>From<input type="date" id="tripStart" value="${esc(t.starts_on || '')}"></label>
-      <label>To<input type="date" id="tripEnd" value="${esc(t.ends_on || '')}"></label>
+      <label>From<input type="date" id="tripStart" value="${esc(draft?.starts ?? t.starts_on ?? '')}"></label>
+      <label>To<input type="date" id="tripEnd" value="${esc(draft?.ends ?? t.ends_on ?? '')}"></label>
     </div>
 
     <h3>Itinerary</h3>
@@ -3451,17 +3459,17 @@ function renderTripSheet(id) {
         <div class="tripgroup-head">${countryFlag(code)} ${esc(countryName(code))}</div>
         ${list.map(a => `<div class="tripitem ${isDone(a.id) ? 'done' : ''}">
           <button class="tick ${isDone(a.id) ? 'on' : ''}" data-toggle="${a.id}" aria-label="Mark done">✓</button>
-          <div class="tripitem-body" data-open="${a.id}">
-            <div class="card-title">${esc(safeTitle(a))}</div>
-            <div class="card-meta">${esc(a.place)} · ${esc(a.region)}</div>
-          </div>
+          <button type="button" class="tripitem-body" data-open="${a.id}" aria-label="Open ${esc(safeTitle(a))}">
+            <span class="card-title">${esc(safeTitle(a))}</span>
+            <span class="card-meta">${esc(a.place)} · ${esc(a.region)}</span>
+          </button>
           <button class="tripitem-remove" data-tripremove="${a.id}" aria-label="Remove from trip">✕</button>
         </div>`).join('')}
       </div>`).join('')
       : `<p class="muted">Nothing added yet. Open any adventure and use <b>Add to a trip</b>.</p>`}
 
     <h3>Notes</h3>
-    <textarea id="tripNotes" placeholder="Ferry times, who's booking what…">${esc(t.notes || '')}</textarea>
+    <textarea id="tripNotes" data-owner-id="${esc(String(userId || ''))}" data-trip-id="${esc(String(id))}" placeholder="Ferry times, who's booking what…">${esc(draft?.notes ?? t.notes ?? '')}</textarea>
 
     <div class="sheet-actions">
       <button class="btn-primary" data-tripact="save">Save trip</button>
@@ -3484,6 +3492,7 @@ function saveOpenTrip() {
   t.starts_on = starts;
   t.ends_on = ends;
   t.notes = $('#tripNotes').value.trim() || null;
+  $('#tripNotes').value = t.notes || '';
   upsertTrip(t);
   toast('Trip saved');
 }
@@ -3526,17 +3535,17 @@ function renderMemories() {
       const r = row(a.id);
       const ph = photosFor(a.id);
       return `<div class="memory">
-        <div data-open="${a.id}">
+        <button type="button" class="memory-open" data-open="${a.id}" aria-label="Open ${esc(safeTitle(a))}">
           <b>${esc(safeTitle(a))}</b>
-          <div class="card-meta">${esc(a.place)} · ${esc(regionName(a))}</div>
-          <div class="badges">
+          <span class="card-meta">${esc(a.place)} · ${esc(regionName(a))}</span>
+          <span class="badges">
             ${r.completed_by || r.completed_by_id ? `<span class="badge">Ticked by ${esc(nameOf(r.completed_by_id, r.completed_by))}</span>` : ''}
             ${r.completed_at ? `<span class="badge">${fmtDate(r.completed_at)}</span>` : ''}
             ${r.rating ? `<span class="badge star">${'★'.repeat(r.rating)}</span>` : ''}
             ${ph.length ? `<span class="badge">📷 ${ph.length}</span>` : ''}
-          </div>
-          <p class="${r.memory ? '' : 'nomemory'}">${esc(r.memory || 'No memory written yet — tap to add one.')}</p>
-        </div>
+          </span>
+          <span class="memory-note ${r.memory ? '' : 'nomemory'}">${esc(r.memory || 'No memory written yet — tap to add one.')}</span>
+        </button>
         ${ph.length ? `<div class="strip" data-group-key="adv-${a.id}">${ph.map(p => thumbHTML(p)).join('')}</div>` : ''}
       </div>`;
     }).join('') : `<div class="empty">No adventures ticked off yet.<br>Go and make some. ❤️</div>`;
@@ -3964,6 +3973,21 @@ function renderAll() {
 function renderSheet(id) {
   const a = ADV.find(x => x.id === id);
   if (!a) return;
+  const previousBox = $('#memoryBox');
+  const sameDraft = openId === id && previousBox
+    && previousBox.dataset?.ownerId === String(userId || '')
+    && previousBox.dataset?.adventureId === String(id)
+    && !$('#sheet').classList.contains('hidden');
+  const memoryDraft = sameDraft ? previousBox.value : null;
+  const restoreFocus = sameDraft && document.activeElement === previousBox;
+  const selection = restoreFocus ? [previousBox.selectionStart, previousBox.selectionEnd] : null;
+  const restoreDraftFocus = () => {
+    if (!restoreFocus) return;
+    const box = $('#memoryBox');
+    if (!box) return;
+    box.focus({ preventScroll: true });
+    if (selection.every(Number.isInteger)) box.setSelectionRange(...selection);
+  };
   const r = row(id);
   const ph = photosFor(id);
   const maps = mapsUrl(a);
@@ -3983,7 +4007,7 @@ function renderSheet(id) {
   if (isUnavailable(a)) {
     const personal = progressView === 'group'
       ? (personalProgress.get(id) || { completed: false }) : r;
-    const hasHistory = !!(personal.completed || personal.rating || personal.memory || ph.length);
+    const hasHistory = !!(personal.completed || personal.rating || personal.memory || memoryDraft || ph.length);
     $('#sheetBody').innerHTML = `
       <h2>${esc(a.title)}</h2>
       <div class="sheet-place">${esc([a.place, a.region, regionName(a)].filter((v, i, arr) => v && arr.indexOf(v) === i).join(' · '))} · ${countryFlag(a.country)} ${esc(countryName(a.country))}</div>
@@ -3998,7 +4022,7 @@ function renderSheet(id) {
           ${[1, 2, 3, 4, 5].map(n => `<button data-rate="${n}" aria-label="${n} star${n > 1 ? 's' : ''}">${n <= (personal.rating || 0) ? '★' : '☆'}</button>`).join('')}
         </div>
         <h3>Your memory</h3>
-        <textarea id="memoryBox" placeholder="What actually happened…">${esc(personal.memory || '')}</textarea>
+        <textarea id="memoryBox" data-owner-id="${esc(String(userId || ''))}" data-adventure-id="${id}" placeholder="What actually happened…">${esc(memoryDraft ?? personal.memory ?? '')}</textarea>
         <div class="sheet-actions"><button class="btn-primary" data-act="saveMemory">Save memory</button></div>
         <h3>Photos${ph.length ? ` <span class="count">${ph.length}</span>` : ''}</h3>
         <div class="strip sheet-strip" data-group-key="adv-${a.id}">
@@ -4013,6 +4037,7 @@ function renderSheet(id) {
         <p class="photohint">${photoHint}</p>`
         : '<p>This listing is paused and cannot be marked complete or added to a trip.</p>'}`;
     hydrateThumbs();
+    restoreDraftFocus();
     return;
   }
 
@@ -4066,10 +4091,9 @@ function renderSheet(id) {
         <a class="btn-ghost" href="${maps}" target="_blank" rel="noopener">📍 ${IS_IOS ? 'Apple Maps' : 'Open in Maps'}</a>
       </div>
       ${book ? `<a class="btn-ghost booking" href="${esc(book.url)}" target="_blank" rel="noopener noreferrer nofollow sponsored">
-        ↗ ${esc(book.label)}
+        <span>↗ ${esc(book.label)}</span><span class="booking-paid">Paid link</span>
       </a>
-      <p class="fineprint"><strong>${esc(book.title)}</strong><br>${esc(book.details)} ${esc(book.note)}</p>
-      <p class="fineprint disclosure">${esc(BOOKING_DISCLOSURE)}</p>` : ''}
+      <p class="fineprint"><strong>${esc(book.title)}</strong><br>${esc(book.details)} ${esc(book.note)}</p>` : ''}
       <button class="btn-ghost" data-act="share">↗ Share this adventure</button>
       ${TOURISM[a.admin1] ? `<a class="btn-ghost" href="${TOURISM[a.admin1]}" target="_blank" rel="noopener">
         Check current access on ${esc(a.admin1 === 'AUS' ? 'australia.com' : regionName(a) + ' tourism')}
@@ -4085,7 +4109,7 @@ function renderSheet(id) {
     </div>
 
     <h3>Your memory</h3>
-    <textarea id="memoryBox" placeholder="What actually happened…">${esc(r.memory || '')}</textarea>
+    <textarea id="memoryBox" data-owner-id="${esc(String(userId || ''))}" data-adventure-id="${id}" placeholder="What actually happened…">${esc(memoryDraft ?? r.memory ?? '')}</textarea>
     <div class="sheet-actions"><button class="btn-primary" data-act="saveMemory">Save memory</button></div>
 
     <h3>Photos${ph.length ? ` <span class="count">${ph.length}</span>` : ''}</h3>
@@ -4101,6 +4125,7 @@ function renderSheet(id) {
     <p class="photohint">${photoHint}</p>`;
 
   hydrateThumbs();
+  restoreDraftFocus();
 }
 
 function openSheet(id) {
@@ -4112,8 +4137,10 @@ function closeSheet() {
   const box = $('#memoryBox');                 // don't lose an unsaved memory
   const editable = progressView === 'group'
     ? (personalProgress.get(openId) || { memory: null }) : row(openId);
-  if (box && openId !== null && box.value !== (editable.memory || '')) {
-    applyPatch(openId, { memory: box.value.trim() || null });
+  const sameOwner = box?.dataset?.ownerId === String(userId || '')
+    && box.dataset.adventureId === String(openId);
+  if (sameOwner && openId !== null && box.value !== (editable.memory || '')) {
+    if (applyPatch(openId, { memory: box.value.trim() || null }) === false) return;
   }
   openId = null;
   hideManagedDialog('#sheet');
@@ -4126,12 +4153,12 @@ function toggleDone(id) {
     : row(id);
   if (isUnavailable(adventure) && !r.completed) return toast('That listing is paused');
   const nowDone = !r.completed;
-  applyPatch(id, {
+  if (applyPatch(id, {
     completed: nowDone,
     completed_at: nowDone ? new Date().toISOString() : null,
     completed_by: nowDone ? who : null,
     completed_by_id: nowDone ? userId : null,
-  });
+  }) === false) return;
   if (nowDone) {
     toast(`✓ ${adventure ? safeTitle(adventure) : 'Done'}`);
   }
@@ -4550,7 +4577,10 @@ function wireUI() {
     if (act.dataset.act === 'toggle') toggleDone(openId);
     if (act.dataset.act === 'short')  applyPatch(openId, { shortlisted: !row(openId).shortlisted });
     if (act.dataset.act === 'saveMemory') {
-      applyPatch(openId, { memory: $('#memoryBox').value.trim() || null });
+      const box = $('#memoryBox');
+      const memory = box.value.trim() || null;
+      box.value = memory || '';
+      if (applyPatch(openId, { memory }) === false) return;
       toast('Memory saved');
     }
     if (act.dataset.act === 'share') shareAdventure(openId);

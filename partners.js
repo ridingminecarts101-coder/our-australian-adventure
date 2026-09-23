@@ -53,8 +53,3 @@ function bookingLink(a) {
       : 'Check the itinerary, departure point, options and availability before booking.',
   };
 }
-
-const BOOKING_DISCLOSURE =
-  'We may earn a commission if you book through this link. Booking, payment and '
-  + 'cancellation are handled by Viator and the experience provider. '
-  + 'Tours and tickets are separate from Wayfinder gem purchases.';
