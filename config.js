@@ -35,24 +35,15 @@ window.OAA_CONFIG = {
     ios: '',
   },
 
-  /* Affiliate ids for the booking links. See partners.js for the rules
-   * this operates under - they matter more than the ids do.
-   *
-   * Empty means no booking button appears anywhere and no disclosure is
-   * shown, which is the correct state until the affiliate applications come
-   * back approved. Filling in either one turns the feature on.
-   *
-   *   viatorPartnerId       Viator/Tripadvisor partner id, from
-   *                         partnerresources.viator.com. Usually 8-12% .
-   *   getYourGuidePartnerId GetYourGuide, via Awin or Travelpayouts. ~8%.
-   *
-   * Viator wins where both are set: wider catalogue outside Europe.
+  /* Public affiliate attribution, not a credential. Enable only after account
+   * readiness and release review. partners.js requires an individually reviewed
+   * product from booking-links.js; it never creates generic search links.
+   * Provider scripts, API credentials and personal user identifiers are absent.
    */
   partners: {
-    viatorPartnerId: '',
-    viatorCampaignId: '',
-    getYourGuidePartnerId: '',
-    getYourGuideCampaign: 'wayfinder',
+    // Prepared separately; enable after account readiness and release review.
+    viatorEnabled: false,
+    viatorPartnerId: 'P00321485',
   },
 
   /* Where a shared link should point.

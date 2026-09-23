@@ -3948,8 +3948,7 @@ function renderSheet(id) {
     : (ph.length
       ? 'Tap a photo to see it full size. New photos use this browser’s site storage on this device; browser retention is best effort.'
       : 'Photos are resized and saved in this browser’s site storage on this device. Browser retention is best effort, and clearing site data removes them. They are not synced to other devices.');
-  // null unless an affiliate id is configured and this is the kind of thing
-  // anybody books. See partners.js.
+  // Only reviewed products matched to this adventure can appear. See partners.js.
   const book = bookingLink(a);
 
   // Site-specific operational holds remain explicitly browseable so an old tick,
@@ -4040,14 +4039,15 @@ function renderSheet(id) {
         <button class="btn-ghost" data-act="short">${r.shortlisted ? '⭐ On shortlist' : '☆ Add to shortlist'}</button>
         <a class="btn-ghost" href="${maps}" target="_blank" rel="noopener">📍 ${IS_IOS ? 'Apple Maps' : 'Open in Maps'}</a>
       </div>
+      ${book ? `<a class="btn-ghost booking" href="${esc(book.url)}" target="_blank" rel="noopener noreferrer nofollow sponsored">
+        ↗ ${esc(book.label)}
+      </a>
+      <p class="fineprint"><strong>${esc(book.title)}</strong><br>${esc(book.details)} ${esc(book.note)}</p>
+      <p class="fineprint disclosure">${esc(BOOKING_DISCLOSURE)}</p>` : ''}
       <button class="btn-ghost" data-act="share">↗ Share this adventure</button>
       ${TOURISM[a.admin1] ? `<a class="btn-ghost" href="${TOURISM[a.admin1]}" target="_blank" rel="noopener">
         Check current access on ${esc(a.admin1 === 'AUS' ? 'australia.com' : regionName(a) + ' tourism')}
       </a>` : ''}
-      ${book ? `<a class="btn-ghost booking" href="${esc(book.url)}" target="_blank" rel="noopener nofollow sponsored">
-        ↗ Find a tour or ticket on ${esc(book.site)}
-      </a>
-      <p class="fineprint disclosure">${esc(BOOKING_DISCLOSURE)}</p>` : ''}
     </div>
 
     <h3>Add to a trip</h3>

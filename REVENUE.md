@@ -92,70 +92,38 @@ the only thing the string affects is what a browser shows.
 
 ---
 
-## 2. Booking links — built, and switched off until you have the ids
+## 2. Reviewed Viator experience links
 
-**Status: shipped in `partners.js`, dormant.** No id configured means no
-button, no disclosure, and no behavioural change anywhere in the app.
+The owner registered a Viator partner account on 23 September 2026 and reports
+account verification is pending. The signed-in link builder generated public
+partner ID `P00321485`, campaign `wayfinder`, medium `link`, mcid `42383`.
 
-### What it does
+The separate `codex/viator-links` branch prepares this feature; it is not in the
+1.0.7 build submitted to Apple. `viatorEnabled` remains false until account
+readiness and release review. No generic search links are allowed: this is the
+owner's explicit choice. `data/viator-links.json` holds reviewed mappings and
+`tools/build_booking_links.py` validates `booking-links.js`; pass `--write` to
+regenerate it explicitly. The standard check suite detects stale output.
 
-On an adventure in one of eight bookable categories — Water, Wildlife,
-Adrenaline, Food & Drink, Culture, History, Island, Snow — a quiet dashed
-button appears at the bottom of the sheet: *Find a tour or ticket on Viator*.
-It searches that partner for the **place and country**, not the adventure
-title, because titles here read as instructions ("Cage-dive with great white
-sharks out of Port Lincoln") and match nothing in a tour catalogue.
+The button appears beneath Maps and Add to shortlist. Exact experiences use
+“View experience on Viator”; optional paid guided visits are labelled as such.
+The registry pins adventure ID, place and country, canonical product URL and
+product code. Locked gems, unavailable listings and avoid-level destinations
+cannot display a booking link. No network request or provider tracking code runs
+before the user deliberately opens a link. Affiliate attribution contains no
+Wayfinder account, email, photo, progress or location data.
 
-The other nine categories get nothing. Standing on a headland at sunset is
-free, and offering to sell it is how an app stops being believed.
+Commission disclosure is shown beside each link. Tour payments, booking changes
+and refunds are handled by Viator/the operator and are separate from the app's
+digital gem purchases. Revenue is not guaranteed and depends on current partner
+terms and eligible completed bookings. New adventures found during research stay
+in a separate country-by-country owner review list; commission availability must
+not determine inclusion, ranking or hidden-gem status.
 
-### The rules it operates under
-
-These are enforced in code, not by good intentions:
-
-- **Nothing is on the list because it pays.** The link is generated *from* the
-  entry. There is no field a partner could write to, no ranking input, no
-  sponsored flag. A partner cannot add a place, move one up, or make one a gem.
-- **No entry changes because a booking exists.** Same words, same order.
-- **Locked gems never get a booking button.** Selling past your own paywall is
-  a bad look and `bookingLink()` returns null for them.
-- **The disclosure is not optional.** It renders with the link, every time:
-  *"We get a small commission if you book through this. It costs you nothing
-  extra, and nothing on this list is here because it pays."*
-
-### The money
-
-| Partner | Commission | Cookie | How to join |
-|---|---|---|---|
-| Viator (Tripadvisor) | 8% standard, up to 12% by volume | 30 days | partnerresources.viator.com — reviewed, not automatic |
-| GetYourGuide | ~8% via Travelpayouts, 7% via Awin, 5% via TradeDoubler | 30–31 days | through a network; no direct programme |
-
-Viator is preferred where both are set: wider catalogue outside Europe and the
-better rate.
-
-Modelled conservatively per 1,000 installs: 8% ever tap a booking link, 4% of
-those book, average experience $85, 8% commission → **about $22**. That is
-small, and it is *supposed* to look small — it is a rounding error next to the
-packs. Two things make it worth having anyway: it costs nothing to run, and
-unlike a one-off unlock it earns again every time somebody travels. A person
-who books three tours a year for five years is worth more through this line
-than through the bundle.
-
-### Turning it on
-
-```js
-// config.js
-partners: {
-  viatorPartnerId: 'P00xxxxxx',     // from the Viator partner dashboard
-  viatorCampaignId: '',             // optional, for tracking which link earned
-  getYourGuidePartnerId: '',
-  getYourGuideCampaign: 'wayfinder',
-}
-```
-
-Nothing else. Both applications need a live app or site to point at, which the
-GitHub Pages build already is, so they can be submitted before the store
-listings exist.
+No API credentials are required for these ordinary outbound links. Exact product
+matching and availability are separate: customers still need to check the current
+itinerary, options, departure point and dates on Viator. Dates/prices/reviews and
+provider images are not copied into the app.
 
 ---
 

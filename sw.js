@@ -17,6 +17,7 @@ const SHELL = [
   './config.js',
   './countries.js',
   './store.js',
+  './booking-links.js',
   './partners.js',
   './land.js',
   './world.js',
