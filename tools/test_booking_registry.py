@@ -14,8 +14,9 @@ with tempfile.TemporaryDirectory(prefix='wayfinder-booking-registry-') as temp:
   assert (result.returncode==0)==ok,change
  check({},True)
  check({'product_status':'INACTIVE'},False)
+ check({'schedule_status':'no_current_or_future_schedule'},False)
  check({'verification':'search_result'},False)
  check({'product_status_evidence':'https://api.viator.com/partner/products/other'},False)
  check({'product_status_checked_at':'2099-01-01T00:00:00+00:00'},False)
  check({'verification':'product_api','evidence_url':'https://api.viator.com/partner/products/'+record['product_code']},True)
-print('6 booking-registry checks passed: ACTIVE product, full evidence and dated proof required')
+print('7 booking-registry checks passed: ACTIVE product, current/future schedule and dated evidence required')

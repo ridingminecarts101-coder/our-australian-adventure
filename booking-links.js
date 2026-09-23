@@ -404,7 +404,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "5512924P7",
     "product_title": "Louvre Museum Closing Time Guided Tour with the Mona Lisa",
     "match_type": "exact",
-    "match_note": "The guided visit takes place in the evening as the Louvre is illuminated and daytime crowds recede, directly matching the night-visit constraint.",
+    "match_note": "This guided Louvre visit takes place in the evening while the museum is illuminated and daytime crowds recede.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -440,7 +440,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "410267P11",
     "product_title": "Climb the Dome, Own the View: Florence Duomo Tour",
     "match_type": "exact",
-    "match_note": "The experience includes the 463-step climb to the top of Brunelleschi's dome, directly matching the adventure.",
+    "match_note": "This experience includes the 463-step climb to the top of Brunelleschi's dome.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -476,7 +476,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "71024P21",
     "product_title": "Pompeii and Vesuvius Day Trip from Naples with Skip The Line",
     "match_type": "exact",
-    "match_note": "The itinerary includes Vesuvius National Park admission and independent time to hike along the crater, directly matching the adventure.",
+    "match_note": "The itinerary includes Vesuvius National Park admission and independent time to hike along the crater.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -488,7 +488,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "55341P19",
     "product_title": "Tour of St Peter's Basilica with Dome Climb and Grottoes",
     "match_type": "exact",
-    "match_note": "The included dome climb reaches the top of St. Peter's Basilica, directly matching the catalogue ascent.",
+    "match_note": "The included dome climb reaches the top of St. Peter's Basilica.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -524,7 +524,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "8606P3",
     "product_title": "VIP Early Access: Opening Ceremony Tower of London & Bridge Entry",
     "match_type": "exact",
-    "match_note": "The product includes Tower Bridge entry after the Tower of London, matching the catalogue glass-floor walk.",
+    "match_note": "The booking includes Tower Bridge entry and its glass-floor walkway after the Tower of London.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -536,7 +536,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "265950P17",
     "product_title": "Private Lake K\u00f6nigssee & Berchtesgaden Salt Mine Tour with Lunch",
     "match_type": "guided_option",
-    "match_note": "Nine-to-ten-hour private departure from Munich includes the Lake K\u00f6nigssee boat cruise ticket; the catalogue's half-day lake trip is embedded in a full-day combination with Berchtesgaden salt mine and lunch.",
+    "match_note": "This private departure from Munich lasts nine to ten hours and includes the Lake K\u00f6nigssee boat cruise ticket, Berchtesgaden salt mine and lunch.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -548,7 +548,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "2906NEWACROPOLIS",
     "product_title": "Acropolis of Athens and Acropolis Museum Tour",
     "match_type": "exact",
-    "match_note": "The tour includes a guided visit to the Acropolis Museum and its archaeological collection, directly matching the adventure.",
+    "match_note": "The tour includes a guided visit to the Acropolis Museum and its archaeological collection.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -560,7 +560,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "63073P12",
     "product_title": "Athens: Cape Sounion and Poseidon Temple Sunset with Audio Guide",
     "match_type": "exact",
-    "match_note": "Sunset-timed Cape Sounion trip whose product page specifically includes the Temple of Poseidon at sunset; temple admission conditions remain those stated by the operator.",
+    "match_note": "This Cape Sounion trip visits the Temple of Poseidon at sunset; temple admission remains subject to the operator's stated conditions.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -596,7 +596,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "2460JUNG",
     "product_title": "Jungfraujoch: Top of Europe Day Trip from Zurich",
     "match_type": "exact",
-    "match_note": "The day trip uses the Jungfrau railway to reach Jungfraujoch, directly matching the catalogue experience.",
+    "match_note": "The day trip uses the Jungfrau railway to reach Jungfraujoch.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -620,7 +620,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "7258P4",
     "product_title": "Zaanse Schans Windmills, Clogs and Dutch Cheese Small-Group Tour from Amsterdam",
     "match_type": "exact",
-    "match_note": "The small-group excursion visits Zaanse Schans and its historic windmills, directly matching the catalogue experience.",
+    "match_note": "The small-group excursion visits Zaanse Schans and its historic windmills.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -632,7 +632,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "147859P3",
     "product_title": "Luxembourg 1-day private guided country tour",
     "match_type": "guided_option",
-    "match_note": "Full-day private Luxembourg itinerary includes a one-hour Vianden chairlift ticket and Vianden Castle admission, embedding the catalogue's half-day activity among Echternach, waterfall and winery stops.",
+    "match_note": "This full-day private Luxembourg itinerary includes a one-hour Vianden chairlift ticket and Vianden Castle admission, plus stops at Echternach, a waterfall and a winery.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -644,7 +644,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "372389P2",
     "product_title": "The Vasa: A Royal dream, a shipwreck, and a legendary rescue.",
     "match_type": "exact",
-    "match_note": "The guided museum visit centres on the preserved Vasa warship and includes admission, directly matching the adventure.",
+    "match_note": "This guided museum visit centres on the preserved Vasa warship and includes admission.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -680,7 +680,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "2970AH12",
     "product_title": "Golden Circle Classic Day Tour from Reykjavik",
     "match_type": "exact",
-    "match_note": "The tour stops at the Geysir geothermal area to watch Strokkur erupt, directly matching the catalogue activity.",
+    "match_note": "The tour stops at the Geysir geothermal area to watch Strokkur erupt.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -692,7 +692,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "16698P48",
     "product_title": "Myvatn Nature Baths & Go\u00f0afoss Waterfall Akureyri Shore Excursion",
     "match_type": "guided_option",
-    "match_note": "Full-day Akureyri excursion includes the Myvatn Nature Baths entrance and about two hours at the baths, matching the catalogue's bathing duration while adding Godafoss and other Lake Myvatn stops.",
+    "match_note": "This full-day Akureyri excursion includes Myvatn Nature Baths entry and about two hours at the baths, plus Godafoss and other Lake Myvatn stops.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -704,7 +704,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "24963P13",
     "product_title": "Auschwitz-Birkenau & Wieliczka in one day (Guided tour)",
     "match_type": "exact",
-    "match_note": "The full-day product includes an official guided visit at Auschwitz-Birkenau, directly matching the catalogue memorial visit.",
+    "match_note": "The full-day trip includes an official guided visit at Auschwitz-Birkenau.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -716,7 +716,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "24963P13",
     "product_title": "Auschwitz-Birkenau & Wieliczka in one day (Guided tour)",
     "match_type": "exact",
-    "match_note": "The same product includes guided entry to the Wieliczka Salt Mine's underground chambers, directly matching the adventure.",
+    "match_note": "This booking includes guided entry to the Wieliczka Salt Mine's underground chambers.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -740,7 +740,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "12963P1",
     "product_title": "So\u010da River Rafting in Bovec with Professional Photo Service",
     "match_type": "exact",
-    "match_note": "Three-hour guided rafting activity on the So\u010da River from Bovec, with rafting equipment and multiple bookable options shown in the full product record.",
+    "match_note": "This three-hour guided rafting activity runs on the So\u010da River from Bovec and includes rafting equipment; multiple booking options are available.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -764,7 +764,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "309251P1",
     "product_title": "Lake Ohrid Boat Trip Bay of Bones Saint Naum and Swim",
     "match_type": "guided_option",
-    "match_note": "Eight-hour Lake Ohrid boat itinerary contains a specific swimming stop, embedding the catalogue's half-day swim in a broader Bay of Bones and Saint Naum trip.",
+    "match_note": "This eight-hour Lake Ohrid boat itinerary includes a swimming stop, the Bay of Bones and Saint Naum.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -788,7 +788,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "154182P11",
     "product_title": "3 Day Danube Delta and Black Sea Tour with Boat Safari",
     "match_type": "exact",
-    "match_note": "Three-day Danube Delta itinerary includes its named boat safari and satisfies the catalogue's multi-day duration.",
+    "match_note": "This three-day Danube Delta itinerary includes its named boat safari.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -800,7 +800,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "12254P5",
     "product_title": "Private Bucharest city tour visit the Palace of the Parliament & Village Museum",
     "match_type": "guided_option",
-    "match_note": "Six-to-eight-hour private Bucharest tour includes a Palace of Parliament interior visit and admission, alongside the Village Museum and other city stops; the booking is longer and broader than the catalogue's half-day entry.",
+    "match_note": "This six-to-eight-hour private Bucharest tour includes Palace of Parliament admission and an interior visit, plus the Village Museum and other city stops.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -812,7 +812,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "331989P6",
     "product_title": "Nessebar to Sozopol Catamaran Cruise with Lunch and Swim",
     "match_type": "guided_option",
-    "match_note": "Seven-and-a-half-hour catamaran trip to Sozopol includes a Black Sea swimming stop and lunch, embedding the catalogue's half-day coastal swim in a longer cruise.",
+    "match_note": "This seven-and-a-half-hour catamaran trip to Sozopol includes a Black Sea swimming stop and lunch.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -872,7 +872,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "5542002P2",
     "product_title": "Stawamus Chief Hike",
     "match_type": "exact",
-    "match_note": "The four-hour product is specifically a guided Stawamus Chief hike, and the full product itinerary describes hiking to the summit.",
+    "match_note": "This four-hour guided hike ascends Stawamus Chief to the summit.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1028,7 +1028,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "20605P5",
     "product_title": "From San Pedro Sula: Mayan Ruins of Copan Day Trip",
     "match_type": "guided_option",
-    "match_note": "The current full-day Copan ruins tour explicitly includes the Hieroglyphic Stairway and guided interpretation of its Maya inscriptions, matching the catalogue's specific feature.",
+    "match_note": "This full-day Copan ruins tour includes the Hieroglyphic Stairway and guided interpretation of its Maya inscriptions.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1088,7 +1088,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "22374P21",
     "product_title": "Tobago Buccoo Reef Glass Bottom Boat Tour",
     "match_type": "exact",
-    "match_note": "The current half-day boat product visits Buccoo Reef with snorkeling gear and continues to the Nylon Pool; it covers both named places and the catalogue's snorkeling activity.",
+    "match_note": "This half-day boat trip visits Buccoo Reef with snorkeling gear, then continues to the Nylon Pool.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1100,7 +1100,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "54923P9",
     "product_title": "Gros Piton Hike with Dannyboy & Co.",
     "match_type": "exact",
-    "match_note": "The five-hour guided hike explicitly ascends to Gros Piton's 2,620-foot summit, matching the catalogue climb.",
+    "match_note": "This five-hour guided hike ascends to the 2,620-foot summit of Gros Piton.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1124,7 +1124,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "6681STINGRAY",
     "product_title": "4-Stop Stingray, Snorkel, Star Fish & 7 Mile Beach (Family Owned)",
     "match_type": "exact",
-    "match_note": "The current boat tour stops on Stingray City's shallow sandbar for guests to stand and swim with stingrays, matching the catalogue's defining shallows experience.",
+    "match_note": "This boat tour stops on Stingray City's shallow sandbar for guests to stand and swim with stingrays.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1184,7 +1184,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "25446P2",
     "product_title": "Colors of Ayutthaya Full-Day Bike Tour",
     "match_type": "exact",
-    "match_note": "This six-hour bicycle tour rides from Ayutthaya city into the Historical Park and enters several temple sites, matching the catalogue's cycling activity.",
+    "match_note": "This six-hour bicycle tour rides from Ayutthaya city into the Historical Park and enters several temple sites.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1196,7 +1196,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "417196P2",
     "product_title": "Premium Half-Day Ethical Elephant Sanctuary Experience Max9Guest",
     "match_type": "exact",
-    "match_note": "This half-day trip from Chiang Mai observes rescued elephants roaming without riding or forced bathing, matching the catalogue's ethical-sanctuary activity.",
+    "match_note": "This half-day trip from Chiang Mai observes rescued elephants roaming without riding or forced bathing.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1208,7 +1208,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "53520P6",
     "product_title": "Kayaking in Ao Thalane - Discover the Mangrove life",
     "match_type": "exact",
-    "match_note": "This private day tour includes two hours kayaking Ao Thalane's mangrove-lined channels, the catalogue's specified location and activity.",
+    "match_note": "This private day tour includes two hours kayaking Ao Thalane's mangrove-lined channels.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1304,7 +1304,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "361415P133",
     "product_title": "Seoul Day Tour: Gyeongbokgung Palace, Bukchon, Gwangjang Market",
     "match_type": "guided_option",
-    "match_note": "This Seoul day tour includes an 80-minute walk through Bukchon Hanok Village, matching the catalogue's neighbourhood walk.",
+    "match_note": "This Seoul day tour includes an 80-minute walk through Bukchon Hanok Village.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1328,7 +1328,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "18249P27",
     "product_title": "6 Day Tour: Amman Petra Jerash Baptism Site Karak Castle Wadi Rum Red & Dead Sea",
     "match_type": "guided_option",
-    "match_note": "On this six-day tour from Amman, the itinerary includes an overnight Bedouin camp in Wadi Rum, matching the catalogue experience.",
+    "match_note": "This six-day tour from Amman includes an overnight Bedouin camp in Wadi Rum.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1460,7 +1460,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "218483P4",
     "product_title": "TheMajestic TableMountain Shared Tour,Penguin&Cape Point Full-Day",
     "match_type": "guided_option",
-    "match_note": "On this full-day tour from Cape Town, the route travels Chapman's Peak Drive, matching the catalogue's scenic drive.",
+    "match_note": "This full-day tour from Cape Town travels Chapman's Peak Drive.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1472,7 +1472,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "9076P7",
     "product_title": "Half Guided Day Tour of Soweto And Apartheid Museum",
     "match_type": "guided_option",
-    "match_note": "On this half-day tour from Johannesburg, the Soweto route visits Vilakazi Street, the same historic street as the catalogue entry.",
+    "match_note": "This half-day Soweto tour from Johannesburg visits historic Vilakazi Street.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1496,7 +1496,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "6243OGT",
     "product_title": "Oslo Combo Tour: Grand City Tour and Oslo Fjord Cruise",
     "match_type": "exact",
-    "match_note": "The city tour stops at Vigeland Park and covers its sculpture installation, directly matching the catalogue experience.",
+    "match_note": "The city tour stops at Vigeland Park and covers its sculpture installation.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1508,7 +1508,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "7555P1",
     "product_title": "Private Ring of Kerry tour, Kerry Cliffs from Killarney clockwise",
     "match_type": "exact",
-    "match_note": "Six-to-eight-hour private Ring of Kerry road tour explicitly runs clockwise from Killarney, matching the catalogue's direction constraint.",
+    "match_note": "This six-to-eight-hour private Ring of Kerry road tour runs clockwise from Killarney.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1520,7 +1520,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "8623P14",
     "product_title": "From Galway: Guided tour of Connemara with 3 hour stop in Kylemore Abbey",
     "match_type": "guided_option",
-    "match_note": "Nine-hour Connemara tour reserves a three-hour Kylemore Abbey stop and the full product description names its Victorian walled garden; admission is excluded and must be purchased separately.",
+    "match_note": "This nine-hour Connemara tour reserves three hours for Kylemore Abbey and its Victorian walled garden; admission is excluded and must be purchased separately.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1532,7 +1532,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "5573545P2",
     "product_title": "Van Gogh Museum Entry Ticket and Guided Tour",
     "match_type": "exact",
-    "match_note": "The product includes timed museum entry and a guided Van Gogh collection visit, directly matching the adventure.",
+    "match_note": "This booking includes timed museum entry and a guided visit to the Van Gogh collection.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1544,7 +1544,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "3885SW302BS",
     "product_title": "Rhine Falls Coach Tour incl. entry tickets from Zurich",
     "match_type": "guided_option",
-    "match_note": "From April through October, add the locally paid seasonal boat option; the product page says it travels to the middle of Rhine Falls. The boat is not included in the base price.",
+    "match_note": "From April through October, a locally paid seasonal boat option travels to the middle of Rhine Falls. The boat is not included in the base price.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1568,7 +1568,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "3731VERSAILLES",
     "product_title": "Versailles Palace Tour & Optional Gardens Access from Paris",
     "match_type": "exact",
-    "match_note": "The guided palace itinerary specifically includes the Hall of Mirrors, directly matching the catalogue visit.",
+    "match_note": "The guided palace itinerary includes the Hall of Mirrors.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1580,7 +1580,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "8606P3",
     "product_title": "VIP Early Access: Opening Ceremony Tower of London & Bridge Entry",
     "match_type": "exact",
-    "match_note": "Early Tower of London entry includes the Crown Jewels before general crowds, directly matching the adventure.",
+    "match_note": "Early Tower of London entry includes the Crown Jewels before general crowds.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1604,7 +1604,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "2198HALFDAYTOUR",
     "product_title": "Seville Sightseeing Tour with Alcazar and Cathedral Tickets",
     "match_type": "exact",
-    "match_note": "The itinerary includes admission and a guided visit inside the Real Alcazar, directly matching the catalogue entry.",
+    "match_note": "The itinerary includes admission and a guided visit inside the Real Alcazar.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1676,7 +1676,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "8243P32",
     "product_title": "Top 2-Day Private Tour to All Pyramids, GEM, Cairo and 2 evenings",
     "match_type": "guided_option",
-    "match_note": "On this private two-day tour from Cairo, the itinerary includes the Giza pyramid complex, matching the same landmark visit.",
+    "match_note": "This private two-day tour from Cairo includes the Giza pyramid complex.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1688,7 +1688,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "8243P32",
     "product_title": "Top 2-Day Private Tour to All Pyramids, GEM, Cairo and 2 evenings",
     "match_type": "guided_option",
-    "match_note": "On this private two-day tour from Cairo, the tour includes the Grand Egyptian Museum, the same museum as the catalogue adventure.",
+    "match_note": "This private two-day tour from Cairo includes the Grand Egyptian Museum.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1700,7 +1700,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "8243P32",
     "product_title": "Top 2-Day Private Tour to All Pyramids, GEM, Cairo and 2 evenings",
     "match_type": "guided_option",
-    "match_note": "On this private two-day tour from Cairo, the itinerary visits Saqqara and its pyramid complex, matching the catalogue location.",
+    "match_note": "This private two-day tour from Cairo visits Saqqara and its pyramid complex.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1712,7 +1712,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "421254P19",
     "product_title": "Private Shopping Tour of Khan El-Khalili in Cairo",
     "match_type": "guided_option",
-    "match_note": "This private 4-6 hour Cairo shopping combination explicitly includes Khan El-Khalili as an entered shopping stop; the catalogue activity is the market-shopping portion. Pickup is offered from Cairo or Giza accommodation.",
+    "match_note": "This private four-to-six-hour Cairo shopping trip includes Khan El-Khalili as an entered shopping stop. Pickup is offered from Cairo or Giza accommodation.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1760,7 +1760,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "105257P6",
     "product_title": "One Package Hot Air Balloon with Best of Luxor Full Day Tour",
     "match_type": "guided_option",
-    "match_note": "Hatshepsut's mortuary temple is an itinerary stop, matching the catalogue site.",
+    "match_note": "Hatshepsut's mortuary temple is an itinerary stop.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1784,7 +1784,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "222336P10",
     "product_title": "Dive Elphinstone Reef in Marsa Alam",
     "match_type": "exact",
-    "match_note": "The full product is a two-hour diving activity at Elphinstone Reef, matching the catalogue's reef dive. Wildlife sightings remain unpromised.",
+    "match_note": "This two-hour diving activity takes place at Elphinstone Reef. Wildlife sightings are not promised.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1796,7 +1796,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "5555474P8",
     "product_title": "White Desert & Black Desert 2-Day Private Tour with Camping",
     "match_type": "exact",
-    "match_note": "This 48-hour private tour from Cairo explicitly combines the White Desert and Black Desert with an overnight camp, matching the catalogue's camping activity among the White Desert formations.",
+    "match_note": "This 48-hour private tour from Cairo combines the White Desert and Black Desert with an overnight camp among the White Desert formations.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2000,7 +2000,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "49115P7",
     "product_title": "Giant Panda and Buddha 1 day tour",
     "match_type": "exact",
-    "match_note": "This full-day tour from Chengdu includes a boat trip below the 71-metre Leshan Giant Buddha, matching the catalogue's river viewpoint.",
+    "match_note": "This full-day tour from Chengdu includes a boat trip below the 71-metre Leshan Giant Buddha.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2012,7 +2012,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "8215P1",
     "product_title": "Skip The Line: Sunrise Taj Mahal & Agra Day Tour From Jaipur",
     "match_type": "guided_option",
-    "match_note": "On this private full-day tour from Jaipur, fatehpur Sikri is an itinerary stop, matching the abandoned Mughal-capital visit.",
+    "match_note": "This private full-day tour from Jaipur includes Fatehpur Sikri as an itinerary stop.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2036,7 +2036,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "61702P12",
     "product_title": "Ninh Binh Full-Day Trip to Trang An Mua Cave Hoa Lu Buffet Lunch",
     "match_type": "exact",
-    "match_note": "This full-day trip from Hanoi includes a two-hour entered visit and climb at Mua Caves, matching the 500-step viewpoint activity.",
+    "match_note": "This full-day trip from Hanoi includes a two-hour visit and climb at Mua Caves, including the 500-step viewpoint activity.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2048,7 +2048,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "349311P2",
     "product_title": "Hoi An: Coconut Basket Boat Ride in the Coconut Forest",
     "match_type": "exact",
-    "match_note": "The product is a basket-boat ride through Bay Mau coconut forest at Cam Thanh, matching the catalogue's boat and setting.",
+    "match_note": "This is a basket-boat ride through Bay Mau coconut forest at Cam Thanh.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2348,7 +2348,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "114067P3",
     "product_title": "South Tour to Trinidad Pitch Lake",
     "match_type": "guided_option",
-    "match_note": "The current south Trinidad tour includes a guided visit onto the surface of Pitch Lake, matching the place and walking activity within a longer island itinerary.",
+    "match_note": "This south Trinidad tour includes a guided visit onto the surface of Pitch Lake within a longer island itinerary.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2372,7 +2372,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "22374P21",
     "product_title": "Tobago Buccoo Reef Glass Bottom Boat Tour",
     "match_type": "exact",
-    "match_note": "The current product stops at the shallow Nylon Pool for guests to enter the water after Buccoo Reef, matching the catalogue's sandbar wade; the experience is part of a half-day boat trip.",
+    "match_note": "This half-day boat trip stops at the shallow Nylon Pool for guests to enter the water after Buccoo Reef.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2396,7 +2396,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "411518P4",
     "product_title": "Private Full-day Tour in Grenada with Pickup",
     "match_type": "guided_option",
-    "match_note": "The current full-day private island itinerary includes roughly 40 minutes with admission at the working Gouyave Nutmeg Processing Station, matching the catalogue tour activity.",
+    "match_note": "This full-day private island itinerary includes about 40 minutes and admission at the working Gouyave Nutmeg Processing Station.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2408,7 +2408,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "161581P8",
     "product_title": "Shirley Heights Sunset Party Taxi (Other packages are available)",
     "match_type": "exact",
-    "match_note": "The current product is specifically the Shirley Heights sunset barbecue and reggae party and offers the Sunday event required by the catalogue title; confirm the selected weekday when booking.",
+    "match_note": "This is the Shirley Heights sunset barbecue and reggae party, with the Sunday event available as required; confirm the selected weekday when booking.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2432,7 +2432,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "5226RAIL",
     "product_title": "St Kitts Scenic Train Tour (Hotel or Ship)",
     "match_type": "exact",
-    "match_note": "The current product's core experience is the St Kitts Scenic Railway, the surviving sugar railway circuit identified by the catalogue adventure.",
+    "match_note": "The core experience is the St Kitts Scenic Railway, the island's surviving sugar railway circuit.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2864,7 +2864,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "63598P17",
     "product_title": "Nairobi to Kiambethu Tea Farm Tour",
     "match_type": "guided_option",
-    "match_note": "The Viator product is a half-day visit to Kiambethu; the estate's own tour page confirms tea-field interpretation, an indigenous-forest walk and lunch.",
+    "match_note": "This half-day visit to Kiambethu includes tea-field interpretation, an indigenous-forest walk and lunch.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2888,7 +2888,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "146832P3",
     "product_title": "Lamsaty Pottery Workshop with Moroccan Tea",
     "match_type": "guided_option",
-    "match_note": "The product page names Atelier Lamsaty and includes modelling, wheel work and painting; the workshop's own site confirms its Marrakech pottery classes.",
+    "match_note": "This Atelier Lamsaty pottery workshop includes modelling, wheel work and painting.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2924,7 +2924,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "470888P5",
     "product_title": "Kuta Bali Silver Jewelry Making Class Near Kuta Beach",
     "match_type": "guided_option",
-    "match_note": "The direct product is a hands-on Kuta silver-jewellery class; Kuta Silversmith's official class page confirms tools, silver, instruction and a two-to-three-hour format.",
+    "match_note": "This hands-on Kuta silver-jewellery class includes tools, silver and instruction in a two-to-three-hour format.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2936,7 +2936,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "13441P60",
     "product_title": "Authentic Kintsugi Workshop: Art of Golden Joinery in Tokyo",
     "match_type": "guided_option",
-    "match_note": "The product page gives the TNCA Minami-Aoyama Studio address and a hands-on repair class; TNCA's official page confirms kintsugi workshops at the same studio.",
+    "match_note": "This hands-on repair class takes place at TNCA Minami-Aoyama Studio and covers kintsugi.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2960,7 +2960,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "202626P3",
     "product_title": "Sound Bath (Sound Healing Session Every Evening) in Nepal",
     "match_type": "guided_option",
-    "match_note": "The product page identifies a one-hour evening session at Golden Temple Singing Bowls and Healing Center in Lalitpur; the centre's own site confirms its location and sound-bath and sound-healing services.",
+    "match_note": "This one-hour evening session at Golden Temple Singing Bowls and Healing Center in Lalitpur offers a sound-bath and sound-healing experience.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2984,7 +2984,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "8255P1",
     "product_title": "Vilnius Custom Day Trip to Trakai and Kernave",
     "match_type": "guided_option",
-    "match_note": "Private full-day itinerary visits the Kernav\u0117 mounds for one hour before Trakai; the page lists the mounds as free and separately lists a Kernav\u0117 museum ticket.",
+    "match_note": "This private full-day itinerary visits the Kernav\u0117 mounds for one hour before Trakai. The mounds are free, while a Kernav\u0117 museum ticket is listed separately.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3032,7 +3032,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "73781P6",
     "product_title": "Small Group Hoover Dam: From Above, On Top and Below Tour",
     "match_type": "guided_option",
-    "match_note": "Current Viator page confirms the six-hour tour includes the guided powerplant tour and Visitor Center ticket; the federal operator page separately confirms both the powerplant route and observation deck.",
+    "match_note": "This six-hour tour includes the guided powerplant tour and Visitor Center ticket; the powerplant route and observation deck are both features of the attraction.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3044,7 +3044,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "3026B10",
     "product_title": "Columbia Icefield Tour with Glacier Skywalk from Banff",
     "match_type": "guided_option",
-    "match_note": "Current Viator page confirms Skywalk admission in an approximately 11-hour Banff day tour; the attraction operator confirms the one-kilometre interpretive walkway and glass-floor platform.",
+    "match_note": "This approximately 11-hour Banff day tour includes Skywalk admission, a one-kilometre interpretive walkway and the glass-floor platform.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3056,7 +3056,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "3914CITYANDBRIDGE",
     "product_title": "Post-Cruise: Vancouver Tour with Lookout and Capilano Bridge",
     "match_type": "guided_option",
-    "match_note": "Current Viator page confirms Vancouver Lookout admission and a 45-minute observation-deck stop; the Lookout's own visitor page confirms one-time observation-deck access.",
+    "match_note": "This booking includes Vancouver Lookout admission and a 45-minute observation-deck stop with one-time deck access.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3080,7 +3080,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "110898P31",
     "product_title": "Blue Hole and Dunn's Falls Tour from Falmouth",
     "match_type": "guided_option",
-    "match_note": "Current Viator itinerary confirms 90 minutes with admission at Blue Hole; Jamaica's official tourism site confirms swimming in the spring-fed lagoon near Ocho Rios.",
+    "match_note": "This booking includes 90 minutes and admission at Blue Hole for swimming in the spring-fed lagoon near Ocho Rios.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3092,7 +3092,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "6315IPCSUPER1",
     "product_title": "Super Saver: the best of Easter Island",
     "match_type": "guided_option",
-    "match_note": "Direct Viator product page opened successfully and confirms a 45-minute Ahu Akivi stop on day one of a three-day package. Rapa Nui National Park admission is not included and must be obtained separately.",
+    "match_note": "This three-day package includes a 45-minute Ahu Akivi stop on day one. Rapa Nui National Park admission is not included and must be obtained separately.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3104,7 +3104,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "105439P8",
     "product_title": "Shared Tour Zipaquir\u00e1 Salt Cathedral and Guatavita Lagoon",
     "match_type": "guided_option",
-    "match_note": "Direct Viator product page opened successfully and explicitly includes a guided 40-to-90-minute walk around Guatavita Lagoon. Reserve admission is not included in every product option; travellers must select an admission-including option or pay the reserve entry separately.",
+    "match_note": "This booking includes a guided 40-to-90-minute walk around Guatavita Lagoon. Reserve admission is not included in every option; select an admission-including option or pay reserve entry separately.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3128,7 +3128,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "44271P1",
     "product_title": "Moroccan Cooking Workshop in Marrakech",
     "match_type": "guided_option",
-    "match_note": "The direct product is a La Maison Arabe Moroccan cooking workshop; the hotel's official school page confirms visitor classes led step by step by traditional dadas.",
+    "match_note": "This hands-on La Maison Arabe Moroccan cooking workshop is led step by step by traditional dadas.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3200,7 +3200,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "5250LIBERTYELLIS",
     "product_title": "Statue of Liberty & Ellis Island Tour with Reserved Ferry Entry",
     "match_type": "guided_option",
-    "match_note": "Direct Viator product page opened successfully and confirms Ellis Island and Immigration Museum access only on the Comprehensive Tour / Ellis Island-including option. The shorter afternoon or Liberty-only option may not allow time for Ellis Island, so the runtime link must present that option gate. NPS confirms the museum and authorised ferry access.",
+    "match_note": "Ellis Island and Immigration Museum access is available only with the Comprehensive Tour or another Ellis Island-including option. The shorter afternoon or Liberty-only option may not allow time for Ellis Island, so confirm the selected option before booking.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3224,7 +3224,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "423831P4",
     "product_title": "Harrison\u2019s Cave Tour & Gully Obstacle Course, Barbados",
     "match_type": "guided_option",
-    "match_note": "Current Viator page confirms the 14-element obstacle course and protective equipment; Chukka's own park page confirms the supervised Gully Challenge Course.",
+    "match_note": "This booking includes a supervised 14-element Gully Challenge obstacle course and protective equipment.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3248,7 +3248,7 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_code": "15693P31",
     "product_title": "Venice In a Day St Mark's Doges Palace Gondola Ride and City Tour",
     "match_type": "guided_option",
-    "match_note": "The product includes a 30-minute traditional gondola ride on the Grand Canal in its main options; the shorter Venice Express option excludes the gondola, and weather can cause substitution. Draft title was corrected from 'smaller canals' because the page verifies the Grand Canal route.",
+    "match_note": "The main options include a 30-minute traditional gondola ride on the Grand Canal. The shorter Venice Express option excludes the gondola, and weather can cause substitution.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },

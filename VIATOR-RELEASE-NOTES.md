@@ -13,7 +13,9 @@ All 5,386 active adventures have dated targeted production API search records.
 The registry contains 272 individually verified adventure matches, 208 ACTIVE
 products and 87 countries/territories. Product-page or full-product API itinerary
 review establishes the activity match; a separate API status check rejects
-inactive products. Search snippets alone are insufficient. Eighty researched
+inactive products. All 208 matched products also have a current or future booking
+schedule; this does not guarantee capacity on a chosen date. Search snippets
+alone are insufficient. Eighty researched
 adventure links were excluded after their 61 products were inactive or unavailable
 through the API. Fourteen additional ideas remain in the owner review report.
 

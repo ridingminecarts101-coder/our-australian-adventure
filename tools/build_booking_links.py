@@ -40,6 +40,9 @@ def build():
         assert r['product_status'] == 'ACTIVE', 'Inactive products must never receive a booking link'
         assert r['product_status_evidence'] == 'https://api.viator.com/partner/products/' + r['product_code']
         assert datetime.datetime.fromisoformat(r['product_status_checked_at']).date() <= datetime.date.today()
+        assert r['schedule_status'] == 'current_or_future_schedule'
+        assert r['schedule_evidence'] == 'https://api.viator.com/partner/availability/schedules/' + r['product_code']
+        assert datetime.datetime.fromisoformat(r['schedule_checked_at']).date() <= datetime.date.today()
         assert datetime.date.fromisoformat(r['checked_at']) <= datetime.date.today()
         u = urlsplit(r['viator_url'])
         assert u.scheme == 'https' and u.netloc == 'www.viator.com'
