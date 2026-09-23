@@ -48,6 +48,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "102": {
+    "country": "AU",
+    "place": "Loch Ard Gorge",
+    "adventure_title": "Walk down into Loch Ard Gorge",
+    "viator_url": "https://www.viator.com/tours/Melbourne/Ocean-Road-Tour-in-Reverse-12-Apostles-London-Bridge-Melbourne/d384-266847P480",
+    "product_code": "266847P480",
+    "product_title": "Great Ocean Road Day Tour Twelve Apostles Loch Ard Gorge Melbourn",
+    "match_type": "guided_option",
+    "match_note": "The Great Ocean Road day tour stops at Loch Ard Gorge for travellers to explore the gorge and its shipwreck coastline.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "154": {
     "country": "AU",
     "place": "Scenic World",
@@ -96,6 +108,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "237": {
+    "country": "AU",
+    "place": "Bundaberg",
+    "adventure_title": "Tour the Bundaberg Rum distillery",
+    "viator_url": "https://www.viator.com/tours/Queensland/Bundaberg-Rum-Distillery-Experience/d122-76809P1",
+    "product_code": "76809P1",
+    "product_title": "Bundaberg Rum Behind The Scenes Distillery Tour And Museum Experience",
+    "match_type": "exact",
+    "match_note": "A behind-the-scenes guided visit enters the working Bundaberg Rum distillery after its museum experience and ends with an eligible tasting.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "258": {
     "country": "AU",
     "place": "Great Barrier Reef",
@@ -105,6 +129,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Silverswift 3 Great Barrier Reef Sites in 1 Day from Cairns",
     "match_type": "exact",
     "match_note": "Departs Cairns for outer-reef sites. Select an introductory or certified scuba option to match this diving adventure; snorkel-only does not include a dive.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "350": {
+    "country": "AU",
+    "place": "Hippo's Yawn",
+    "adventure_title": "Walk around to Hippo's Yawn near Wave Rock",
+    "viator_url": "https://www.viator.com/tours/Perth/Discover-Wave-Rock-and-Malukas-Cave-a-one-day-tour/d389-5524468P1",
+    "product_code": "5524468P1",
+    "product_title": "Private Day-Tour; Wave Rock, Mulka's Cave & Hippo's Yawn",
+    "match_type": "guided_option",
+    "match_note": "The private Wave Rock day tour includes Hippo's Yawn alongside Mulka's Cave and other Wheatbelt stops.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -204,6 +240,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "491": {
+    "country": "AU",
+    "place": "Wild platypus",
+    "adventure_title": "See a platypus in the wild",
+    "viator_url": "https://www.viator.com/tours/Airlie-Beach/Platypus-and-Waterfalls/d28628-436915P2",
+    "product_code": "436915P2",
+    "product_title": "Airlie Beach: Small Group Eungella Wild Platypus Encounter",
+    "match_type": "exact",
+    "match_note": "A small-group day tour visits the Broken River viewing platform to look for completely wild platypuses; sightings are common but never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "502": {
     "country": "NZ",
     "place": "Waitangi Treaty Grounds",
@@ -213,6 +261,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Unique Cultural Experience at Waitangi Treaty Grounds \u2013 Day Pass",
     "match_type": "exact",
     "match_note": "Admission to the Treaty Grounds with guided and cultural activities; check the current programme and pass conditions.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "520": {
+    "country": "NZ",
+    "place": "Piha",
+    "adventure_title": "Walk the black sand at Piha",
+    "viator_url": "https://www.viator.com/tours/Auckland/Black-sand-PIHA-BEACH-Maori-Carvings-Water-Falls-WEST-AUCKLAND/d391-471475P18",
+    "product_code": "471475P18",
+    "product_title": "Explore BLACK SAND PIHA BEACH, and Water Falls in West Auckland",
+    "match_type": "exact",
+    "match_note": "A half-day West Auckland tour gives time to stroll Piha's black-sand beach before walking to Kitekite Falls.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -240,6 +300,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "535": {
+    "country": "NZ",
+    "place": "Cathedral Cove",
+    "adventure_title": "Walk to Cathedral Cove",
+    "viator_url": "https://www.viator.com/tours/Auckland/Coromandal-Hot-Water-Beach-and-Cathedral-Cove-Day-Tour-From-Auckland/d391-121194P10",
+    "product_code": "121194P10",
+    "product_title": "Cathedral Cove and Hot Water Beach Scenic Day Tour from Auckland",
+    "match_type": "exact",
+    "match_note": "The Coromandel day tour uses the Cathedral Cove walkway; travellers unable to walk may arrange a separate boat taxi at their own cost.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "549": {
     "country": "NZ",
     "place": "Kaituna River",
@@ -261,6 +333,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Polynesian Spa Rotorua: Deluxe Lake Spa Hot Spring Bathing",
     "match_type": "exact",
     "match_note": "Entry to the lake-facing geothermal pools; choose the advertised Deluxe Lake Spa option.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "552": {
+    "country": "NZ",
+    "place": "Buried Village of Te Wairoa",
+    "adventure_title": "See the buried village at Te Wairoa",
+    "viator_url": "https://www.viator.com/tours/Rotorua/New-Zealands-most-visited-Archaeological-Site-where-stories-of-the-1886-Mt-Tarawera-Eruption-come-to-life/d395-14862P1",
+    "product_code": "14862P1",
+    "product_title": "Buried Village of Te Wairoa",
+    "match_type": "exact",
+    "match_note": "An admitted visit explores the Buried Village of Te Wairoa, its archaeological remains, exhibits and walking trails.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "576": {
+    "country": "NZ",
+    "place": "Tongariro Alpine Crossing",
+    "adventure_title": "Walk the Tongariro Alpine Crossing",
+    "viator_url": "https://www.viator.com/tours/Auckland/Tongariro-Alpine-Crossing-A-Once-In-a-Lifetime-Experience-Ex-Auckland/d391-168163P29",
+    "product_code": "168163P29",
+    "product_title": "Private Tour [3 Days]: Tongariro Alpine Crossing, Huka Falls & Lake Taup\u014d",
+    "match_type": "guided_option",
+    "match_note": "The three-day private package includes the full Tongariro Alpine Crossing day hike along with Waitomo and Taup\u014d visits.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -324,6 +420,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "640": {
+    "country": "NZ",
+    "place": "Rob Roy Glacier",
+    "adventure_title": "Walk to the Rob Roy Glacier",
+    "viator_url": "https://www.viator.com/tours/Wanaka/Rob-Roy-Glacier-Guided-Walk/d409-90805P3",
+    "product_code": "90805P3",
+    "product_title": "Rob Roy Glacier Guided Walk",
+    "match_type": "exact",
+    "match_note": "A guided day hike follows the Rob Roy Glacier track to the upper viewpoint, with Wanaka transfers and lunch.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "642": {
+    "country": "NZ",
+    "place": "Otago Central Rail Trail",
+    "adventure_title": "Cycle the Otago Central Rail Trail",
+    "viator_url": "https://www.viator.com/tours/Queenstown/Otago-Central-Rail-Trail-One-Day-Wonder-Cycle-tour/d407-140473P1",
+    "product_code": "140473P1",
+    "product_title": "Otago Central Rail Trail One Day Wonder Cycle tour",
+    "match_type": "exact",
+    "match_note": "A one-day cycling experience covers a selected section of the Otago Central Rail Trail with bicycle and transfers included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "646": {
+    "country": "NZ",
+    "place": "Taieri Gorge Railway",
+    "adventure_title": "Ride the Taieri Gorge Railway",
+    "viator_url": "https://www.viator.com/tours/Dunedin-and-The-Otago-Peninsula/Taieri-Gorge-Railway-from-Dunedin/d758-17149P1",
+    "product_code": "17149P1",
+    "product_title": "Taieri Gorge Scenic Railway Journey from Dunedin",
+    "match_type": "exact",
+    "match_note": "A five-hour heritage rail journey travels from Dunedin deep into the Taieri Gorge over its viaducts and through hand-cut tunnels.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "650": {
     "country": "NZ",
     "place": "Milford Sound",
@@ -333,6 +465,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "2-Hour Milford Sound Scenic Cruise",
     "match_type": "exact",
     "match_note": "A two-hour Milford Sound cruise travels past the fiord entrance into the Tasman Sea, subject to weather and operating conditions.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "653": {
+    "country": "NZ",
+    "place": "Milford Track",
+    "adventure_title": "Walk the Milford Track",
+    "viator_url": "https://www.viator.com/tours/Fiordland-and-Milford-Sound/Milford-Sound-Nature-Cruise-and-Self-Guided-Scenic-Track-Walk/d756-3960P38",
+    "product_code": "3960P38",
+    "product_title": "Milford Sound Nature Cruise and Self-Guided Scenic Track Walk",
+    "match_type": "guided_option",
+    "match_note": "The applicable departure includes a self-guided 11-kilometre return walk on the Milford Track to Giant's Gate Falls plus a Milford Sound cruise.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -381,6 +525,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Full Day Tour in Samoa with a Local",
     "match_type": "guided_option",
     "match_note": "Full-day tour from Apia explicitly includes To Sua Ocean Trench admission and a 45-minute stop.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "722": {
+    "country": "ES",
+    "place": "Alhambra",
+    "adventure_title": "Get an early ticket for the Nasrid Palaces at the Alhambra",
+    "viator_url": "https://www.viator.com/tours/Granada/Skip-the-Line-Alhambra-and-Generalife-Guided-Tour-Options/d554-71188P11",
+    "product_code": "71188P11",
+    "product_title": "Alhambra Ticket and Guided Tour with Nasrid Palaces",
+    "match_type": "exact",
+    "match_note": "Three-hour guided Alhambra visit includes the Nasrid Palaces ticket, Generalife Gardens and skip-the-line entry; passport details and the assigned palace time must match the booking.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -468,6 +624,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "753": {
+    "country": "CZ",
+    "place": "Bohemian Switzerland",
+    "adventure_title": "Find the Pravcicka Gate in Bohemian Switzerland",
+    "viator_url": "https://www.viator.com/tours/Prague/Top-3-Breathtaking-Viewpoint-Hikes-Gate-Tisa-Rocks-Bastei/d462-72192P30",
+    "product_code": "72192P30",
+    "product_title": "Stunning Views of Bohemian Switzerland: Gate, Tisa Rocks, Bastei",
+    "match_type": "guided_option",
+    "match_note": "Ten-to-twelve-hour Prague day trip includes a two-hour guided walk to Prav\u010dick\u00e1 Gate with admission, plus Tis\u00e1 Rocks and Bastei Bridge.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "760": {
     "country": "PL",
     "place": "Malbork",
@@ -552,6 +720,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "821": {
+    "country": "FR",
+    "place": "Haut-Koenigsbourg",
+    "adventure_title": "Climb to the Chateau du Haut-Koenigsbourg",
+    "viator_url": "https://www.viator.com/tours/Strasbourg/Private-Day-Tour-Colmar-Riquewihr-and-Haut-Koenigsbourg-Castle/d5502-2016P157",
+    "product_code": "2016P157",
+    "product_title": "Private Chateau Haut-Koenigsbourg Tour Strasbourg",
+    "match_type": "guided_option",
+    "match_note": "Private full-day Alsace excursion finishes with a two-hour guided interior visit to Haut-Koenigsbourg Castle, with its admission ticket included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "828": {
     "country": "IT",
     "place": "Colosseum",
@@ -585,6 +765,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Timed Entrance to Galleria dell'Accademia David's Statute",
     "match_type": "exact",
     "match_note": "Timed Accademia Gallery entry provides faster access to Michelangelo's original David; this is hosted entry rather than a full guided museum tour.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "840": {
+    "country": "IT",
+    "place": "Piazza del Campo",
+    "adventure_title": "Sit in the shell of the Piazza del Campo",
+    "viator_url": "https://www.viator.com/tours/Siena/Discovering-Siena-and-the-Cathedral/d944-63770P36",
+    "product_code": "63770P36",
+    "product_title": "Siena Tour and exclusive window on Piazza del Campo",
+    "match_type": "exact",
+    "match_note": "Two-hour Siena walk reaches Piazza del Campo and finishes at a historic palace with an exclusive window overlooking the shell-shaped square.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -645,6 +837,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Sentiero degli Dei - Path of the Gods",
     "match_type": "exact",
     "match_note": "Guided Path of the Gods hike follows the high Amalfi Coast route from Nocelle toward Colle Serra, with steep drops and repeated climbs and descents.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "873": {
+    "country": "IT",
+    "place": "Ballaro",
+    "adventure_title": "Eat street food at the Ballaro market",
+    "viator_url": "https://www.viator.com/tours/Palermo/Tour-The-Historical-Markets-of-Palermo-Street-Food/d4815-160985P14",
+    "product_code": "160985P14",
+    "product_title": "Ballaro 'street food market tour & Santa Rosalia Sanctuary",
+    "match_type": "guided_option",
+    "match_note": "Palermo tour walks through Ballar\u00f2 market with tastings of local street food, then continues to the Santa Rosalia sanctuary on Monte Pellegrino.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -768,6 +972,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1040": {
+    "country": "DE",
+    "place": "Bodensee",
+    "adventure_title": "Cycle around Lake Constance",
+    "viator_url": "https://www.viator.com/tours/Konstanz/Bodensee-Cycling-Tour-7-Nights-Around-Lake-Constance/d50871-146833P7",
+    "product_code": "146833P7",
+    "product_title": "Bodensee Cycling Tour 7 Nights Around Lake Constance",
+    "match_type": "exact",
+    "match_note": "Seven-night self-guided Lake Constance cycling package covers roughly 25\u201340 kilometres per day, with accommodation, breakfast, luggage transfer and navigation support.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1045": {
     "country": "GR",
     "place": "Acropolis Museum",
@@ -813,6 +1029,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Spinalonga Regular Trip -daily At 12:30 From Agios Nikolaos",
     "match_type": "exact",
     "match_note": "Four-and-a-half-hour boat departure from Agios Nikolaos with about 90 minutes on Spinalonga; island admission is paid separately.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1064": {
+    "country": "GR",
+    "place": "Preveli",
+    "adventure_title": "Walk the Preveli palm gorge to the beach",
+    "viator_url": "https://www.viator.com/tours/Greece/Discover-Paradise-Kourtaliotiko-gorge-and-Preveli-Beach-in-Crete/d53-356353P9",
+    "product_code": "356353P9",
+    "product_title": "Kourtaliotiko Gorge & Preveli Palm Beach Private Tour",
+    "match_type": "guided_option",
+    "match_note": "Private southern Crete day trip visits Preveli Palm Beach and allows a walk along the palm-lined river, alongside a separate Kourtaliotiko Gorge walk.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1067": {
+    "country": "GR",
+    "place": "Rhodes Old Town",
+    "adventure_title": "Walk the medieval street of the Knights",
+    "viator_url": "https://www.viator.com/tours/Rhodes/Private-Rhodes-Scavenger-Hunt-Self-Guided-City-Tour/d4272-178424P172",
+    "product_code": "178424P172",
+    "product_title": "Rhodes Old Town Scavenger Hunt & Self-Guided Walking Tour",
+    "match_type": "exact",
+    "match_note": "Self-guided Rhodes Old Town app route explicitly follows Ippoton Street, the Street of the Knights; it is outdoor-only and requires internet access.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -996,6 +1236,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1194": {
+    "country": "LV",
+    "place": "Riga Central Market",
+    "adventure_title": "Eat in the zeppelin hangars of Riga Central Market",
+    "viator_url": "https://www.viator.com/tours/Riga/Latvian-food-tasting-tour-at-Riga-Central-market/d4480-145460P3",
+    "product_code": "145460P3",
+    "product_title": "Latvian food tasting tour at Riga Central market (20 tastes)",
+    "match_type": "exact",
+    "match_note": "Two-hour Riga Central Market food walk passes through all five former zeppelin hangars and includes around 20 Latvian food and drink tastings.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1201": {
     "country": "CZ",
     "place": "Prazsky hrad",
@@ -1005,6 +1257,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Prague Castle Tour Including Admission Ticket - 2.5 Hour",
     "match_type": "exact",
     "match_note": "Two-and-a-half-hour Prague Castle tour includes admission and explicitly visits Golden Lane, St Vitus Cathedral, the Old Royal Palace and St George's Basilica.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1204": {
+    "country": "CZ",
+    "place": "Karlovy Vary",
+    "adventure_title": "Drink the springs at Karlovy Vary",
+    "viator_url": "https://www.viator.com/tours/Prague/Karlovy-Vary-All-Inclusive-Escape-Springs-Views-and-Culture/d462-72192P33",
+    "product_code": "72192P33",
+    "product_title": "Karlovy Vary All-Inclusive from Prague: Springs, Views & Culture",
+    "match_type": "guided_option",
+    "match_note": "Small-group Karlovy Vary day trip walks the spa colonnades and explicitly tastes mineral spring water at the source; lunch and the Diana funicular are also included.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2160,6 +2424,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1681": {
+    "country": "JP",
+    "place": "Tottori Sand Dunes",
+    "adventure_title": "Walk the Tottori sand dunes",
+    "viator_url": "https://www.viator.com/tours/Tottori-Prefecture/Tottori-Guided-Walk-through-the-Tottori-Sand-Dunes/d50175-174545P510",
+    "product_code": "174545P510",
+    "product_title": "Tottori: Guided Walk through the Tottori Sand Dunes",
+    "match_type": "exact",
+    "match_note": "A guided walk crosses the Tottori Sand Dunes and climbs the Horse's Back for views toward the Sea of Japan.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1691": {
+    "country": "TH",
+    "place": "Wat Phra Kaew",
+    "adventure_title": "See the Emerald Buddha at Wat Phra Kaew",
+    "viator_url": "https://www.viator.com/tours/Bangkok/Grand-Palace-and-Wat-Phra-Kaew-Guided-Walking-Tour/d343-163642P123",
+    "product_code": "163642P123",
+    "product_title": "Bangkok: Grand Palace, Emerald Buddha, Wat Phra Kaew Walking Tour",
+    "match_type": "exact",
+    "match_note": "A small-group walking tour enters Wat Phra Kaew to see the Emerald Buddha and also explores Bangkok's Grand Palace.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1695": {
     "country": "TH",
     "place": "Ayutthaya",
@@ -2205,6 +2493,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Ninh Binh Full-Day Trip to Trang An Mua Cave Hoa Lu Buffet Lunch",
     "match_type": "exact",
     "match_note": "This full-day trip from Hanoi includes an entered four-hour Trang An Grottoes boat trip through the cave landscape.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1710": {
+    "country": "VN",
+    "place": "Ha Giang Loop",
+    "adventure_title": "Ride the Ha Giang loop",
+    "viator_url": "https://www.viator.com/tours/Ha-Giang/Ha-Giang-Loop-3-Days-2-Nights-from-Hanoi/d50728-13034P144",
+    "product_code": "13034P144",
+    "product_title": "Ha Giang Loop 3 Days 2 Nights",
+    "match_type": "guided_option",
+    "match_note": "The three-day Ha Giang Loop product offers a motorbike option with a trained driver and local guide; choose that option rather than the car itinerary.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1712": {
+    "country": "VN",
+    "place": "Phong Nha",
+    "adventure_title": "Go into the caves at Phong Nha",
+    "viator_url": "https://www.viator.com/tours/Dong-Hoi/TOUR-TO-THE-CAVES-Paradise-and-Phong-Nha-caves-tour-from-Dong-hoi-city/d50565-64024P6",
+    "product_code": "64024P6",
+    "product_title": "Paradise Phong Nha caves from Dong hoi city",
+    "match_type": "exact",
+    "match_note": "A full-day tour enters both Phong Nha's water cave and Paradise Cave, with transport, lunch and entrance fees.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1714": {
+    "country": "VN",
+    "place": "Hai Van Pass",
+    "adventure_title": "Ride the Hai Van Pass",
+    "viator_url": "https://www.viator.com/tours/Da-Nang/Hai-Van-Pass-and-Hue-City-Sites-Deluxe-Small-Group-Tour/d4680-104142P11",
+    "product_code": "104142P11",
+    "product_title": "Hue Imperial City - Hai Van Pass Small Group From Danang/HoiAn",
+    "match_type": "guided_option",
+    "match_note": "The small-group Hue day trip crosses the Hai Van Pass by vehicle before continuing to Hue's major historical sites.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2256,6 +2580,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1731": {
+    "country": "LA",
+    "place": "Plain of Jars",
+    "adventure_title": "Walk the Plain of Jars",
+    "viator_url": "https://www.viator.com/tours/Luang-Prabang/3-Days-The-Plain-of-Jars-and-Xieng-Khouan-Depart-from-Luang-Prabang/d5466-172573P23",
+    "product_code": "172573P23",
+    "product_title": "3 Days The Plain of Jars and Xieng Khouan (Depart from Luang Prabang)",
+    "match_type": "guided_option",
+    "match_note": "The three-day tour dedicates a day to walking several Plain of Jars sites and learning about the area's war legacy.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1733": {
     "country": "MY",
     "place": "Batu Caves",
@@ -2265,6 +2601,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Putrajaya, Batu Caves And Kuala Lumpur Full-day City Tour",
     "match_type": "guided_option",
     "match_note": "On this full-day tour from Kuala Lumpur, batu Caves and its stairway are included as a named stop.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1735": {
+    "country": "MY",
+    "place": "Cameron Highlands",
+    "adventure_title": "Walk the mossy forest in the Cameron Highlands",
+    "viator_url": "https://www.viator.com/tours/Tanah-Rata/Cameron-Highlands-Mossy-Forest-Discovery/d50519-11036P39",
+    "product_code": "11036P39",
+    "product_title": "Cameron Highlands: Mossy Forest Tour",
+    "match_type": "exact",
+    "match_note": "A guided Cameron Highlands tour walks the Mossy Forest boardwalk; the product lists the Mossy Forest fee separately.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2292,6 +2640,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1750": {
+    "country": "PH",
+    "place": "Batad",
+    "adventure_title": "Walk the rice terraces at Batad",
+    "viator_url": "https://www.viator.com/tours/Manila/Batad-Banaue-Rice-Terraces-UNESCO-Guided-Tour-from-Manila-by-Bus/d4674-197179P44",
+    "product_code": "197179P44",
+    "product_title": "Batad Banaue Rice Terraces UNESCO Guided Tour from Manila by Bus",
+    "match_type": "exact",
+    "match_note": "A guided trip reaches the Batad rice terraces for a demanding walk through the terraces, with an optional continuation toward Tappiyah Falls.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1751": {
     "country": "PH",
     "place": "Chocolate Hills",
@@ -2301,6 +2661,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Bohol Countryside Tour to Chocolate Hills and Loboc River",
     "match_type": "guided_option",
     "match_note": "This Bohol day tour includes entered stops at both a tarsier conservation area and the Chocolate Hills Natural Monument.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1759": {
+    "country": "IN",
+    "place": "Taj Mahal",
+    "adventure_title": "See the Taj Mahal at sunrise",
+    "viator_url": "https://www.viator.com/tours/New-Delhi/Devine-Tour-10-Days-11-Nightgs-Delhi-Haridwar-Shimla-Amritsar-and-Rajasthan/d804-108420P20",
+    "product_code": "108420P20",
+    "product_title": "Sunrise Taj Mahal Tour From Delhi",
+    "match_type": "exact",
+    "match_note": "A private pre-dawn drive from Delhi reaches the Taj Mahal for a guided sunrise visit before continuing to Agra Fort.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2364,6 +2736,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1786": {
+    "country": "NP",
+    "place": "Annapurna Base Camp",
+    "adventure_title": "Trek to Annapurna Base Camp",
+    "viator_url": "https://www.viator.com/tours/Pokhara/Mira-Peak-Climbing/d22291-113382P9",
+    "product_code": "113382P9",
+    "product_title": "Annapurna Base Camp Trek 11 Days",
+    "match_type": "exact",
+    "match_note": "An eleven-day supported trek reaches Annapurna Base Camp through villages, forest and the Himalayan sanctuary.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1787": {
+    "country": "NP",
+    "place": "Everest Base Camp",
+    "adventure_title": "Trek to Everest Base Camp",
+    "viator_url": "https://www.viator.com/tours/Kathmandu/Everest-Base-Camp-Trekking/d5109-106496P1",
+    "product_code": "106496P1",
+    "product_title": "Everest Base Camp Trek -14 Days",
+    "match_type": "exact",
+    "match_note": "A fully guided fourteen-day high-altitude trek follows the classic route from Lukla to Everest Base Camp.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1794": {
+    "country": "LK",
+    "place": "Temple of the Tooth",
+    "adventure_title": "See the Temple of the Tooth at Kandy",
+    "viator_url": "https://www.viator.com/tours/Kandy/Kandy-Temple-of-the-Sacred-Tooth-Relic-Entry-eTicket/d22283-420105P23",
+    "product_code": "420105P23",
+    "product_title": "Kandy: Temple of the Sacred Tooth Relic Entry eTicket",
+    "match_type": "guided_option",
+    "match_note": "An entry e-ticket provides independent access to Kandy's Temple of the Sacred Tooth Relic.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1797": {
     "country": "LK",
     "place": "Yala",
@@ -2385,6 +2793,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Experience the Largest Unbroken Sea Beach in the World",
     "match_type": "guided_option",
     "match_note": "The broader Cox's Bazar package is centred on the Bay of Bengal beach and includes time to walk its long sandy shoreline.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1806": {
+    "country": "PK",
+    "place": "Hunza Valley",
+    "adventure_title": "See the Hunza valley in autumn",
+    "viator_url": "https://www.viator.com/tours/Islamabad/Autumn-Tour-to-Hunza-valley-from-October-till-November/d50280-223597P2",
+    "product_code": "223597P2",
+    "product_title": "7-Days Autumn Tour to Hunza Valley",
+    "match_type": "exact",
+    "match_note": "A seven-day seasonal tour explores Hunza Valley, its forts and viewpoints during the autumn period.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1808": {
+    "country": "PK",
+    "place": "Lahore Fort",
+    "adventure_title": "See the Badshahi Mosque and Lahore Fort",
+    "viator_url": "https://www.viator.com/tours/Lahore/Excellent-and-Amazing-Guided-Tour-of-Lahore/d50344-157297P3",
+    "product_code": "157297P3",
+    "product_title": "Lahore Private Tour: Fort, Walled City, Badshahi Mosque & Wagah",
+    "match_type": "guided_option",
+    "match_note": "The private Lahore day tour enters Lahore Fort and Badshahi Mosque before continuing through the Walled City and to Wagah.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2448,6 +2880,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1820": {
+    "country": "CN",
+    "place": "Mogao Caves",
+    "adventure_title": "See the Mogao caves at Dunhuang",
+    "viator_url": "https://www.viator.com/tours/Dunhuang/Dunhuang-Private-Day-Tour-of-Mogao-Grottoes-Crescent-Lake-and-Singing-Mountain/d24682-10289P160",
+    "product_code": "10289P160",
+    "product_title": "Dunhuang Private Silk Road Day Tour: Mogao Caves, Crescent Spring",
+    "match_type": "guided_option",
+    "match_note": "A private Dunhuang day tour enters the Mogao Caves and also visits Singing Sand Mountain, Crescent Spring and the night market.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1821": {
     "country": "CN",
     "place": "The Bund",
@@ -2484,6 +2928,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1844": {
+    "country": "KZ",
+    "place": "Charyn Canyon",
+    "adventure_title": "Walk the Charyn canyon",
+    "viator_url": "https://www.viator.com/tours/Almaty/Private-Day-Trip-to-Fantastic-Charyn-Canyon/d32977-104455P5",
+    "product_code": "104455P5",
+    "product_title": "Private Day Trip to Fantastic Charyn Canyon",
+    "match_type": "exact",
+    "match_note": "A private day trip from Almaty walks through Charyn Canyon's sandstone landscape with park access and transport.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1848": {
+    "country": "UZ",
+    "place": "Bukhara",
+    "adventure_title": "Walk the old town of Bukhara",
+    "viator_url": "https://www.viator.com/tours/Bukhara/Bukhara-Private-Old-Town-Tour-with-Local-Expert/d50479-400430P1",
+    "product_code": "400430P1",
+    "product_title": "Best of Bukhara: All Day Private Old Town Tour",
+    "match_type": "exact",
+    "match_note": "A private full-day walking tour covers Bukhara's pedestrian Old Town, markets, mosques, madrasahs and citadel; site admissions are separate.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1850": {
     "country": "JO",
     "place": "Petra",
@@ -2505,6 +2973,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "6 Day Tour: Amman Petra Jerash Baptism Site Karak Castle Wadi Rum Red & Dead Sea",
     "match_type": "guided_option",
     "match_note": "This six-day tour from Amman includes an overnight Bedouin camp in Wadi Rum.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1855": {
+    "country": "JO",
+    "place": "Dana Biosphere Reserve",
+    "adventure_title": "Walk the Dana Biosphere Reserve",
+    "viator_url": "https://www.viator.com/tours/Amman/2-Night-Jordan-Private-Tour-Petra-Wadi-Rum-Dana-Biosphere-Reserve-and-Dead-Sea/d5503-2268P317",
+    "product_code": "2268P317",
+    "product_title": "2-Night Jordan Private Tour Petra, Wadi Rum, Dana Biosphere Reserve, & Dead Sea",
+    "match_type": "guided_option",
+    "match_note": "The broader two-night Jordan package stays at Dana Biosphere Reserve and provides free time to hike its trails; the Dana walk itself is at the traveller's expense.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2544,6 +3024,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1864": {
+    "country": "OM",
+    "place": "Jebel Shams",
+    "adventure_title": "Walk the Balcony Walk on Jebel Shams",
+    "viator_url": "https://www.viator.com/tours/Muscat/Private-Full-Day-Tour-Balcony-Walk-Hiking-to-Jebel-Shams/d4389-324718P35",
+    "product_code": "324718P35",
+    "product_title": "Private Full Day Guided Balcony Walk Hiking to Jebel Shams",
+    "match_type": "exact",
+    "match_note": "A private guided full-day outing completes the roughly five-hour Balcony Walk on Jebel Shams.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1865": {
     "country": "OM",
     "place": "Sharqiya Sands",
@@ -2553,6 +3045,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "2 Days Desert Adventure Package",
     "match_type": "guided_option",
     "match_note": "On this private two-day tour from Muscat, the route includes Wahiba, or Sharqiya, Sands and a desert-camp stay.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1870": {
+    "country": "IL",
+    "place": "Jerusalem Old City",
+    "adventure_title": "Walk the Old City of Jerusalem",
+    "viator_url": "https://www.viator.com/tours/Jerusalem/Jerusalems-Old-City-Walls-An-Audio-Tour-Through-Time-and-Faith/d921-110804P1208",
+    "product_code": "110804P1208",
+    "product_title": "Jerusalem\u2019s Old City Walls: An Audio Tour Through Time and Faith",
+    "match_type": "guided_option",
+    "match_note": "A self-guided audio walk follows Jerusalem's Old City ramparts from Jaffa Gate; it is not an admission ticket.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1877": {
+    "country": "TR",
+    "place": "Derinkuyu",
+    "adventure_title": "Go down into the Derinkuyu underground city",
+    "viator_url": "https://www.viator.com/tours/Goreme/Bokun-Free-Product-3/d23271-12899P97",
+    "product_code": "12899P97",
+    "product_title": "Ihlara Canyon and Derinkuyu Underground City Tour",
+    "match_type": "guided_option",
+    "match_note": "The Cappadocia day tour descends into Derinkuyu's tunnels and chambers before continuing to Ihlara Canyon and other stops.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2673,6 +3189,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Elvis Presley's Childhood Home Sightseeing Daytrip from Memphis",
     "match_type": "exact",
     "match_note": "The Memphis day trip includes admission to Elvis Presley's two-room Tupelo birthplace, museum, childhood church and Walk of Life.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2279": {
+    "country": "JP",
+    "place": "Zao Onsen",
+    "adventure_title": "See the snow monsters on Zao",
+    "viator_url": "https://www.viator.com/tours/Tokyo/Ginzan-Onsen-and-Yamagata-Zao-Snow-Monsters-Winter-Tour-2-Days/d334-17229P313",
+    "product_code": "17229P313",
+    "product_title": "Ginzan Onsen and Yamagata Zao Snow Monsters Winter Tour 2 Days",
+    "match_type": "guided_option",
+    "match_note": "The seasonal two-day winter tour rides the Zao Ropeway to view the snow monsters, alongside Ginzan Onsen and other Yamagata stops.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2287": {
+    "country": "JP",
+    "place": "Mount Yoshino",
+    "adventure_title": "See the cherry blossom on Mount Yoshino",
+    "viator_url": "https://www.viator.com/tours/Osaka/Mount-Yoshino-Cherry-Blossom-Private-Day-Tour-from-Osaka-and-Kyoto/d333-457137P67",
+    "product_code": "457137P67",
+    "product_title": "Mount Yoshino Cherry Blossom Private Day Tour from Osaka & Kyoto",
+    "match_type": "exact",
+    "match_note": "A private spring day tour explores Mount Yoshino among its thousands of cherry trees; blossom timing depends on seasonal conditions.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2293": {
+    "country": "JP",
+    "place": "Ritsurin Garden",
+    "adventure_title": "Walk the Ritsurin garden at Takamatsu",
+    "viator_url": "https://www.viator.com/tours/Takamatsu/Kagawa-Ritsurin-Garden-Guided-Walking-Tour/d50594-174545P506",
+    "product_code": "174545P506",
+    "product_title": "Kagawa: Takamatsu Ritsurin Garden Guided Tour",
+    "match_type": "exact",
+    "match_note": "A guided walk follows Ritsurin Garden's ponds, bridges and viewpoints, with a tea break at Kikugetsu-tei.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2940,6 +3492,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "2431": {
+    "country": "IS",
+    "place": "Askja",
+    "adventure_title": "Swim in the Viti crater lake after a superjeep crossing to Askja",
+    "viator_url": "https://www.viator.com/tours/Reykjahlid/Private-Askja-Caldera-and-Viti-Crater-4x4-Tour-from-Lake-Myvatn/d36399-121093P15",
+    "product_code": "121093P15",
+    "product_title": "Private Askja Caldera and Viti Crater 4x4 Tour from Lake Myvatn",
+    "match_type": "guided_option",
+    "match_note": "Private 4x4 highlands trip reaches Askja Caldera and Viti Crater; swimming is permitted only when the guide judges summer conditions safe.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "2432": {
     "country": "NO",
     "place": "Vigelandsparken",
@@ -2949,6 +3513,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Oslo Combo Tour: Grand City Tour and Oslo Fjord Cruise",
     "match_type": "exact",
     "match_note": "The city tour stops at Vigeland Park and covers its sculpture installation.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2460": {
+    "country": "FI",
+    "place": "Ranua Wildlife Park",
+    "adventure_title": "Meet polar bears that have never lived wild in Finland",
+    "viator_url": "https://www.viator.com/tours/Rovaniemi/Arctic-Wildlife-Adventure-Ranua-Wildlife-Park-Trip/d22130-5516800P8",
+    "product_code": "5516800P8",
+    "product_title": "Arctic Wildlife Adventure Ranua Wildlife Park Trip",
+    "match_type": "guided_option",
+    "match_note": "Five-to-six-hour Ranua Wildlife Park trip includes park entry and time on its trails to see Arctic species including polar bears; animal visibility is never guaranteed.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2985,6 +3561,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Van Gogh Museum Entry Ticket and Guided Tour",
     "match_type": "exact",
     "match_note": "This booking includes timed museum entry and a guided visit to the Van Gogh collection.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2488": {
+    "country": "NL",
+    "place": "Kroller-Muller Museum",
+    "adventure_title": "See a second Van Gogh collection inside Hoge Veluwe park",
+    "viator_url": "https://www.viator.com/tours/Amsterdam/Kroller-Muller-Museum-and-Paleis-Het-Loo-Private-Tour/d525-366978P11",
+    "product_code": "366978P11",
+    "product_title": "Kroller Muller Museum (Van Gogh) & Palace Het Loo Private Tour",
+    "match_type": "guided_option",
+    "match_note": "Private day trip enters the Kr\u00f6ller-M\u00fcller Museum inside De Hoge Veluwe for its major Van Gogh collection, and also visits Paleis Het Loo.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3033,6 +3621,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Krakow\u2013Zakopane: Cable Car, Chocholow Baths, Cheese & Vodka",
     "match_type": "guided_option",
     "match_note": "Full-day Zakopane trip includes the Guba\u0142\u00f3wka funicular and its tickets, plus Chocholow village, tastings and three hours at thermal baths.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2549": {
+    "country": "HU",
+    "place": "Eger",
+    "adventure_title": "Cellar-hop Bull's Blood wine in Eger's Valley of Beautiful Women",
+    "viator_url": "https://www.viator.com/tours/Budapest/Private-winetasting-and-sightseeing-tour-to-Eger-home-to-Bulls-Blood-wine/d499-20948P44",
+    "product_code": "20948P44",
+    "product_title": "Eger private tour to the home of Bull's Blood wine with taste!",
+    "match_type": "guided_option",
+    "match_note": "Private Eger day trip visits the Valley of Beautiful Women for a Bull's Blood tasting at a prize-winning winery, after the city's castle and historic centre.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3129,6 +3729,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Seville Sightseeing Tour with Alcazar and Cathedral Tickets",
     "match_type": "exact",
     "match_note": "The itinerary includes admission and a guided visit inside the Real Alcazar.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2651": {
+    "country": "PT",
+    "place": "Mosteiro dos Jeronimos",
+    "adventure_title": "See the tomb of Vasco da Gama at the Jeronimos Monastery",
+    "viator_url": "https://www.viator.com/tours/Lisbon/Bokun-Free-Product-4/d538-242299P49",
+    "product_code": "242299P49",
+    "product_title": "Explore Mosteiro Dos Jeronimos by Tuk Tuk",
+    "match_type": "guided_option",
+    "match_note": "Lisbon tuk-tuk tour ends at Jer\u00f3nimos Monastery and includes a monastery entrance ticket; the church and Vasco da Gama tomb are explored independently after drop-off.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3309,6 +3921,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Kumasi City Tour",
     "match_type": "guided_option",
     "match_note": "The broader private Kumasi package includes an admitted stop at Manhyia Palace Museum; confirm the applicable tour option and two-day scope before booking.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2814": {
+    "country": "NG",
+    "place": "Osun-Osogbo Sacred Grove",
+    "adventure_title": "Walk the sacred grove of Osun-Osogbo",
+    "viator_url": "https://www.viator.com/tours/Lagos/Osun-2-Day-Tour-History-and-Nature-Expedition/d24049-227990P11",
+    "product_code": "227990P11",
+    "product_title": "Osun Osogbo Sacred Grove Tour From Lagos",
+    "match_type": "exact",
+    "match_note": "A full-day trip from Lagos enters and walks the UNESCO-listed Osun-Osogbo Sacred Grove with transport and fees included.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -4008,6 +4632,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "3335": {
+    "country": "KR",
+    "place": "Manjanggul Lava Tube",
+    "adventure_title": "Walk through the Manjanggul lava tube",
+    "viator_url": "https://www.viator.com/tours/Jeju-Island/Best-Jeju-UNESCO-Highlights-Day-Tour-Lava-Cave-and-Haenyeo-Show/d50286-112875P96",
+    "product_code": "112875P96",
+    "product_title": "Jeju East Highlights Tour Manjanggul Lava Tube and Haenyeo Show",
+    "match_type": "guided_option",
+    "match_note": "The East Jeju day tour includes an entered walk through Manjanggul Lava Tube; the operator notes that on-site conditions can alter the schedule.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3350": {
     "country": "HK",
     "place": "Ngong Ping 360",
@@ -4500,6 +5136,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "3622": {
+    "country": "RO",
+    "place": "Scarisoara Ice Cave",
+    "adventure_title": "Descend into the Scarisoara ice cave",
+    "viator_url": "https://www.viator.com/tours/Oradea/Scarisoara-Ice-cave-one-day-minivan-tour-from-Oradea/d23888-45752P16",
+    "product_code": "45752P16",
+    "product_title": "Scarisoara Ice cave - one day car tour from Oradea",
+    "match_type": "guided_option",
+    "match_note": "Full-day departure from Oradea descends into Sc\u0103ri\u0219oara Ice Cave and walks on its large underground ice body, with additional Apuseni cave stops.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3629": {
+    "country": "RO",
+    "place": "Retezat National Park",
+    "adventure_title": "Hike to the glacial lakes of Retezat National Park",
+    "viator_url": "https://www.viator.com/tours/Cluj-Napoca/Full-day-hiking-in-Retezat-National-Park/d22043-242354P8",
+    "product_code": "242354P8",
+    "product_title": "From Cluj Napoca: Full Day Hiking in Retezat National Park",
+    "match_type": "guided_option",
+    "match_note": "Full-day guided hike from Cluj enters Retezat National Park specifically for its alpine ridges and glacial lakes; the long road transfer is part of the day.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3631": {
     "country": "BG",
     "place": "Seven Rila Lakes",
@@ -4572,6 +5232,54 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "3666": {
+    "country": "AL",
+    "place": "Blue Eye",
+    "adventure_title": "Peer into the Blue Eye spring",
+    "viator_url": "https://www.viator.com/tours/Saranda/Explore-Blue-Eye-The-Monument-of-Nature/d50197-121020P3",
+    "product_code": "121020P3",
+    "product_title": "Blue Eye Spring Tour- pickup from Saranda & Ksamil",
+    "match_type": "guided_option",
+    "match_note": "Sarand\u00eb or Ksamil transfer visits Albania's Blue Eye spring with time on the forest trails and viewing platforms around the sapphire-coloured source.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3667": {
+    "country": "AL",
+    "place": "Valbona to Theth",
+    "adventure_title": "Hike the pass from Valbona to Theth",
+    "viator_url": "https://www.viator.com/tours/Tirana/From-Tirana-Berat-City-UNESCO-and-Belshi-Lake-Day-Tour/d23957-467033P6",
+    "product_code": "467033P6",
+    "product_title": "Tirana/Shkodra:Valbona to Theth Hike via Shala River (SelfGuided)",
+    "match_type": "guided_option",
+    "match_note": "Two-day self-guided journey includes the Valbona-to-Theth hike over Valbona Pass, with organised transport, GPS route and itinerary supplied in advance.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3670": {
+    "country": "AL",
+    "place": "Lekuresi Castle",
+    "adventure_title": "Watch the sunset from Lekuresi Castle",
+    "viator_url": "https://www.viator.com/tours/Saranda/From-Sarande-Blue-Eye-Springs-and-Sunset-from-Lekuresi-Castle/d50197-121020P17",
+    "product_code": "121020P17",
+    "product_title": "Blue Eye Spring and Lekuresi Castle Sunset Tour from Saranda",
+    "match_type": "guided_option",
+    "match_note": "Sarand\u00eb tour visits Blue Eye before reaching L\u00ebkur\u00ebsi Castle specifically for sunset and panoramic views over the Ionian Sea and Corfu.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3673": {
+    "country": "AL",
+    "place": "Osumi Canyon",
+    "adventure_title": "Float through the Osumi canyon",
+    "viator_url": "https://www.viator.com/tours/Berat-County/Osumi-Canyon-River-Hiking/d51916-324104P2",
+    "product_code": "324104P2",
+    "product_title": "Explore, Swim & Float in Osumi Canyon",
+    "match_type": "exact",
+    "match_note": "Guided 3.8-kilometre Osumi Canyon activity uses life jackets and helmets for swimming, floating, shallow hiking and optional cliff jumps.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3693": {
     "country": "LT",
     "place": "Trakai Castle",
@@ -4581,6 +5289,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Tour to Ponary Memorial Park, The Hill of Angels & Trakai Castle",
     "match_type": "guided_option",
     "match_note": "Guided day trip reaches Trakai's island castle by the lake and also visits Paneriai Memorial Park and the Hill of Angels.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3698": {
+    "country": "LT",
+    "place": "Aukstaitija National Park",
+    "adventure_title": "Canoe the lakes of Aukstaitija",
+    "viator_url": "https://www.viator.com/tours/Vilnius/Aukstaitija-National-Park-Self-guided-kayaking-trip-7-day/d5479-219806P10",
+    "product_code": "219806P10",
+    "product_title": "5 Days Aukstaitija National Park Self-guided Kayaking Trip",
+    "match_type": "exact",
+    "match_note": "Five-day self-guided kayaking journey crosses Auk\u0161taitija National Park's lakes and rivers, with villages and the Ginu\u010diai watermill along the route.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -5256,6 +5976,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "4436": {
+    "country": "IM",
+    "place": "Snaefell Mountain Railway",
+    "adventure_title": "Ride the mountain railway from Laxey to Snaefell",
+    "viator_url": "https://www.viator.com/tours/Isle-of-Man/Snaefell-Mountain-Railway-and-The-Biggest-Waterwheel-in-the-World/d5017-5686651P3",
+    "product_code": "5686651P3",
+    "product_title": "Snaefell Mountain Railway + The Great Laxey Wheel (Lady Isabella)",
+    "match_type": "guided_option",
+    "match_note": "Guided Isle of Man excursion rides the Manx Electric and Snaefell Mountain railways from Douglas through Laxey to Snaefell; the rail ticket is an extra GBP 18 per person.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "4573": {
     "country": "AG",
     "place": "Betty\u2019s Hope open-air museum",
@@ -5265,6 +5997,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Private Shore Tour: Antigua Historical Island",
     "match_type": "guided_option",
     "match_note": "The private Antigua history tour stops at Betty's Hope to explore the restored 17th-century sugar plantation and open-air museum as one part of a wider island itinerary.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4960": {
+    "country": "IT",
+    "place": "Craco ghost town",
+    "adventure_title": "Join an authorised walk through Craco",
+    "viator_url": "https://www.viator.com/tours/Matera/Tour-of-Craco-the-ghost-town-with-transfer/d22632-91060P38",
+    "product_code": "91060P38",
+    "product_title": "Craco Ghost Town and Amaro Lucano Day Trip from Matera",
+    "match_type": "guided_option",
+    "match_note": "Matera day trip includes admission and a 90-minute authorised walk through Craco's alleys and ruins; live guidance is Italian with English information supplied by QR code.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
