@@ -28,7 +28,7 @@ CHECKS = [
     ('frame guard',    'test_frame_guard.js', 'top-level-only UI and hostile-frame fallback'),
     ('content',        'check_quality.py',   'thin regions, narrow categories, tall claims'),
     ('research refs',  'check_research_sources.py', 'row sources and hidden-gem rationale'),
-    ('coverage math',  'test_content_inventory.py', 'exact one-in-five planning boundaries'),
+    ('coverage math',  'test_content_inventory.py', 'country and pack coverage without a forced gem quota'),
     ('country moves',  'test_content_migrations.py', 'country corrections preserve saved IDs'),
     ('sql',            'check_sql.py',       'unbalanced quotes, policies on missing tables'),
     ('account client', 'check_account_groups.py', 'recoverable identity and consent-safe client contract'),

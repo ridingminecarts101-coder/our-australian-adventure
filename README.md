@@ -1,107 +1,30 @@
 # 🧭 Wayfinder
 
-A shared adventure checklist for Riley & Elli. 500 real Australian places and
-experiences, ticked off together — what one phone marks, the other sees.
+Wayfinder is an adventure checklist and travel journal by **RL Applications**. Discover specific things to do around the world, plan a trip, tick off what you have done and keep a personal passport of places and memories. An account is required so progress follows the traveller across devices; joining a group and sharing completions are optional.
 
-**Setup instructions: [SETUP.md](SETUP.md)**
+As of 23 September 2026, the active catalogue has **5,412 adventures**, including **1,156 paid hidden gems**, across 228 country and territory entries. Seventeen operationally paused listings remain visible for historical context but are excluded from completion targets. Some adventures have an individually reviewed link to a matching Viator experience; unmatched entries have no booking button. Those links are paid links, and RL Applications may earn a commission on eligible bookings. Wayfinder does not process tour bookings or payments.
 
----
+## Current product
 
-## What it does
+- Browse by world, continent, country and larger regional divisions, with maps, filters, shortlist, trips and optional Near me search.
+- Record personal completions, ratings, notes, passport stamps and achievements. Group progress shows only what members choose to share; purchases and personal progress belong to individual accounts.
+- Use the Community board for text-only traveller recommendations, with review and reporting controls.
+- Keep new memory photos inside Wayfinder on the originating device. They are not uploaded to Supabase, GitHub or another RL Applications photo service. A user can manually transfer a password-encrypted, account-bound photo backup to another phone and import it there. Browser/OS/device-backup retention is outside the app's control.
+- Read already-loaded catalogue content and device-local memories offline. Progress changes queue for sync when the account reconnects.
+- Buy the optional **All continents** hidden-gem collection for AUD $14.99 once, or a standalone continent collection for AUD $2.99 once. Antarctica is bundle-only. Store availability and transaction handling depend on the native platform.
 
-- **500 adventures** across all 8 states and territories, every one a real place
-- **Shared progress** — Riley ticks something, Elli's phone updates within seconds
-- **Works with no signal** — progress changes are saved locally and sync when you get back
-  into range, which matters when a third of this list is out of reception
-- **Attribution** — each phone knows whether it's Riley's or Elli's, so completed
-  adventures record who actually ticked them
-- **Shortlist** for planning the next trip
-- **Ratings, memories and photos** on everything you've done — photos are dated
-  from the camera's own EXIF timestamp, grouped by adventure, month, year or category
-- **Passport** — a stamp per country, continents cleared, regions completed
-- **Trips** — bundle adventures into a named plan with dates, grouped by country
-- **Installs to the home screen** on both iPhones as a real app icon
+The PWA and native iOS/Android builds share the web app source, but their signing, purchases, file storage and platform releases are separate. This source prepares PWA v65 and iOS 1.0.9 (build 9) for internal TestFlight. The earlier 1.0.7 (build 7) and its eight purchases remain in App Review with manual public release. Android store distribution is separate. See the dated release records in the coordination workspace for current receipts; do not infer public store availability from a PWA or TestFlight deployment.
 
-## The dataset
+## Source and checks
 
-`data/adventures.json` — 500 entries, each with:
+`index.html`, `styles.css` and `app.js` contain the main interface and behavior. `world.js`, `countries.js` and `data/adventures.json` provide the catalogue; `data/src/` holds source entries. `store.js` handles purchase state. `partners.js` and `booking-links.js` gate reviewed Viator links. `config.js` holds public client configuration. `supabase/` contains the reviewed backend schema and migrations. `business-site/public/wayfinder/` contains the public help and privacy pages. Native projects are in `ios/` and `android/`.
 
-| Field | Meaning |
-|---|---|
-| `title` | What you actually do there |
-| `place`, `region`, `state` | Where it is |
-| `category` | One of 17: Nature, Beach, Wildlife, Hiking, Water, Culture, History, Food & Drink, Road Trip, Adrenaline, Island, Outback, Snow, City, Family, Scenic, Stargazing |
-| `difficulty` | 1 (very easy) → 5 (serious undertaking) |
-| `cost` | 0 (free) → 4 ($200+ per person) |
-| `duration` | 1 hr → Multi-day |
-| `season` | When it's actually worth going |
-| `hidden_gem` | 170 of the 500 — genuinely lesser-known, not just everything |
-| `description` | One real sentence about the place |
+Run `npm ci` then `npm run check` for the full source/backend/static test matrix. `npm run stage` assembles the native web payload before a platform sync. The latest full check has one existing content-quality failure: CF, KP and SS have no suitable adventures yet. Do not add filler merely to clear that check. Signed native builds, device tests, backend tests and store acceptance are separate results.
 
-Spread: QLD 80, SA 71, WA 70, VIC 66, NSW 65, TAS 51, NT 50, ACT 30, plus 17
-nationwide challenges (drive the Nullarbor, swim three oceans, see a wild platypus).
+## Privacy, accuracy and ownership
 
-The source files live in `data/src/*.jsonl`, one state per file. To change the
-data, edit those and re-run the merge step in [SETUP.md](SETUP.md).
+The Supabase URL and publishable key in `config.js` are intentionally public client configuration; private service keys, signing material, API credentials and customer data do not belong in Git. Row Level Security protects account data. The app does not run a Viator pixel or contact Viator until the user chooses an external link. Full booking and data disclosures are in the bundled Privacy and Support pages and at [rlapplications.com/wayfinder](https://rlapplications.com/wayfinder/).
 
-### On accuracy
+Destinations, access, weather, prices, permits and travel advice change. Wayfinder gives planning context, not a guarantee of availability or safety; users should verify current details with operators and relevant authorities before travel. Maps searches use place names rather than invented precise coordinates.
 
-Every place name is real and every description reflects what the place actually
-is. But **access changes**: seasonal closures, permits, Traditional Owner
-requirements, operators going out of business, roads cut in the wet. The app
-links to the relevant state tourism site on each adventure for exactly this
-reason. Check before you drive six hours.
-
-Coordinates are deliberately **not** included — inventing 500 precise lat/longs
-would have produced confident-looking errors. The Maps button searches by place
-name instead, which is slower but honest.
-
-## Files
-
-```
-index.html          app shell
-styles.css          all styling, light + dark
-app.js              the whole app — sync, filtering, rendering
-config.js           your Supabase URL + public key (you fill this in)
-manifest.json       PWA metadata
-sw.js               service worker: offline support
-data/
-  adventures.json   the 500, generated
-  src/*.jsonl       source data, one file per state
-supabase/
-  schema.sql        run this once in the Supabase SQL editor
-  schema-photos.sql legacy photos table + private storage bucket
-  schema-trips.sql  trip planning (optional)
-icons/              generated by tools/make_icons.py
-tools/make_icons.py regenerates the app icons
-```
-
-## Security
-
-The Supabase URL and anon key in `config.js` are public by design — they ship
-inside the app. They grant nothing on their own, because Row Level Security
-requires a signed-in session (the passphrase). See `supabase/schema.sql`.
-
-**Never put the `service_role` key in this repo.** It bypasses every rule.
-
-In the current device-local build, new photos stay on the device where they are added. Native builds use app-private
-Files storage and the PWA uses IndexedDB; these photos do not sync to another
-device or upload to the RL Applications backend or GitHub. A browser, operating
-system or user-configured device backup may retain PWA storage outside the app's
-control. Native releases exclude Wayfinder's persistent app data from Android and
-iOS device or cloud backups. Older photos already uploaded by earlier builds remain
-readable from the private Storage bucket through short-lived signed URLs. The app
-does not currently provide a photo export or device-backup feature.
-Until `supabase/schema-device-local-photos.sql` is deployed, an older client may
-still use the former cloud-upload path.
-
-## Licence / credit
-
-Wayfinder is maintained by Riley Nicholas Lawler, an Australian sole trader
-operating as **RL Applications** (ABN 92 363 169 656). Project-specific material
-is proprietary; see [LICENSE](LICENSE) and [OWNERSHIP.md](OWNERSHIP.md).
-
-Open-source libraries, Natural Earth map data and other third-party material
-remain under their own terms. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
-and the dependency lockfiles. Research citations establish factual provenance;
-they do not transfer ownership of source websites or their protected content.
+Wayfinder is maintained by Riley Nicholas Lawler, an Australian sole trader operating as **RL Applications** (ABN 92 363 169 656). Project-specific material is proprietary; see [LICENSE](LICENSE) and [OWNERSHIP.md](OWNERSHIP.md). Open-source libraries, Natural Earth map data and other third-party material remain under their own terms; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Research citations establish factual provenance but do not transfer ownership of source websites or their protected content.

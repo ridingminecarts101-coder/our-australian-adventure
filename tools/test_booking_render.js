@@ -56,7 +56,11 @@ assert.match(html, /mcid=42383&amp;pid=P00321485&amp;medium=api&amp;api_version=
 assert.match(html, /underground glowworm boat ride/);
 assert.ok(html.indexOf('data-act="short"') < html.indexOf('class="btn-ghost booking"'));
 assert.ok(html.indexOf('class="btn-ghost booking"') < html.indexOf('data-act="share"'));
-assert.match(html, /We may earn a commission/);
+assert.match(html, /<span class="booking-paid">Paid link<\/span>/);
+assert.doesNotMatch(html, /We may earn a commission/,
+  'the full commercial explanation belongs in About, Support and Privacy');
+assert.match(fs.readFileSync('index.html', 'utf8'),
+  /Viator buttons are paid links\. RL Applications may earn a commission if you book\./);
 run('renderSheet(681)');
 assert.match(elements.get('#sheetBody').innerHTML,/View matching option on Viator/);
 assert.match(elements.get('#sheetBody').innerHTML,/from Apia/);
@@ -67,6 +71,15 @@ run(`owned=new Set(['oceania']); renderSheet(529)`);
 assert.match(elements.get('#sheetBody').innerHTML,/View experience on Viator/);
 run('OAA_CONFIG.partners.viatorEnabled=false; renderSheet(529)');
 assert.doesNotMatch(elements.get('#sheetBody').innerHTML,/class="btn-ghost booking"/);
+run("OAA_CONFIG.partners.viatorEnabled=true; owned=new Set(['all']); userId='test-owner'; openId=529;");
+elements.get('#memoryBox').dataset = { ownerId: 'test-owner', adventureId: '529' };
+elements.get('#memoryBox').value = 'Unsaved adventure draft';
+run('renderSheet(529)');
+assert.match(elements.get('#sheetBody').innerHTML, /Unsaved adventure draft/,
+  'a sheet refresh must preserve a memory draft for the same account and adventure');
+run("userId='different-owner'; renderSheet(529)");
+assert.doesNotMatch(elements.get('#sheetBody').innerHTML, /Unsaved adventure draft/,
+  'a draft must not cross account boundaries');
 if (process.argv.includes('--preview')) {
  fs.mkdirSync('build',{recursive:true});
  fs.writeFileSync('build/viator-preview.html','<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wayfinder Viator development preview</title><link rel="stylesheet" href="../styles.css"><body><main style="max-width:560px;margin:auto;padding:20px"><p>Development preview · no accounts or bookings</p>'+html+'</main></body></html>');

@@ -164,14 +164,39 @@ async function tripChecks(){
 }
 function passportChecks(){
   const h=harness();
-  h.run(`ADV=[{id:1,country:'AU',continent:'Oceania'},{id:2,country:'NZ',continent:'Oceania'}];
+  h.run(`ADV=[{id:1,country:'AU',continent:'Oceania'},
+    {id:2,country:'NZ',continent:'Oceania'},
+    {id:3,country:'AU',continent:'Oceania',availability:{status:'unavailable'}},
+    {id:4,country:'WS',continent:'Oceania',availability:{status:'unavailable'}}];
     isLocked=()=>false; progressView='group'; personalProgress=new Map([[1,{completed:true,completed_at:'2026-01-01'}]]);
     progress=new Map([[1,{completed:true,completed_at:'2026-01-01'}],[2,{completed:true,completed_at:'2026-01-02'}]]); renderPassport();`);
   assert.match(h.elements.get('#passportTotals').innerHTML,/<b>1<\/b><span>adventures<\/span>/);
   const stamps=[...h.elements.get('#stampGrid').innerHTML.matchAll(/<button class="stamp ([^"]*)"[\s\S]*?<span class="stamp-name">([^<]+)<\/span>[\s\S]*?<\/button>/g)];
   assert(stamps.find(s=>s[2]==='AU')[1].includes('earned'));
+  assert(stamps.find(s=>s[2]==='AU')[1].includes('complete'),
+    'a paused adventure must not make a country impossible to complete');
   assert(!stamps.find(s=>s[2]==='NZ')[1].includes('earned'));
+  assert.match(h.elements.get('#stampGrid').innerHTML,/<span class="stamp-count">1 \/ 1<\/span>/);
+  assert.match(h.elements.get('#stampGrid').innerHTML,/<span class="stamp-count">0 \/ 0<\/span>/,
+    'a paused-only country retains its blank card');
   assert.match(h.elements.get('#continentProgress').innerHTML,/1 \/ 2/);
-  console.log('PASS: personal Passport stamps and totals stay personal in Group view');
+  console.log('PASS: personal Passport stamps exclude paused targets and stay personal in Group view');
 }
-(async()=>{await groupChecks();await tripChecks();passportChecks();})().catch(e=>{console.error(e);process.exitCode=1;});
+function tripDraftChecks(){
+  const h=harness();
+  h.run("ADV=[];trips=[{id:'trip-a',name:'Draft trip',adventure_ids:[],starts_on:'2026-10-01',notes:'Saved note'}];openTripId='trip-a';");
+  h.context.document.querySelector('#tripNotes').dataset={ownerId:'account-a',tripId:'trip-a'};
+  h.context.document.querySelector('#tripNotes').value='Unsaved itinerary note';
+  h.context.document.querySelector('#tripStart').value='2026-11-01';
+  h.context.document.querySelector('#tripEnd').value='2026-11-03';
+  h.run("renderTripSheet('trip-a')");
+  const current=h.elements.get('#tripBody').innerHTML;
+  assert.match(current,/Unsaved itinerary note/);
+  assert.match(current,/id="tripStart" value="2026-11-01"/);
+  assert.match(current,/id="tripEnd" value="2026-11-03"/);
+  h.run("userId='account-b';renderTripSheet('trip-a')");
+  assert.doesNotMatch(h.elements.get('#tripBody').innerHTML,/Unsaved itinerary note/,
+    'an unsaved trip draft must not cross account boundaries');
+  console.log('PASS: itinerary redraw keeps the owner draft without crossing accounts');
+}
+(async()=>{await groupChecks();await tripChecks();passportChecks();tripDraftChecks();})().catch(e=>{console.error(e);process.exitCode=1;});
