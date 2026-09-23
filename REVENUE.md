@@ -107,9 +107,8 @@ and attribution parameters. Wayfinder preserves those returned URLs exactly;
 it does not invent or append tracking fields. Partner payout readiness has not
 been independently confirmed.
 
-The separate `codex/viator-links` branch prepares this feature; it is not in the
-1.0.7 build submitted to Apple. `viatorEnabled` remains false until account
-readiness and release review. No generic search links are allowed: this is the
+The PWA v64 source enables this feature; it is not in the 1.0.7 build submitted
+to Apple. No generic search links are allowed: this is the
 owner's explicit choice. `data/viator-links.json` holds reviewed mappings and
 `tools/build_booking_links.py` validates `booking-links.js`; pass `--write` to
 regenerate it explicitly. The standard check suite detects stale output.
@@ -125,9 +124,9 @@ Wayfinder account, email, photo, progress or location data.
 Commission disclosure is shown beside each link. Tour payments, booking changes
 and refunds are handled by Viator/the operator and are separate from the app's
 digital gem purchases. Revenue is not guaranteed and depends on current partner
-terms and eligible completed bookings. New adventures found during research stay
-in a separate country-by-country owner review list; commission availability must
-not determine inclusion, ranking or hidden-gem status.
+terms and eligible completed bookings. Seventy-one distinct researched adventures
+were added after quality review; commission availability must not determine
+inclusion, ranking or hidden-gem status.
 
 No API credentials are required for these ordinary outbound links. Exact product
 matching and availability are separate: customers still need to check the current

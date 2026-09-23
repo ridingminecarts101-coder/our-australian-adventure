@@ -35,14 +35,12 @@ window.OAA_CONFIG = {
     ios: '',
   },
 
-  /* Public affiliate attribution, not a credential. Enable only after account
-   * readiness and release review. partners.js requires an individually reviewed
+  /* Public affiliate attribution, not a credential. partners.js requires an individually reviewed
    * product from booking-links.js; it never creates generic search links.
    * Provider scripts, API credentials and personal user identifiers are absent.
    */
   partners: {
-    // Prepared separately; enable after account readiness and release review.
-    viatorEnabled: false,
+    viatorEnabled: true,
     viatorPartnerId: 'P00321485',
   },
 
