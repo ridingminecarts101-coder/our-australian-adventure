@@ -2245,18 +2245,21 @@ async function deleteOwnedGroup(groupId) {
  */
 let storeStatusOwner = null;
 function setStoreStatus(message) {
-  const status = $('#storeStatus');
-  if (!status) return;
   storeStatusOwner = userId;
-  status.textContent = message;
+  for (const selector of ['#storeStatus', '#continentStoreStatus']) {
+    const status = $(selector);
+    if (status) status.textContent = message;
+  }
 }
 
 function renderStore() {
   const el = $('#storePanel');
   if (!el) return;
-  const status = $('#storeStatus');
-  if (status && storeStatusOwner !== userId) {
-    status.textContent = '';
+  if (storeStatusOwner !== userId) {
+    for (const selector of ['#storeStatus', '#continentStoreStatus']) {
+      const status = $(selector);
+      if (status) status.textContent = '';
+    }
     storeStatusOwner = userId;
   }
   const restore = $('#restoreBtn');
@@ -2273,7 +2276,7 @@ function renderStore() {
   const packs = sellablePacks(ADV);
   const hasAll = ownsPack('all');
 
-  el.innerHTML = packs.map(p => {
+  const packRow = p => {
     const n = counts[p.slug] || 0;
     const got = ownsPack(p.slug);
     const sub = p.slug === 'all'
@@ -2289,10 +2292,13 @@ function renderStore() {
               ? '<span class="packowned">Mobile app</span>'
               : `<button class="btn-buy" data-buy="${esc(p.slug)}"${Billing.busy ? ' disabled' : ''}>${esc(priceFor(p.slug))}</button>`}
     </div>`;
-  }).join('') + (hasAll ? '' :
-    '<p class="fineprint">One payment for your account, with no subscription. ' +
-    'The all-continents bundle includes every hidden gem, Antarctica and future additions. ' +
-    'Travel, admission and guide fees are separate.</p>');
+  };
+  el.innerHTML = packs.filter(p => p.slug === 'all').map(packRow).join('');
+  $('#storeFinePrint').textContent = hasAll ? ''
+    : 'One payment for your account, with no subscription. The all-continents bundle includes every hidden gem, Antarctica and future additions. Travel, admission and guide fees are separate.';
+  $('#storeFinePrint').classList.toggle('hidden', hasAll);
+  const continentPanel = $('#continentStorePanel');
+  if (continentPanel) continentPanel.innerHTML = packs.filter(p => p.slug !== 'all').map(packRow).join('');
 }
 
 // Buying, from wherever the button was pressed.
@@ -2314,6 +2320,9 @@ async function buyPack(slug) {
     : 'Purchase verified for this Wayfinder account. Collection unlocked.');
   toast(res.simulated ? 'Unlocked (simulated)' : 'Unlocked. Enjoy.');
   renderAll();
+  const packsSheet = $('#continentPacksSheet');
+  if (packsSheet && !packsSheet.classList.contains('hidden'))
+    hideManagedDialog('#continentPacksSheet');
   if (openId !== null) renderSheet(openId);
 }
 
@@ -3693,6 +3702,7 @@ function handleDialogKeydown(event) {
     event.preventDefault();
     if (dialog.id === 'lightbox') closeLightbox();
     else if (dialog.id === 'photoBackupSheet') window.WayfinderPhotoTransfer.close();
+    else if (dialog.id === 'continentPacksSheet') hideManagedDialog('#continentPacksSheet');
     else if (dialog.id === 'recSheet') closeRecSheet();
     else if (dialog.id === 'tripSheet') closeTripSheet();
     else closeSheet();
@@ -3887,8 +3897,10 @@ function renderMe() {
 
   // An achievement nobody can reach is not an achievement, it is a nag. The
   // optional fifth element says whether it applies at all right now.
-  $('#achList').innerHTML = ACHIEVEMENTS
-    .filter(([, , , , available]) => !available || available(d))
+  const availableAchievements = ACHIEVEMENTS
+    .filter(([, , , , available]) => !available || available(d));
+  $('#achCount').textContent = `${availableAchievements.filter(([, , , test]) => test(d)).length} / ${availableAchievements.length}`;
+  $('#achList').innerHTML = availableAchievements
     .map(([icon, name, desc, test]) =>
       `<div class="ach ${test(d) ? '' : 'locked'}">
          <span class="ach-icon">${icon}</span>
@@ -4368,6 +4380,9 @@ function wireUI() {
 
   $('#privacyBtn').onclick = () => window.location.assign('privacy.html');
   $('#supportBtn').onclick = () => window.location.assign('support.html');
+  $('#continentPacksBtn').onclick = () => showManagedDialog('#continentPacksSheet');
+  $$('#continentPacksSheet [data-packclose]').forEach(b =>
+    b.onclick = () => hideManagedDialog('#continentPacksSheet'));
 
   // Only offered while there is no real store to buy from.
   $('#previewBtn').onclick = () => {
@@ -5288,7 +5303,7 @@ function showAccountLock(message = '') {
 
 function hideAndClearPrivateOverlays() {
   if (window.WayfinderPhotoTransfer) window.WayfinderPhotoTransfer.close(true);
-  for (const id of ['#sheet', '#tripSheet', '#recSheet', '#lightbox']) {
+  for (const id of ['#sheet', '#tripSheet', '#recSheet', '#continentPacksSheet', '#lightbox']) {
     const overlay = $(id);
     if (overlay) overlay.classList.add('hidden');
   }

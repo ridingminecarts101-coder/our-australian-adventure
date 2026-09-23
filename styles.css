@@ -404,6 +404,21 @@ input, select, textarea { font: inherit; color: inherit; }
 .ptotal b { display: block; font-size: 24px; line-height: 1.1; }
 .ptotal span { font-size: 11px; opacity: .8; }
 
+.passport-achievements {
+  margin: 0 0 20px; border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--card);
+}
+.passport-achievements summary {
+  display: flex; align-items: center; gap: 8px; min-height: 48px;
+  padding: 12px 14px; cursor: pointer; list-style: none; font-weight: 700;
+}
+.passport-achievements summary::-webkit-details-marker { display: none; }
+.passport-achievements summary::after {
+  content: '›'; margin-left: auto; color: var(--muted); font-size: 22px;
+}
+.passport-achievements[open] summary::after { transform: rotate(90deg); }
+.passport-achievements .achlist { padding: 0 12px 12px; }
+
 .stampgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .stampgrid > .empty { grid-column: 1 / -1; }
 @media (min-width: 460px) { .stampgrid { grid-template-columns: repeat(3, 1fr); } }
@@ -633,6 +648,8 @@ input, select, textarea { font: inherit; color: inherit; }
  * would hide the thing being sold, which helps nobody.
  */
 .storelist { display: grid; gap: 8px; margin-bottom: 10px; }
+#continentPacksSheet .sheet-card { max-height: calc(100dvh - max(20px, var(--safe-top))); }
+#continentPacksSheet .storelist { margin-top: 16px; }
 .packrow {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   background: var(--card); border: 1px solid var(--line);

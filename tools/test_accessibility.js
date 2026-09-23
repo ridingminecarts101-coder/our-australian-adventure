@@ -44,7 +44,7 @@ async function modalBehavior() {
   const opener = node(document); opener.setAttribute('data-open', '7');
   const replacement = node(document); replacement.setAttribute('data-open', '7');
   const dialogs = {};
-  for (const id of ['sheet', 'tripSheet', 'recSheet', 'lightbox', 'photoBackupSheet']) {
+  for (const id of ['sheet', 'tripSheet', 'recSheet', 'lightbox', 'photoBackupSheet', 'continentPacksSheet']) {
     const dialog = node(document, id); dialog.classList.add('hidden');
     dialog.controls = [node(document, `${id}-close`), node(document, `${id}-last`)];
     bySelector.set(`#${id}`, dialog); dialogs[id] = dialog;
@@ -96,6 +96,13 @@ async function modalBehavior() {
     await Promise.resolve();
   }
   assert.deepEqual(closed, ['sheet', 'tripSheet', 'recSheet', 'lightbox', 'photoBackupSheet']);
+  document.activeElement = replacement;
+  context.showManagedDialog('#continentPacksSheet');
+  await Promise.resolve();
+  context.handleDialogKeydown(key('Escape'));
+  await Promise.resolve();
+  assert(dialogs.continentPacksSheet.classList.contains('hidden'));
+  assert.equal(document.activeElement, replacement, 'the pack sheet restores focus to its opener');
   assert(prevented >= 7);
 }
 
@@ -124,7 +131,7 @@ function cardAndSelectionBehavior() {
   assert.deepEqual(controls.map(x => x.attrs['aria-current']), ['false','false','page']);
 
   assert.match(html, /id="search"[^>]*aria-label="Search adventures"/);
-  for (const id of ['sheet','tripSheet','recSheet','lightbox']) {
+  for (const id of ['sheet','tripSheet','recSheet','lightbox','continentPacksSheet']) {
     assert.match(html, new RegExp(`id="${id}"[^>]*role="dialog"[^>]*aria-modal="true"[^>]*tabindex="-1"`));
   }
 }
@@ -132,5 +139,5 @@ function cardAndSelectionBehavior() {
 (async () => {
   cardAndSelectionBehavior();
   await modalBehavior();
-  console.log('PASS: keyboard card activation, selection semantics and five-dialog focus lifecycle');
+  console.log('PASS: keyboard card activation, selection semantics and six-dialog focus lifecycle');
 })().catch(error => { console.error(error); process.exitCode = 1; });
