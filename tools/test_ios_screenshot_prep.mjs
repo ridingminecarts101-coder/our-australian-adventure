@@ -92,6 +92,15 @@ for (const label of ['All continents', 'Oceania gems', 'Europe gems', 'North Ame
   assert(appSource.includes('p.name') && testSource.includes(`"${label}"`),
     `IAP screenshot row selector changed: ${label}`);
 }
+assert.match(markup, /id="continentPacksBtn"[^>]*>Continent-specific collections<\/button>/);
+assert.match(markup, /aria-label="Close continent collections"/);
+assert.match(testSource, /if index == 1 \{[\s\S]*?regionalCollections\.tap\(\)/,
+  'regional IAP screenshots must open the continent collection dialog');
+assert.match(testSource, /scrollTo\(closeCollections, swipeUp: false\)/,
+  'the test must return from the scrolled collection dialog');
+assert(testSource.indexOf('regionalCollections.tap()') < testSource.indexOf('capture("iap-\\(slug)")')
+  && testSource.indexOf('closeCollections.tap()') < testSource.indexOf('adventures.tap()'),
+  'regional product captures must happen in the dialog before returning to Adventures');
 assert.match(appSource, /<button class="placerow/);
 assert.match(markup, /data-tab="tab-list"[^>]*>.*Adventures/);
 for (const name of [

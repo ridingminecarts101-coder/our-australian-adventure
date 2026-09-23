@@ -20,12 +20,12 @@ name: iOS signed archive and delivery
       marketing_version:
         description: Public App Store version; build N must use version 1.0.N
         required: true
-        default: 1.0.7
+        default: 1.0.8
         type: string
       build_number:
         description: Internal build N; increment every upload and pair with version 1.0.N
         required: true
-        default: '7'
+        default: '8'
         type: string
 
 permissions:

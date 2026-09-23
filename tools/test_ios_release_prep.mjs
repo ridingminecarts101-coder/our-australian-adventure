@@ -18,7 +18,8 @@ assert.equal(injected.replace("ios: 'appl_PUBLICKEY12345'", "ios: ''"), source,
   'release preparation may change only the staged Apple public-key slot');
 assert.throws(() => injectApplePublicKey("ios: ''\nios: ''", key));
 
-const workflow = await readFile('.github/workflows/ios-release-upload.yml', 'utf8');
+const workflow = (await readFile('.github/workflows/ios-release-upload.yml', 'utf8'))
+  .replace(/\r\n/g, '\n');
 for (const required of [
   'APPLE_DISTRIBUTION_CERTIFICATE_P12_BASE64',
   'APPLE_DISTRIBUTION_CERTIFICATE_PASSWORD',
@@ -64,7 +65,8 @@ assert.doesNotMatch(archiveArgs, /\b(?:DEVELOPMENT_TEAM|CODE_SIGN_STYLE|CODE_SIG
 assert.match(archiveStep, /trap 'cp build\/unsigned-project\.pbxproj "\$PROJECT"' EXIT/,
   'the App-only archive override must restore the committed project even when archiving fails');
 
-const project = await readFile('ios/App/App.xcodeproj/project.pbxproj', 'utf8');
+const project = (await readFile('ios/App/App.xcodeproj/project.pbxproj', 'utf8'))
+  .replace(/\r\n/g, '\n');
 const listing = JSON.parse(await readFile('store-release/ios-listing.json', 'utf8'));
 const workflowMarketingVersion = workflow.match(
   /marketing_version:[\s\S]*?^\s+default:\s*['"]?([0-9]+\.[0-9]+\.[0-9]+)['"]?\s*$/m)?.[1];
