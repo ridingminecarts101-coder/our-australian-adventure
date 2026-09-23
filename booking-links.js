@@ -48,6 +48,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "154": {
+    "country": "AU",
+    "place": "Scenic World",
+    "adventure_title": "Ride the steepest passenger railway in the world at Scenic World",
+    "viator_url": "https://www.viator.com/tours/Sydney/Blue-Mountains-Day-Trip-from-Sydney-Including-Scenic-World/d357-8129P1",
+    "product_code": "8129P1",
+    "product_title": "Blue Mountains Day Trip from Sydney Including Scenic World",
+    "match_type": "guided_option",
+    "match_note": "The Blue Mountains day trip includes Scenic World's railway, cableway and skyway alongside several other stops.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "160": {
+    "country": "AU",
+    "place": "Jervis Bay",
+    "adventure_title": "Watch dolphins from a boat in Jervis Bay",
+    "viator_url": "https://www.viator.com/tours/Sydney/Jervis-Bay-Full-Day-Tour-Dolphin-Cruise-and-Delicious-Donuts/d357-392485P18",
+    "product_code": "392485P18",
+    "product_title": "All Inclusive Jervis Bay Day Tour Dolphin Cruise, Lunch &Blowhole",
+    "match_type": "exact",
+    "match_note": "The all-day Jervis Bay trip includes a 90-minute dolphin-watching cruise; dolphin sightings are never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "172": {
     "country": "AU",
     "place": "Port Stephens",
@@ -168,6 +192,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "406": {
+    "country": "AU",
+    "place": "Uluru sunset",
+    "adventure_title": "Watch Uluru change colour at sunset",
+    "viator_url": "https://www.viator.com/tours/Uluru/Small-Group-Sunset-Tour/d359-5234P11",
+    "product_code": "5234P11",
+    "product_title": "Small Group Uluru Sunset Viewing Tour",
+    "match_type": "exact",
+    "match_note": "A small-group sunset viewing tour is dedicated to watching Uluru change colour; weather affects the display.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "502": {
     "country": "NZ",
     "place": "Waitangi Treaty Grounds",
@@ -177,6 +213,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Unique Cultural Experience at Waitangi Treaty Grounds \u2013 Day Pass",
     "match_type": "exact",
     "match_note": "Admission to the Treaty Grounds with guided and cultural activities; check the current programme and pass conditions.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "528": {
+    "country": "NZ",
+    "place": "Hobbiton",
+    "adventure_title": "Have a pint at the Green Dragon in Hobbiton",
+    "viator_url": "https://www.viator.com/tours/North-Island/Hobbiton-Movie-Set-2-Hour-Walking-Tour-from-Shires-Rest/d128-5328P2",
+    "product_code": "5328P2",
+    "product_title": "Hobbiton\u2122 Movie Set Walking Tour from Shires Rest",
+    "match_type": "exact",
+    "match_note": "The guided Hobbiton Movie Set walk finishes inside the Green Dragon Inn with a complimentary Southfarthing beverage.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -276,6 +324,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "650": {
+    "country": "NZ",
+    "place": "Milford Sound",
+    "adventure_title": "Cruise Milford Sound to the Tasman Sea",
+    "viator_url": "https://www.viator.com/tours/Fiordland-and-Milford-Sound/Milford-Sound-Cruise/d756-29858P2",
+    "product_code": "29858P2",
+    "product_title": "2-Hour Milford Sound Scenic Cruise",
+    "match_type": "exact",
+    "match_note": "A two-hour Milford Sound cruise travels past the fiord entrance into the Tasman Sea, subject to weather and operating conditions.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "665": {
     "country": "FJ",
     "place": "Mamanuca Islands",
@@ -336,6 +396,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "728": {
+    "country": "DE",
+    "place": "Saxon Switzerland",
+    "adventure_title": "Cross the Bastei Bridge in Saxon Switzerland",
+    "viator_url": "https://www.viator.com/tours/Berlin/Berlin-Dresden-and-Moritzburg-Castle-Day-Trip/d488-6877P195",
+    "product_code": "6877P195",
+    "product_title": "Berlin: Dresden, Saxon Switzerland and Bastei Bridge Day Trip",
+    "match_type": "guided_option",
+    "match_note": "Full-day departure from Berlin includes 75 minutes at the Bastei Bridge with time to walk across it; Dresden is also visited.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "730": {
+    "country": "DE",
+    "place": "Berlin Wall",
+    "adventure_title": "Walk the East Side Gallery along the Berlin Wall",
+    "viator_url": "https://www.viator.com/tours/Berlin/Cold-War-Walking-Tour-of-Berlin/d488-5560COLDWAR",
+    "product_code": "5560COLDWAR",
+    "product_title": "Cold War, Berlin Wall, Spies and the East Side Gallery",
+    "match_type": "guided_option",
+    "match_note": "Three-hour Berlin Cold War walk stops at the East Side Gallery for about 25 minutes and places it in the history of the Berlin Wall.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "739": {
     "country": "NL",
     "place": "Amsterdam canals",
@@ -372,6 +456,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "749": {
+    "country": "IE",
+    "place": "Cliffs of Moher",
+    "adventure_title": "Walk the cliff path at the Cliffs of Moher",
+    "viator_url": "https://www.viator.com/tours/Galway/Cliffs-of-Moher-Day-Trip-from-Galway/d5156-5750MOHER",
+    "product_code": "5750MOHER",
+    "product_title": "Cliffs of Moher & the Burren Tour from Galway",
+    "match_type": "guided_option",
+    "match_note": "Full-day Galway departure allows two hours at the Cliffs of Moher, with time specifically described for walking the cliff edge; Burren and Doolin stops are also included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "760": {
     "country": "PL",
     "place": "Malbork",
@@ -384,6 +480,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "761": {
+    "country": "FR",
+    "place": "Eiffel Tower",
+    "adventure_title": "Climb the Eiffel Tower stairs instead of queueing for the lift",
+    "viator_url": "https://www.viator.com/tours/Paris/Eiffel-Tower-guided-climb-with-optional-summit/d479-5522676P3",
+    "product_code": "5522676P3",
+    "product_title": "Eiffel Tower Guided Tour by Stairs with Optional Summit by Lift",
+    "match_type": "exact",
+    "match_note": "Two-hour guided Eiffel Tower climb ascends by stairs to the second level; the summit is available only with the optional lift upgrade.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "762": {
     "country": "FR",
     "place": "Musee d'Orsay",
@@ -393,6 +501,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Louvre and Musee d Orsay Exclusive Museum Tour Entry Included",
     "match_type": "exact",
     "match_note": "Paris combination tour with admission to both the Louvre and Musee d'Orsay; the Orsay visit and Impressionist collection deliver the core activity, but this is not an Orsay-only booking.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "764": {
+    "country": "FR",
+    "place": "Catacombes de Paris",
+    "adventure_title": "Walk the ossuary tunnels beneath the fourteenth arrondissement",
+    "viator_url": "https://www.viator.com/tours/Paris/Catacombs-of-Paris-Small-Group-Walking-Tour/d479-3731CATACOMBS",
+    "product_code": "3731CATACOMBS",
+    "product_title": "Paris Catacombs Tour with VIP Access to Restricted Areas",
+    "match_type": "exact",
+    "match_note": "Small-group Paris Catacombs tour enters the ossuary tunnels and includes normally restricted areas such as the Sacellum Crypt.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -420,6 +540,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "777": {
+    "country": "FR",
+    "place": "Calanques National Park",
+    "adventure_title": "Swim in the calanques between Marseille and Cassis",
+    "viator_url": "https://www.viator.com/tours/Marseille/Full-Day-Snorkeling-and-Guided-Dive-in-the-Calanques-National-Park-from-Marseille/d485-24730P1",
+    "product_code": "24730P1",
+    "product_title": "Full-Day Snorkeling and Guided Dive in the Calanques National Park from Marseille",
+    "match_type": "exact",
+    "match_note": "Six-to-eight-hour Marseille activity provides snorkelling equipment and guided water time inside Calanques National Park; diving options vary by certification.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "828": {
     "country": "IT",
     "place": "Colosseum",
@@ -441,6 +573,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Climb the Dome, Own the View: Florence Duomo Tour",
     "match_type": "exact",
     "match_note": "This experience includes the 463-step climb to the top of Brunelleschi's dome.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "838": {
+    "country": "IT",
+    "place": "Galleria dell'Accademia",
+    "adventure_title": "See the David without the queue",
+    "viator_url": "https://www.viator.com/tours/Florence/Fast-Track-Entrance/d519-428951P2",
+    "product_code": "428951P2",
+    "product_title": "Timed Entrance to Galleria dell'Accademia David's Statute",
+    "match_type": "exact",
+    "match_note": "Timed Accademia Gallery entry provides faster access to Michelangelo's original David; this is hosted entry rather than a full guided museum tour.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "844": {
+    "country": "IT",
+    "place": "Cascate del Mulino",
+    "adventure_title": "Soak in the free hot cascades at Saturnia",
+    "viator_url": "https://www.viator.com/tours/Rome/Private-Tour-to-Cascate-del-Mulino-Saturnia-Hot-Springs-from-Rome/d511-111291P37",
+    "product_code": "111291P37",
+    "product_title": "Private Full-day Cascate del Mulino Hot Springs from Rome",
+    "match_type": "guided_option",
+    "match_note": "Private full-day transfer from Rome includes roughly two and a half hours relaxing at the free Cascate del Mulino hot springs; the long road transfer is part of the booking.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -480,6 +636,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "868": {
+    "country": "IT",
+    "place": "Sentiero degli Dei",
+    "adventure_title": "Walk the Path of the Gods above Positano",
+    "viator_url": "https://www.viator.com/tours/Sorrento/Path-of-the-Gods-Path-of-the-Gods/d947-145947P16",
+    "product_code": "145947P16",
+    "product_title": "Sentiero degli Dei - Path of the Gods",
+    "match_type": "exact",
+    "match_note": "Guided Path of the Gods hike follows the high Amalfi Coast route from Nocelle toward Colle Serra, with steep drops and repeated climbs and descents.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "880": {
+    "country": "IT",
+    "place": "Santa Maria di Leuca",
+    "adventure_title": "Swim off the cliffs at Santa Maria di Leuca",
+    "viator_url": "https://www.viator.com/tours/Lecce/Caves-Boat-Tour-with-Aperitif-and-Swim-from-Santa-Maria-di-Leuca/d22769-5561541P28",
+    "product_code": "5561541P28",
+    "product_title": "Caves Boat Tour with Aperitif & Swim from Santa Maria di Leuca",
+    "match_type": "exact",
+    "match_note": "Boat trip from Santa Maria di Leuca explores local caves and includes swimming stops, an onboard aperitif and an experienced skipper.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "889": {
     "country": "VA",
     "place": "St Peter's Basilica",
@@ -516,6 +696,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "907": {
+    "country": "ES",
+    "place": "Caminito del Rey",
+    "adventure_title": "Walk the Caminito del Rey",
+    "viator_url": "https://www.viator.com/tours/Malaga/Malaga-city-centre-coach-tours-and-day-trips-to-the-Caminito-Del-Rey/d956-113310P46",
+    "product_code": "113310P46",
+    "product_title": "Caminito Del Rey tour from Malaga by bus day trip",
+    "match_type": "exact",
+    "match_note": "Malaga day trip is built around the Caminito del Rey hike and adds return bus transport plus guide commentary.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "913": {
+    "country": "ES",
+    "place": "Museo Reina Sofia",
+    "adventure_title": "Stand in front of Guernica",
+    "viator_url": "https://www.viator.com/tours/Madrid/Museum-Reina-Sofia-Entrance-And-Audio-Guide/d566-91405P62",
+    "product_code": "91405P62",
+    "product_title": "Museo Reina Sofia in Madrid Entrance And Audio Guide",
+    "match_type": "exact",
+    "match_note": "Reina Sofia admission and downloadable audio guide explicitly cover Picasso's Guernica alongside the museum's wider modern-art collection.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "947": {
     "country": "GB",
     "place": "Tower Bridge",
@@ -525,6 +729,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "VIP Early Access: Opening Ceremony Tower of London & Bridge Entry",
     "match_type": "exact",
     "match_note": "The booking includes Tower Bridge entry and its glass-floor walkway after the Tower of London.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "948": {
+    "country": "GB",
+    "place": "Royal Observatory Greenwich",
+    "adventure_title": "Stand on the Prime Meridian at Greenwich",
+    "viator_url": "https://www.viator.com/tours/London/Royal-Observatory-Greenwich/d737-24388P1",
+    "product_code": "24388P1",
+    "product_title": "Royal Observatory Greenwich & Prime Meridian Entry Ticket London",
+    "match_type": "exact",
+    "match_note": "Royal Observatory Greenwich entry specifically includes standing astride the Prime Meridian line and visiting the home of Greenwich Mean Time.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "981": {
+    "country": "GB",
+    "place": "Old Town",
+    "adventure_title": "Find the closes off the Royal Mile",
+    "viator_url": "https://www.viator.com/tours/Edinburgh/Edinburgh-Guided-Tour/d739-8613P1",
+    "product_code": "8613P1",
+    "product_title": "Edinburgh Royal Mile and Old Town Small Group Walking Tour",
+    "match_type": "guided_option",
+    "match_note": "Small-group Royal Mile and Old Town walk enters historic closes and courts, including Riddles Court and James Court; building interiors are generally not included.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -588,6 +816,54 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1081": {
+    "country": "PT",
+    "place": "Cabo da Roca",
+    "adventure_title": "Stand at the westernmost point of Europe",
+    "viator_url": "https://www.viator.com/tours/Lisbon/Sintra-Cabo-da-Roca-Cascais-Estoril-Tour/d538-126453P1",
+    "product_code": "126453P1",
+    "product_title": "Guided Tour to Sintra, Pena, Regaleira, Cabo da Roca and Cascais",
+    "match_type": "guided_option",
+    "match_note": "Full-day Sintra combination stops for about 15 minutes at Cabo da Roca, explicitly identified as continental Europe's westernmost point.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1085": {
+    "country": "PT",
+    "place": "Vila Nova de Gaia",
+    "adventure_title": "Taste port in a Vila Nova de Gaia lodge",
+    "viator_url": "https://www.viator.com/tours/Porto/Port-Wine-Cocktails-Workshop-at-Espaco-Porto-Cruz/d26879-66671P1",
+    "product_code": "66671P1",
+    "product_title": "Port Wine Cocktails Workshop at Espa\u00e7o Porto Cruz, Vila Nova de Gaia, Portugal",
+    "match_type": "exact",
+    "match_note": "One-hour Espa\u00e7o Porto Cruz workshop in Vila Nova de Gaia includes two port tastings before participants make port-wine cocktails.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1095": {
+    "country": "PT",
+    "place": "Pico",
+    "adventure_title": "Climb Pico, the highest point in Portugal",
+    "viator_url": "https://www.viator.com/tours/Pico/Hike-Pico-Mountain-and-Piquinho-2351meters/d50346-363930P1",
+    "product_code": "363930P1",
+    "product_title": "Pico Mountain Climb the Highest Point of Portugal 2351m",
+    "match_type": "exact",
+    "match_note": "Guided Pico hike climbs to Portugal's 2,351-metre high point; it is intended for travellers in good physical condition.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1106": {
+    "country": "IE",
+    "place": "Great Western Greenway",
+    "adventure_title": "Cycle the Great Western Greenway",
+    "viator_url": "https://www.viator.com/tours/Westport/eBiking-the-Great-Western-Greenway-Mayo-Self-guided-Full-half-day/d23309-11121P384",
+    "product_code": "11121P384",
+    "product_title": "eBiking the Great Western Greenway. Mayo. Self-guided. Full day.",
+    "match_type": "exact",
+    "match_note": "Full-day self-guided e-bike hire covers the 42-kilometre Great Western Greenway from Westport toward Achill, with equipment and emergency backup.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1110": {
     "country": "CH",
     "place": "Jungfraujoch",
@@ -633,6 +909,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Luxembourg 1-day private guided country tour",
     "match_type": "guided_option",
     "match_note": "This full-day private Luxembourg itinerary includes a one-hour Vianden chairlift ticket and Vianden Castle admission, plus stops at Echternach, a waterfall and a winery.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1152": {
+    "country": "NO",
+    "place": "Flamsbana",
+    "adventure_title": "Ride the Flam railway down to the fjord",
+    "viator_url": "https://www.viator.com/tours/Bergen/Self-Guided-Norway-Day-Trip-Bergen-to-Oslo/d4318-9016P35",
+    "product_code": "9016P35",
+    "product_title": "Self-Guided Bergen to Oslo Daytrip With Flamsbana & Fjordcruise",
+    "match_type": "guided_option",
+    "match_note": "Self-guided Bergen-to-Oslo day journey includes the Fl\u00e5m Railway and fjord cruise; tickets and itinerary are supplied rather than an accompanying guide.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -696,6 +984,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1189": {
+    "country": "EE",
+    "place": "Tallinn Old Town",
+    "adventure_title": "Walk the medieval walls of Tallinn old town",
+    "viator_url": "https://www.viator.com/tours/Tallinn/Tallinn-Old-Town-Walking-Tour-Medieval-to-Digital-Estonia/d4147-474321P13",
+    "product_code": "474321P13",
+    "product_title": "Tallinn Old Town Walking Tour Medieval to Digital Estonia",
+    "match_type": "exact",
+    "match_note": "Two-hour Tallinn Old Town walk follows the medieval city walls and visits Nun Tower as part of a wider Hanseatic-history route.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1201": {
+    "country": "CZ",
+    "place": "Prazsky hrad",
+    "adventure_title": "Walk the Golden Lane at Prague Castle",
+    "viator_url": "https://www.viator.com/tours/Prague/Prague-Castle-Walking-Tour-Including-Admission-Tickets/d462-9396P1",
+    "product_code": "9396P1",
+    "product_title": "Prague Castle Tour Including Admission Ticket - 2.5 Hour",
+    "match_type": "exact",
+    "match_note": "Two-and-a-half-hour Prague Castle tour includes admission and explicitly visits Golden Lane, St Vitus Cathedral, the Old Royal Palace and St George's Basilica.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1208": {
     "country": "PL",
     "place": "Auschwitz-Birkenau",
@@ -720,6 +1032,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1215": {
+    "country": "HU",
+    "place": "Szechenyi Baths",
+    "adventure_title": "Soak at the Szechenyi thermal baths",
+    "viator_url": "https://www.viator.com/tours/Budapest/Private-Entrance-to-Szechenyi-Spa-in-Budapest-with-Optional-Massage/d499-5808SZECHENYI",
+    "product_code": "5808SZECHENYI",
+    "product_title": "Budapest Sz\u00e9chenyi Thermal Spa Ticket",
+    "match_type": "exact",
+    "match_note": "Day ticket gives access to the indoor and outdoor thermal pools at Budapest's Sz\u00e9chenyi Baths; massage or other upgrades depend on the selected option.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1218": {
+    "country": "HU",
+    "place": "Shoes on the Danube Bank",
+    "adventure_title": "Take the shoe memorial on the Danube bank slowly",
+    "viator_url": "https://www.viator.com/tours/Budapest/The-Original-Pest-Downtown-Walking-Tour/d499-289081P17",
+    "product_code": "289081P17",
+    "product_title": "Walking Tour Budapest incl. the Shoes on the Danube Bank",
+    "match_type": "exact",
+    "match_note": "Budapest walking tour makes a dedicated stop at the Shoes on the Danube Bank memorial and also covers central Pest landmarks.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1225": {
     "country": "SI",
     "place": "Lake Bled",
@@ -741,6 +1077,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "So\u010da River Rafting in Bovec with Professional Photo Service",
     "match_type": "exact",
     "match_note": "This three-hour guided rafting activity runs on the So\u010da River from Bovec and includes rafting equipment; multiple booking options are available.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1230": {
+    "country": "HR",
+    "place": "Diocletian's Palace",
+    "adventure_title": "Live inside Diocletian's Palace",
+    "viator_url": "https://www.viator.com/tours/Split/City-of-Split-Walking-Tour/d4185-15026P1",
+    "product_code": "15026P1",
+    "product_title": "Split & Diocletian's Palace Walking Tour - Since 2007",
+    "match_type": "guided_option",
+    "match_note": "Ninety-minute Split walk explores Diocletian's Palace and the living Old Town around it, including the Golden Gate and cathedral area.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -816,6 +1164,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1291": {
+    "country": "US",
+    "place": "Alcatraz",
+    "adventure_title": "Take the night tour of Alcatraz",
+    "viator_url": "https://www.viator.com/tours/San-Francisco/Fishermans-Wharf-Tour-and-Alcatraz-Upgrade-Option/d651-103123P1",
+    "product_code": "103123P1",
+    "product_title": "Alcatraz Ticket & Cruise with North Beach Tour plus Night Option",
+    "match_type": "guided_option",
+    "match_note": "The North Beach walking package includes the Alcatraz ferry, prison access and audio guide; the after-dark Alcatraz sailing applies only when the Night Tour option is selected.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1293": {
     "country": "US",
     "place": "Muir Woods",
@@ -828,6 +1188,102 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1297": {
+    "country": "US",
+    "place": "La Brea Tar Pits",
+    "adventure_title": "See the tar pits at La Brea",
+    "viator_url": "https://www.viator.com/tours/Los-Angeles/La-Brea-Tar-Pits-Tour-by-Segway/d645-5058LABREA",
+    "product_code": "5058LABREA",
+    "product_title": "La Brea Tar Pits Segway Tour",
+    "match_type": "exact",
+    "match_note": "The guided Segway route explores the La Brea Tar Pits and its active excavation and prehistoric-animal exhibits. Museum admission beyond the outdoor route is not listed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1298": {
+    "country": "US",
+    "place": "La Jolla",
+    "adventure_title": "Kayak the sea caves at La Jolla",
+    "viator_url": "https://www.viator.com/tours/La-Jolla/La-Jolla-Sea-Caves-Kayak-Tour/d22636-3654CAVES",
+    "product_code": "3654CAVES",
+    "product_title": "La Jolla Sea Caves Kayak Tour For Two (Tandem Kayak)",
+    "match_type": "guided_option",
+    "match_note": "The tandem-kayak tour paddles from La Jolla Shores to the sea caves and ecological reserve. Entering the caves depends on ocean conditions, safety and the guide's assessment.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1302": {
+    "country": "US",
+    "place": "Multnomah Falls",
+    "adventure_title": "Walk up to Multnomah Falls",
+    "viator_url": "https://www.viator.com/tours/Portland/Multnomah-Falls-Zen-Columbia-River-Gorge-Waterfalls-Tour/d5065-126203P10",
+    "product_code": "126203P10",
+    "product_title": "Multnomah Falls and Columbia River Gorge Half-Day Hiking Tour",
+    "match_type": "exact",
+    "match_note": "The Columbia River Gorge hiking tour walks to Multnomah Falls' Benson Bridge and visits other short waterfall trails; it does not include the long, steep hike to the top of Multnomah Falls.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1308": {
+    "country": "US",
+    "place": "Olympic National Park",
+    "adventure_title": "Walk the Hoh Rain Forest in Olympic",
+    "viator_url": "https://www.viator.com/tours/Port-Angeles/Hoh-Rain-Forest-and-Pacific-Coast-Olympic-National-Park-Guided-Tour/d4390-88081P4",
+    "product_code": "88081P4",
+    "product_title": "Hoh Rain Forest and Rialto Beach Guided Tour in Olympic National Park",
+    "match_type": "exact",
+    "match_note": "The guided Olympic National Park day tour hikes both the Hall of Mosses and Spruce Nature Trail in the Hoh Rain Forest, with park entry included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1315": {
+    "country": "US",
+    "place": "Fairbanks",
+    "adventure_title": "Chase the northern lights from Fairbanks",
+    "viator_url": "https://www.viator.com/tours/Fairbanks/Aurora-Viewing-In-Interior-Alaska/d5269-330649P1",
+    "product_code": "330649P1",
+    "product_title": "Northern Lights Lodge & Chase Tour from Fairbanks",
+    "match_type": "exact",
+    "match_note": "The Fairbanks tour combines a private dark-sky lodge with a mobile aurora chase when conditions warrant. Northern-light appearance and intensity are natural and cannot be guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1320": {
+    "country": "US",
+    "place": "Alaska Railroad",
+    "adventure_title": "Ride the Alaska Railroad to Seward",
+    "viator_url": "https://www.viator.com/tours/Anchorage/Alaska-Railroad-Anchorage-to-Seward-Round-Trip-Same-Day-Return/d4152-48944P1",
+    "product_code": "48944P1",
+    "product_title": "Alaska Railroad Anchorage to Seward Round Trip Same Day Return",
+    "match_type": "exact",
+    "match_note": "The same-day rail package rides the Alaska Railroad's Coastal Classic from Anchorage to Seward and back, with several hours to explore Seward independently. Activities and meals there cost extra.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1325": {
+    "country": "US",
+    "place": "Road to Hana",
+    "adventure_title": "Drive the Road to Hana",
+    "viator_url": "https://www.viator.com/tours/Lahaina/Road-to-Hana-Tour-from-Maui/d51005-19153P1",
+    "product_code": "19153P1",
+    "product_title": "Road to Hana: Full-Day Scenic Drive with Blacksand & Waterfalls",
+    "match_type": "exact",
+    "match_note": "The full-day guided drive follows the Road to Hana's winding highway, bridges, rainforest, waterfalls and coastal stops. Individual stops can vary with timing, access and conditions.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1326": {
+    "country": "US",
+    "place": "Molokini",
+    "adventure_title": "Snorkel the Molokini crater",
+    "viator_url": "https://www.viator.com/tours/Maui/Maui-Reef-Adventure-Tours-aboard-the-Ocean-Freedom-and-Reef-Explorer/d671-45301P1",
+    "product_code": "45301P1",
+    "product_title": "Molokini Crater Snorkel and Turtle Cove High Quality Adventure!",
+    "match_type": "exact",
+    "match_note": "The small-group raft trip snorkels inside Molokini Crater and then visits a turtle cove, with snorkel gear, flotation, lunch and snacks included. Wildlife encounters are not guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1340": {
     "country": "US",
     "place": "Horseshoe Bend",
@@ -837,6 +1293,198 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Page: Lower Antelope Canyon Prime Time Entry with Navajo Guide",
     "match_type": "exact",
     "match_note": "Horseshoe Bend is an explicit tour stop.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1361": {
+    "country": "US",
+    "place": "Taos Pueblo",
+    "adventure_title": "Visit Taos Pueblo",
+    "viator_url": "https://www.viator.com/tours/Santa-Fe/Chimayo-Taos-Pueblo-Driving-Tour/d22369-408593P6",
+    "product_code": "408593P6",
+    "product_title": "Santa Fe to Chimayo and Taos Pueblo Driving Tour/ Day Trip",
+    "match_type": "exact",
+    "match_note": "The private day trip enters Taos Pueblo for a locally guided visit, with admission and lunch included; access remains subject to the Pueblo community's operating decisions.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1363": {
+    "country": "US",
+    "place": "Rocky Mountain National Park",
+    "adventure_title": "Drive Trail Ridge Road in Rocky Mountain National Park",
+    "viator_url": "https://www.viator.com/tours/Denver/Rocky-Mountain-National-Park-Summer/d4837-59646P6",
+    "product_code": "59646P6",
+    "product_title": "Rocky Mountain National Park in Summer Tour from Denver",
+    "match_type": "exact",
+    "match_note": "The summer tour travels 11 miles along Trail Ridge Road, stopping at overlooks and the road's highest point; road access remains seasonal and weather-dependent.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1366": {
+    "country": "US",
+    "place": "Mesa Verde",
+    "adventure_title": "Tour the Cliff Palace at Mesa Verde",
+    "viator_url": "https://www.viator.com/tours/Durango/Mesa-Verde-Express-Tour-With-Tickets-To-Cliff-Palace/d23639-16649P12",
+    "product_code": "16649P12",
+    "product_title": "Mesa Verde Express Tour With Tickets To Cliff Palace",
+    "match_type": "exact",
+    "match_note": "The half-day Mesa Verde trip includes park transport, the National Park Service ticket and a ranger-led Cliff Palace visit; the approach includes stairs and uneven terrain.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1374": {
+    "country": "US",
+    "place": "Glacier National Park",
+    "adventure_title": "Drive the Going-to-the-Sun Road in Glacier",
+    "viator_url": "https://www.viator.com/tours/West-Glacier/Glacier-National-Park-Going-to-the-Sun-Road-Audio-Tour-Guide/d50559-102020P125",
+    "product_code": "102020P125",
+    "product_title": "Glacier National Park Going-to-the-Sun Road Self-Guided Tour",
+    "match_type": "exact",
+    "match_note": "The offline audio tour is built around driving Going-to-the-Sun Road in Glacier National Park, with GPS narration and optional stops; vehicle, park entry and seasonal road access are separate.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1381": {
+    "country": "US",
+    "place": "Custer State Park",
+    "adventure_title": "Drive the Wildlife Loop in Custer State Park",
+    "viator_url": "https://www.viator.com/tours/Rapid-City/Custer-State-Park-Wildlife-Loop-and-Needles-Highway-Shared-Tour/d22170-5577342P12",
+    "product_code": "5577342P12",
+    "product_title": "Custer State Park Wildlife Loop and Needles Highway Tour",
+    "match_type": "exact",
+    "match_note": "The guided drive follows Custer State Park's Wildlife Loop and continues onto Needles Highway and Iron Mountain Road. Animal sightings remain natural and unguaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1386": {
+    "country": "US",
+    "place": "San Antonio River Walk",
+    "adventure_title": "Walk the River Walk and the Alamo",
+    "viator_url": "https://www.viator.com/tours/San-Antonio/Best-S-Antonio-Alamo-and-River-Walking-fun-historic-Adventure/d910-5489626P1",
+    "product_code": "5489626P1",
+    "product_title": "Ultimate San Antonio Walking Experience Alamo & River Walk Cruise",
+    "match_type": "exact",
+    "match_note": "The San Antonio walking experience includes timed entry to the Alamo Church and continues down to the River Walk as part of one connected historical route.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1387": {
+    "country": "US",
+    "place": "Palo Duro Canyon",
+    "adventure_title": "Ride into Palo Duro Canyon",
+    "viator_url": "https://www.viator.com/tours/Amarillo/Amarillo-Palo-Duro-Canyon-Route-66-Day-Trip/d29045-286200P4",
+    "product_code": "286200P4",
+    "product_title": "Amarillo, Palo Duro Canyon and Route 66 Day Trip",
+    "match_type": "exact",
+    "match_note": "The Amarillo day trip drives into Palo Duro Canyon, stops at the Big Cave and Goodnight's Dugout, and allows optional light walking before continuing to Canyon and Route 66.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1394": {
+    "country": "US",
+    "place": "Chicago",
+    "adventure_title": "Take the architecture cruise on the Chicago River",
+    "viator_url": "https://www.viator.com/tours/Chicago/Chicago-Architecture-River-Cruise/d673-5580ARC",
+    "product_code": "5580ARC",
+    "product_title": "Chicago Architecture River Cruise",
+    "match_type": "exact",
+    "match_note": "The narrated cruise travels the main, north and south branches of the Chicago River while interpreting more than 40 notable buildings; drinks are extra.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1400": {
+    "country": "US",
+    "place": "Great Smoky Mountains",
+    "adventure_title": "Watch the synchronous fireflies in the Smokies",
+    "viator_url": "https://www.viator.com/tours/Knoxville/Great-Smoky-Mountains-Rare-Synchronous-Firefly-and-Waterfalls-Walk/d32982-5602570P9",
+    "product_code": "5602570P9",
+    "product_title": "Great Smoky Mountains Rare Synchronous Firefly Waterfalls Walk",
+    "match_type": "exact",
+    "match_note": "The guided night walk is specifically timed for rare synchronous fireflies in the Great Smoky Mountains. Wildlife appearance and intensity remain natural and cannot be guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1406": {
+    "country": "US",
+    "place": "Savannah",
+    "adventure_title": "Walk the squares of Savannah",
+    "viator_url": "https://www.viator.com/tours/Savannah/Savannah-Culinary-and-Cultural-Walking-Tour/d5166-6260SQUARE",
+    "product_code": "6260SQUARE",
+    "product_title": "Savannah First Squares Culinary & Cultural Walking Food Tour",
+    "match_type": "exact",
+    "match_note": "The three-hour food walk crosses Savannah's four original squares and waterfront while pairing local history with six tastings. Dietary needs should be checked with the operator before booking.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1412": {
+    "country": "US",
+    "place": "Crystal River",
+    "adventure_title": "Snorkel with manatees at Crystal River",
+    "viator_url": "https://www.viator.com/tours/Crystal-River/Manatee-swim-and-snorkel-Guided-Crystal-River-Tour/d22318-107016P1",
+    "product_code": "107016P1",
+    "product_title": "Morning Swim and Snorkel with Manatees-Guided Crystal River Tour",
+    "match_type": "exact",
+    "match_note": "The Crystal River boat trip equips guests to enter the water and snorkel with resident manatees under an in-water guide. Manatee encounters remain subject to wildlife behaviour and protection rules.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1417": {
+    "country": "US",
+    "place": "Shenandoah",
+    "adventure_title": "Drive Skyline Drive through Shenandoah",
+    "viator_url": "https://www.viator.com/tours/Washington-DC/From-Washington-DC-Shenandoah-Private-Skyline-Drive-Day-Tour/d657-117866P647",
+    "product_code": "117866P647",
+    "product_title": "Shenandoah Private Skyline Drive Day Tour From Washington DC",
+    "match_type": "exact",
+    "match_note": "The private day trip drives Skyline Drive through Shenandoah National Park with scenic-overlook stops and optional short walks. Meals and any separately ticketed attractions are excluded.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1421": {
+    "country": "US",
+    "place": "Tidal Basin",
+    "adventure_title": "See the cherry blossom at the Tidal Basin",
+    "viator_url": "https://www.viator.com/tours/Washington-DC/Georgetown-Glow-Public-Art-Tour/d657-41376P22",
+    "product_code": "41376P22",
+    "product_title": "DC in Spring: Cherry Blossom & Tidal Basin Memorials Walking Tour",
+    "match_type": "exact",
+    "match_note": "The seasonal two-hour walk follows the Tidal Basin's cherry trees and five nearby memorials. Blossom timing and appearance depend on weather and the natural bloom cycle.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1423": {
+    "country": "US",
+    "place": "Independence Hall",
+    "adventure_title": "See the Liberty Bell and Independence Hall",
+    "viator_url": "https://www.viator.com/tours/Philadelphia/90-Min-Hamilton-Tour-Liberty-Bell-Independence-Hall-and-more/d906-5694285P1",
+    "product_code": "5694285P1",
+    "product_title": "90-Min Hamilton Tour Liberty Bell and Independence Hall",
+    "match_type": "exact",
+    "match_note": "The 90-minute Philadelphia history walk stops at both the Liberty Bell and Independence Hall. The itinerary records short visits but does not include a separate interior Independence Hall ticket.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1431": {
+    "country": "US",
+    "place": "Freedom Trail",
+    "adventure_title": "Walk the Freedom Trail in Boston",
+    "viator_url": "https://www.viator.com/tours/Boston/Tour-of-the-Freedom-Trail-Faneuil-Hall-to-Boston-Common/d678-105002P10",
+    "product_code": "105002P10",
+    "product_title": "Tour of the Freedom Trail: Faneuil Hall to Boston Common",
+    "match_type": "exact",
+    "match_note": "The period-costumed walking tour follows 11 of Boston's 16 Freedom Trail sites from Faneuil Hall to Boston Common. It is a partial rather than end-to-end trail route.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1450": {
+    "country": "CA",
+    "place": "Niagara Falls",
+    "adventure_title": "Take the boat under Horseshoe Falls",
+    "viator_url": "https://www.viator.com/tours/Niagara-Falls-and-Around/Niagara-Falls-Walking-Tour-with-Boat-Cruise-Eco-Experience/d773-3040P45",
+    "product_code": "3040P45",
+    "product_title": "Niagara Falls Walking Tour with Boat Cruise",
+    "match_type": "guided_option",
+    "match_note": "The Niagara walking tour sails to the base of Horseshoe Falls only when the seasonal boat-cruise option is selected; the listing says the cruise normally operates May to October.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -876,6 +1524,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1462": {
+    "country": "CA",
+    "place": "Butchart Gardens",
+    "adventure_title": "See the Butchart Gardens near Victoria",
+    "viator_url": "https://www.viator.com/tours/Vancouver/Victoria-Icons-Butchart-Harbour-and-Mile-Zero-in-a-Day/d616-132218P732",
+    "product_code": "132218P732",
+    "product_title": "Victoria and Butchart Gardens 1-Day In-Depth Tour from Vancouver",
+    "match_type": "exact",
+    "match_note": "The Vancouver day trip includes ferry transport, Butchart Gardens admission and free time in the gardens. During its listed January 2027 closure window, the operator substitutes the Butterfly Gardens.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1467": {
     "country": "CA",
     "place": "Columbia Icefield",
@@ -909,6 +1569,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Drumheller Day: Royal Tyrrell Museum, Hoodoos & Horseshoe Canyon",
     "match_type": "guided_option",
     "match_note": "The nine-to-ten-hour Drumheller day tour stops for 2.5 hours at the Royal Tyrrell Museum. Museum admission is explicitly not included and must be purchased separately.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1473": {
+    "country": "CA",
+    "place": "Calgary Stampede",
+    "adventure_title": "Go to the Calgary Stampede",
+    "viator_url": "https://www.viator.com/tours/Calgary/The-Calgary-Stampede/d817-5399CSTM",
+    "product_code": "5399CSTM",
+    "product_title": "Calgary Stampede Two Day Thrill Package",
+    "match_type": "exact",
+    "match_note": "The two-day Calgary Stampede package includes Stampede Park entry, reserved afternoon rodeo seating and the following evening's chuckwagon races and Grandstand Show. It is limited to the annual festival dates.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1480": {
+    "country": "CA",
+    "place": "Thousand Islands",
+    "adventure_title": "Cruise the Thousand Islands",
+    "viator_url": "https://www.viator.com/tours/Kingston/1000-Islands-Sunset-Dinner-Cruise/d50495-17217P2",
+    "product_code": "17217P2",
+    "product_title": "Thousand Islands Sunset Dinner Cruise",
+    "match_type": "exact",
+    "match_note": "The three-hour dinner cruise sails among the Thousand Islands from Kingston at sunset, with a served meal and live entertainment; drinks and gratuities are extra.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1488": {
+    "country": "CA",
+    "place": "Green Gables",
+    "adventure_title": "Visit Green Gables on Prince Edward Island",
+    "viator_url": "https://www.viator.com/tours/Charlottetown/Best-of-P-E-I-Tour/d4401-6483P23",
+    "product_code": "6483P23",
+    "product_title": "Prince Edward Island Small Group Tour With Anne of Green Gables",
+    "match_type": "exact",
+    "match_note": "The small-group Prince Edward Island tour includes admission and free time at Green Gables Heritage Place, including the farmhouse and Lovers Lane, plus other island stops.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -960,6 +1656,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1519": {
+    "country": "MX",
+    "place": "Dos Ojos",
+    "adventure_title": "Dive the cenote at Dos Ojos",
+    "viator_url": "https://www.viator.com/tours/Tulum/Dos-Ojos-Cenote-Cavern-Dive-The-Barbie-Line-and-The-Bat-Cave/d23012-189283P1",
+    "product_code": "189283P1",
+    "product_title": "Dive Dos Ojos Cenote: 2 Cavern Dives for Certified Divers",
+    "match_type": "exact",
+    "match_note": "The Dos Ojos experience makes two guided cavern dives on the Barbie Line and Bat Cave routes. It requires Open Water certification, at least 20 logged dives and recent diving experience.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1522": {
+    "country": "MX",
+    "place": "Sumidero Canyon",
+    "adventure_title": "Boat through the Sumidero Canyon",
+    "viator_url": "https://www.viator.com/tours/San-Cristobal-de-las-Casas/Day-Trip-to-Sumidero-Canyon-and-San-Juan-Chamula/d23477-30922P14",
+    "product_code": "30922P14",
+    "product_title": "Boat ride through Sumidero Canyon and visit to Indian Villages",
+    "match_type": "exact",
+    "match_note": "The full-day Chiapas trip travels by shared motorboat through Sumidero Canyon before visiting Chiapa de Corzo and two Indigenous villages; food and drinks are extra.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1537": {
     "country": "MX",
     "place": "El Arco",
@@ -981,6 +1701,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "8-Day Best of Guatemala Tour: Antigua, Pacaya Volcano, Lake Atitlan and Tikal Ruins",
     "match_type": "exact",
     "match_note": "This eight-day Guatemala City round trip includes the Lake Atitlan boat crossing to Santiago on day five; it is one segment of the multi-day package.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1547": {
+    "country": "BZ",
+    "place": "Great Blue Hole",
+    "adventure_title": "Dive the Great Blue Hole",
+    "viator_url": "https://www.viator.com/tours/Ambergris-Caye/The-Great-Blue-Hole-Belize-and-Lighthouse-Reef-Atoll-Dive-Adventure/d5072-5559370P4",
+    "product_code": "5559370P4",
+    "product_title": "Great Blue Hole Belize and Lighthouse Reef Atoll Dive Adventure",
+    "match_type": "exact",
+    "match_note": "The full-day three-tank trip dives the Great Blue Hole to about 40 metres before two Lighthouse Reef dives. Open Water certification, at least ten logged divers for trip confirmation, separate marine fees and rental scuba equipment are required.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1548": {
+    "country": "BZ",
+    "place": "Hol Chan Marine Reserve",
+    "adventure_title": "Snorkel with rays at Hol Chan and Shark Ray Alley",
+    "viator_url": "https://www.viator.com/tours/The-Cayes/Caye-Caulker-Belize-Barrier-Reef-Full-Day-Snorkeling-Tour/d5102-5600920P3",
+    "product_code": "5600920P3",
+    "product_title": "Hol Chan Marine Reserve Snorkeling Adventure",
+    "match_type": "exact",
+    "match_note": "The full-day snorkelling itinerary explicitly visits Hol Chan Marine Reserve and Shark & Ray Alley to snorkel with stingrays and nurse sharks; manatee encounters are seasonal and not guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1549": {
+    "country": "BZ",
+    "place": "Actun Tunichil Muknal",
+    "adventure_title": "Wade into the ATM cave at Actun Tunichil Muknal",
+    "viator_url": "https://www.viator.com/tours/San-Ignacio/ATM-Cave-Actun-Tunichil-Muknal/d5083-151558P15",
+    "product_code": "151558P15",
+    "product_title": "ATM Cave (Actun Tunichil Muknal)",
+    "match_type": "exact",
+    "match_note": "The guided ATM Cave experience wades and swims through Actun Tunichil Muknal to its Maya artefacts and human remains, with helmet, light and optional life vest provided.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1056,6 +1812,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1571": {
+    "country": "BS",
+    "place": "Exuma Cays",
+    "adventure_title": "Swim with the pigs at Big Major Cay",
+    "viator_url": "https://www.viator.com/tours/New-Providence-Island/Exuma-All-Inclusive-Swimming-Pigs-Tour-by-Powerboat/d24115-294117P4",
+    "product_code": "294117P4",
+    "product_title": "Exuma Powerboat Tour from Nassau with Swimming Pigs",
+    "match_type": "exact",
+    "match_note": "The Exuma powerboat tour includes a stop and admission at Big Major Cay to visit the swimming pigs; conditions and animal behaviour may affect the encounter.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1573": {
     "country": "DO",
     "place": "Samana Bay",
@@ -1065,6 +1833,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Humpback whales Watching + Samana Eco-Tour",
     "match_type": "exact",
     "match_note": "The current 10-to-12-hour product explicitly cruises Samana Bay by catamaran to watch humpbacks. Sightings are not guaranteed because the whales are wild; no live date availability is claimed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1575": {
+    "country": "PR",
+    "place": "Mosquito Bay",
+    "adventure_title": "Kayak the bioluminescent bay at Mosquito Bay",
+    "viator_url": "https://www.viator.com/tours/Vieques/Dindins-Bio-Bay-Tour-Kayak-Regular-Mosquito-Bay-Vieques-PR/d22812-389200P2",
+    "product_code": "389200P2",
+    "product_title": "Dindin\u2019s Biobay Tours-CLEAR BOTTOM KAYAKS Tour in Mosquito Bay",
+    "match_type": "exact",
+    "match_note": "The one-hour clear-bottom kayak tour paddles Mosquito Bay on Vieques at night to observe bioluminescence; travellers must arrange their own ferry access to Vieques.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1104,6 +1884,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1583": {
+    "country": "LC",
+    "place": "Sulphur Springs Saint Lucia",
+    "adventure_title": "Bathe in the sulphur springs at Soufriere",
+    "viator_url": "https://www.viator.com/tours/Cap-Estate/Rejuvenating-Mud-Bath-Experience-Tour-St-Lucia-Sulphur-Springs-Tour-Full-Day/d50210-126216P14",
+    "product_code": "126216P14",
+    "product_title": "St. Lucia Sulphur Springs Rejuvenating Mud Bath Tour",
+    "match_type": "exact",
+    "match_note": "The Saint Lucia tour includes entry to the Soufriere Sulphur Springs mud bath and time bathing in the warm sulphur water, plus Toraille Waterfall.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1584": {
     "country": "DM",
     "place": "Boiling Lake",
@@ -1128,6 +1920,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1588": {
+    "country": "AW",
+    "place": "Arikok National Park",
+    "adventure_title": "Find the natural pool in Arikok National Park",
+    "viator_url": "https://www.viator.com/tours/Aruba/National-Park-Arikok-Jeep-Safari-Adventure/d28-324189P4",
+    "product_code": "324189P4",
+    "product_title": "National Park Arikok Jeep Safari Adventures",
+    "match_type": "exact",
+    "match_note": "The Arikok jeep safari reaches Conchi Natural Pool by the rough park track. Swimming and snorkelling happen only when park rangers deem conditions safe.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1589": {
     "country": "AG",
     "place": "Nelson's Dockyard",
@@ -1140,6 +1944,54 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1599": {
+    "country": "ID",
+    "place": "Tirta Empul",
+    "adventure_title": "Bathe in the holy springs at Tirta Empul",
+    "viator_url": "https://www.viator.com/tours/Nusa-Dua/Melukat-Ritual-at-Tirta-Empul-Temple-Holy-Water-Cleansing/d22287-452265P33",
+    "product_code": "452265P33",
+    "product_title": "Purification at Tirta Empul Temple - Holy Water Cleansing",
+    "match_type": "exact",
+    "match_note": "A guided melukat purification experience uses Tirta Empul's holy springs, followed by other Bali stops.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1601": {
+    "country": "ID",
+    "place": "Mount Batur",
+    "adventure_title": "Climb Mount Batur for sunrise",
+    "viator_url": "https://www.viator.com/tours/Seminyak/Bali-Gate-Of-Heaven-Sunset-Tour-All-Inclusive/d34198-148440P4",
+    "product_code": "148440P4",
+    "product_title": "Mount Batur Sunrise Trekking Private Tour",
+    "match_type": "exact",
+    "match_note": "A private pre-dawn trek climbs Mount Batur for sunrise, with a guide, summit breakfast and return transfer.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1602": {
+    "country": "ID",
+    "place": "Ulun Danu Beratan",
+    "adventure_title": "See the lake temple at Ulun Danu Beratan",
+    "viator_url": "https://www.viator.com/tours/Ubud/Balis-Pura-Ulun-Danu-Beratan-Temple-Complex-A-Self-Guided-Tour/d5467-110804P618",
+    "product_code": "110804P618",
+    "product_title": "Ulun Danu Beratan: Self-Guided Temple Walk",
+    "match_type": "guided_option",
+    "match_note": "A self-guided audio walk covers Ulun Danu Beratan's lakeside temple complex; it is not an admission ticket.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1607": {
+    "country": "ID",
+    "place": "Tirta Gangga",
+    "adventure_title": "Explore the water palace at Tirta Gangga",
+    "viator_url": "https://www.viator.com/tours/Ubud/Lempuyang-Temple-Tirta-Gangga-Water-palace-and-Hidden-Waterfall/d5467-135757P12",
+    "product_code": "135757P12",
+    "product_title": "Bali Instagram: Gate of Heavan, Tirta Gangga, Swing and Waterfall",
+    "match_type": "guided_option",
+    "match_note": "The broader East Bali day tour enters Tirta Gangga Water Palace and includes several other photo stops.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1608": {
     "country": "ID",
     "place": "Uluwatu Temple",
@@ -1149,6 +2001,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Bali Uluwatu Sunset Tour with Kecak Fire Dance",
     "match_type": "exact",
     "match_note": "This four-to-five-hour Bali tour explicitly combines Uluwatu sunset with the Kecak and fire-dance performance.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1612": {
+    "country": "ID",
+    "place": "Kelingking Beach",
+    "adventure_title": "Look down on Kelingking Beach from the cliff",
+    "viator_url": "https://www.viator.com/tours/Nusa-Penida/Nusa-Penida-Speedboat-Island-Hopping-Tour/d60448-92163P9",
+    "product_code": "92163P9",
+    "product_title": "Nusa Penida Highlights Full Day Tour: Kelingking Beach and more",
+    "match_type": "guided_option",
+    "match_note": "The full-day Nusa Penida tour stops at the Kelingking headland viewpoint among several island highlights.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1613": {
+    "country": "ID",
+    "place": "Manta Point",
+    "adventure_title": "Snorkel with manta rays at Nusa Penida",
+    "viator_url": "https://www.viator.com/tours/Nusa-Penida/Snorkeling-Safari-Tour/d60448-267968P2",
+    "product_code": "267968P2",
+    "product_title": "Snorkeling Manta Ray Safari in Nusa Penida",
+    "match_type": "exact",
+    "match_note": "A dedicated Nusa Penida manta-ray snorkelling safari; manta sightings and sea access are never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1619": {
+    "country": "ID",
+    "place": "Kawah Ijen",
+    "adventure_title": "See the blue fire at Kawah Ijen",
+    "viator_url": "https://www.viator.com/tours/Banyuwangi/Kawah-Ijen-Midnight-Share-Tour/d50506-193525P2",
+    "product_code": "193525P2",
+    "product_title": "Kawah Ijen Midnight (Share Tour)",
+    "match_type": "exact",
+    "match_note": "A midnight Kawah Ijen hike seeks the blue flame before sunrise; visibility and crater access depend on conditions.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1173,6 +2061,102 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "3-Day Komodo National Park Tour: Komodo Island and Rinca Island Trek",
     "match_type": "exact",
     "match_note": "On this private three-day tour from Labuan Bajo, the second day includes two hours at Pink Beach with snorkelling gear supplied.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1627": {
+    "country": "ID",
+    "place": "Mount Rinjani",
+    "adventure_title": "Climb Mount Rinjani to the crater rim",
+    "viator_url": "https://www.viator.com/tours/Lombok/Mount-Rinjani-Two-days-and-one-night-to-senaru-crater-rim/d22869-250867P6",
+    "product_code": "250867P6",
+    "product_title": "Mount Rinjani 2 Days and 1 Night to Senaru Crater Rim",
+    "match_type": "exact",
+    "match_note": "A two-day, one-night Mount Rinjani trek reaches the Senaru crater rim; fitness, weather and park access requirements apply.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1635": {
+    "country": "ID",
+    "place": "Bukit Lawang",
+    "adventure_title": "Trek to see orangutans at Bukit Lawang",
+    "viator_url": "https://www.viator.com/tours/Medan/Bukit-Lawang-1-Day-Jungle-Treking/d4866-258082P4",
+    "product_code": "258082P4",
+    "product_title": "Bukit Lawang Full Day Private Jungle Trekking To See Orangutans",
+    "match_type": "exact",
+    "match_note": "A full-day private Bukit Lawang jungle trek looks for orangutans and other wildlife; sightings are never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1650": {
+    "country": "JP",
+    "place": "Kinkaku-ji",
+    "adventure_title": "See Kinkaku-ji reflected in its pond",
+    "viator_url": "https://www.viator.com/tours/Kyoto/Day-Trip-to-Kyoto-from-Osaka/d332-20415P1",
+    "product_code": "20415P1",
+    "product_title": "Kyoto Day Tour: Fushimi Inari, Arashiyama, Kinkaku-ji & Kiyomizu",
+    "match_type": "guided_option",
+    "match_note": "The broader Kyoto day tour stops at Kinkaku-ji and several other major sights.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1655": {
+    "country": "JP",
+    "place": "Nara Park",
+    "adventure_title": "Bow to the deer at Nara Park",
+    "viator_url": "https://www.viator.com/tours/Kyoto/From-Osaka-One-Day-Sightseeing-Tour-of-Kyoto-and-Nara/d332-444978P4",
+    "product_code": "444978P4",
+    "product_title": "From Kyoto / Osaka: Kyoto Must-see Spots & Nara Park One Day Tour",
+    "match_type": "guided_option",
+    "match_note": "The broader day tour stops in Nara Park among its free-roaming deer before continuing to Kyoto sights.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1656": {
+    "country": "JP",
+    "place": "Todai-ji",
+    "adventure_title": "Stand under the Great Buddha at Todai-ji",
+    "viator_url": "https://www.viator.com/tours/Kyoto/Nara-Afternoon-Tour-of-Todaiji-Temple-Deer-Park-and-Kasuga-Shrine-from-Kyoto/d332-2142KYO_N310",
+    "product_code": "2142KYO_N310",
+    "product_title": "Nara Afternoon Tour from Kyoto or Osaka: Todai-ji, Nara Park",
+    "match_type": "exact",
+    "match_note": "The Nara afternoon tour enters Todai-ji's Great Buddha hall and also visits Nara Park and Kasuga Taisha.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1659": {
+    "country": "JP",
+    "place": "Himeji Castle",
+    "adventure_title": "Climb the keep at Himeji Castle",
+    "viator_url": "https://www.viator.com/tours/Himeji/The-Timeless-Majesty-Himeji-Castle-Guided-Tour/d50592-439207P1",
+    "product_code": "439207P1",
+    "product_title": "2.5 Hour Private History and Culture Tour in Himeji Castle",
+    "match_type": "exact",
+    "match_note": "A private guide leads visitors through Himeji Castle and up the main keep's steep staircases; castle admission is separate.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1660": {
+    "country": "JP",
+    "place": "Kumano Kodo",
+    "adventure_title": "Walk the Kumano Kodo pilgrimage route",
+    "viator_url": "https://www.viator.com/tours/Wakayama-Prefecture/Wakayama-Walk-the-Kumano-Kodo-to-Kumano-Hongu-Taisha/d50174-174545P448",
+    "product_code": "174545P448",
+    "product_title": "Wakayama: Walk the Kumano Kodo to Kumano Hongu Taisha",
+    "match_type": "exact",
+    "match_note": "A guided walk follows the Kumano Kodo from Hosshinmon-oji to Kumano Hongu Taisha.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1665": {
+    "country": "JP",
+    "place": "Kamikochi",
+    "adventure_title": "Walk the Azusa river at Kamikochi",
+    "viator_url": "https://www.viator.com/tours/Matsumoto/Nagano-Kamikochi-Morning-Nature-Walk-from-Taisho-Pond/d50821-174545P622",
+    "product_code": "174545P622",
+    "product_title": "Nagano: Kamikochi Morning Nature Walk from Taisho Pond",
+    "match_type": "exact",
+    "match_note": "A guided morning nature walk follows Kamikochi from Taisho Pond beside the Azusa River toward Kappa Bridge.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1236,6 +2220,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1721": {
+    "country": "KH",
+    "place": "Bayon",
+    "adventure_title": "Find the faces at the Bayon",
+    "viator_url": "https://www.viator.com/tours/Siem-Reap/Angkor-Wat-Sunrise-Tour-to-Bayon-Ta-Prohm-and-Banteay-Srei/d5480-71686P3",
+    "product_code": "71686P3",
+    "product_title": "Angkor Wat Sunrise Tour to Bayon, Ta Prohm and Banteay Srei",
+    "match_type": "guided_option",
+    "match_note": "The broader Angkor day tour stops at Bayon to see its many carved faces after several other temples.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1722": {
+    "country": "KH",
+    "place": "Ta Prohm",
+    "adventure_title": "See the trees growing through Ta Prohm",
+    "viator_url": "https://www.viator.com/tours/Siem-Reap/Angkor-Golden-Sunrise-Tour/d5480-239308P1",
+    "product_code": "239308P1",
+    "product_title": "Angkor Wat Sunrise, Bayon and Ta Prohm Small Group Tour",
+    "match_type": "guided_option",
+    "match_note": "The broader small-group Angkor tour enters Ta Prohm, where the temple is overgrown by jungle trees.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1723": {
+    "country": "KH",
+    "place": "Banteay Srei",
+    "adventure_title": "See the pink sandstone carving at Banteay Srei",
+    "viator_url": "https://www.viator.com/tours/Siem-Reap/Banteay-Srei-Full-Day-Tour-by-shared-MiniBus/d5480-56250P13",
+    "product_code": "56250P13",
+    "product_title": "Full-Day Banteay Srei & 5 Temples - Grand Tours Join-in Tour",
+    "match_type": "guided_option",
+    "match_note": "The full-day temple circuit includes an entered stop at the pink-sandstone Banteay Srei temple.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1733": {
     "country": "MY",
     "place": "Batu Caves",
@@ -1245,6 +2265,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Putrajaya, Batu Caves And Kuala Lumpur Full-day City Tour",
     "match_type": "guided_option",
     "match_note": "On this full-day tour from Kuala Lumpur, batu Caves and its stairway are included as a named stop.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1746": {
+    "country": "BN",
+    "place": "Ulu Temburong",
+    "adventure_title": "Walk the canopy at Ulu Temburong",
+    "viator_url": "https://www.viator.com/tours/Bandar-Seri-Begawan/Brunei-Temburong-Day-Trip/d4617-38355P511",
+    "product_code": "38355P511",
+    "product_title": "Full Day Trip of Brunei Ulu Temburong National Park including Canopy Walk",
+    "match_type": "exact",
+    "match_note": "A full-day Ulu Temburong National Park outing includes the long stair approach and canopy walk.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1747": {
+    "country": "PH",
+    "place": "El Nido",
+    "adventure_title": "Island-hop the Bacuit archipelago",
+    "viator_url": "https://www.viator.com/tours/Palawan/El-Nido-Island-Hopping-Tour-A-Big-Lagoon-and-4-islands/d25945-422454P1",
+    "product_code": "422454P1",
+    "product_title": "Small-Group El Nido Island Hopping Tour",
+    "match_type": "exact",
+    "match_note": "A full-day small-group El Nido island-hopping route visits lagoons, beaches and islands in the Bacuit archipelago.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1272,6 +2316,54 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1768": {
+    "country": "IN",
+    "place": "Jama Masjid",
+    "adventure_title": "Walk Old Delhi from the Jama Masjid",
+    "viator_url": "https://www.viator.com/tours/New-Delhi/Old-Delhi-Walk-Jama-Masjid-Spice-Market-Sikh-Temple-and-Rickshaw-Ride/d804-371126P1",
+    "product_code": "371126P1",
+    "product_title": "Old Delhi Walk, Jama Masjid, Spice Market, Sikh Temple & Rickshaw Ride",
+    "match_type": "exact",
+    "match_note": "A guided Old Delhi walk visits Jama Masjid and continues through markets, alleys and religious sites.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1770": {
+    "country": "IN",
+    "place": "Golden Temple",
+    "adventure_title": "Eat in the langar at the Golden Temple",
+    "viator_url": "https://www.viator.com/tours/Amritsar/Experience-Golden-Temple-Traditionally/d22306-175722P1",
+    "product_code": "175722P1",
+    "product_title": "Golden Temple Guided Tour (Planet Amritsar Inc.)",
+    "match_type": "exact",
+    "match_note": "The guided Golden Temple visit includes eating in the free community langar and seeing its large kitchen.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1771": {
+    "country": "IN",
+    "place": "Khardung La",
+    "adventure_title": "Drive over the Khardung La",
+    "viator_url": "https://www.viator.com/tours/Leh/Khardung-La-Day-Trip-from-Leh/d22569-76234P264",
+    "product_code": "76234P264",
+    "product_title": "Private Khardung La Day Trip from Leh",
+    "match_type": "exact",
+    "match_note": "A private day trip drives from Leh over Khardung La; permits, altitude, weather and road conditions apply.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1780": {
+    "country": "IN",
+    "place": "Ajanta and Ellora",
+    "adventure_title": "See the rock-cut caves at Ajanta and Ellora",
+    "viator_url": "https://www.viator.com/tours/Aurangabad/Ajanta-and-Ellora-Caves-Tour-2-Days/d23226-16386P22",
+    "product_code": "16386P22",
+    "product_title": "Ajanta and Ellora Caves Tour",
+    "match_type": "exact",
+    "match_note": "A multi-day guided tour visits both Ajanta and Ellora's rock-cut cave complexes.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1797": {
     "country": "LK",
     "place": "Yala",
@@ -1281,6 +2373,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Discover Sri Lankan Beauty - 12 Days",
     "match_type": "guided_option",
     "match_note": "On this 12-day tour departing Negombo, the itinerary includes a Yala-area wildlife safari; leopard sightings are never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1804": {
+    "country": "BD",
+    "place": "Cox's Bazar",
+    "adventure_title": "Walk the Bay of Bengal shore at Cox's Bazar",
+    "viator_url": "https://www.viator.com/tours/Dhaka/Tea-Plantation-Tour-To-Sreemangal-and-Shylet/d22495-263476P11",
+    "product_code": "263476P11",
+    "product_title": "Experience the Largest Unbroken Sea Beach in the World",
+    "match_type": "guided_option",
+    "match_note": "The broader Cox's Bazar package is centred on the Bay of Bengal beach and includes time to walk its long sandy shoreline.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1296,6 +2400,66 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "1811": {
+    "country": "CN",
+    "place": "Temple of Heaven",
+    "adventure_title": "Walk the Temple of Heaven park in the morning",
+    "viator_url": "https://www.viator.com/tours/Beijing/2-hour-Private-Walking-Tour-either-Temple-of-Heaven-or-Summer-Palace/d321-37561P143",
+    "product_code": "37561P143",
+    "product_title": "Summer Palace & Temple of Heaven 5-hour Group Walking Tour",
+    "match_type": "guided_option",
+    "match_note": "The five-hour group walking tour enters the Temple of Heaven before continuing to the Summer Palace; select the guided option rather than ticket-only.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1812": {
+    "country": "CN",
+    "place": "Terracotta Army",
+    "adventure_title": "Stand in front of the Terracotta Army",
+    "viator_url": "https://www.viator.com/tours/Xian/Terracotta-Army-Ticket/d326-448763P4",
+    "product_code": "448763P4",
+    "product_title": "Terracotta Army Ticket",
+    "match_type": "guided_option",
+    "match_note": "A Terracotta Army admission product for independent visitors; transport is not included and passport details are required.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1813": {
+    "country": "CN",
+    "place": "Xi'an city wall",
+    "adventure_title": "Cycle the Xi'an city wall",
+    "viator_url": "https://www.viator.com/tours/Xian/Xian-City-Wall-Guided-Tour-with-Cycling-Option/d326-10289P220",
+    "product_code": "10289P220",
+    "product_title": "Xi'an City Wall: Guided Tour with Cycling Option",
+    "match_type": "guided_option",
+    "match_note": "A small-group Xi'an City Wall tour offers cycling as an option; select the cycling option and note that the guide does not ride with guests.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1816": {
+    "country": "CN",
+    "place": "Tiger Leaping Gorge",
+    "adventure_title": "Walk Tiger Leaping Gorge",
+    "viator_url": "https://www.viator.com/tours/China/Wuyuan-Huangling-Day-Tour/d13-5590720P25",
+    "product_code": "5590720P25",
+    "product_title": "Private Adventure: A Day Hike Through Tiger Leaping Gorge",
+    "match_type": "exact",
+    "match_note": "A private day hike follows Tiger Leaping Gorge's high trail; altitude, weather and trail conditions apply.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1821": {
+    "country": "CN",
+    "place": "The Bund",
+    "adventure_title": "Walk the Bund at night",
+    "viator_url": "https://www.viator.com/tours/Shanghai/Huangpu-River-Cruise-and-Bund-City-Lights-Evening-Tour-of-Shanghai/d325-2052SIC_06",
+    "product_code": "2052SIC_06",
+    "product_title": "Huangpu River Cruise and Bund City Lights Evening Tour of Shanghai",
+    "match_type": "guided_option",
+    "match_note": "The evening tour begins with a Huangpu cruise and then walks along the illuminated Bund as part of a broader night itinerary.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "1822": {
     "country": "KR",
     "place": "Bukchon Hanok Village",
@@ -1305,6 +2469,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Seoul Day Tour: Gyeongbokgung Palace, Bukchon, Gwangjang Market",
     "match_type": "guided_option",
     "match_note": "This Seoul day tour includes an 80-minute walk through Bukchon Hanok Village.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "1833": {
+    "country": "HK",
+    "place": "Star Ferry",
+    "adventure_title": "Ride the Star Ferry across the harbour",
+    "viator_url": "https://www.viator.com/tours/Hong-Kong-SAR/Hong-Kong-Night-Adventure-and-Foodie-Local-Tour/d35959-67934P14",
+    "product_code": "67934P14",
+    "product_title": "Hong Kong Night Tour | Star Ferry Ride & Symphony of Lights",
+    "match_type": "exact",
+    "match_note": "The private night tour includes a Star Ferry crossing of Victoria Harbour and several later evening stops.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1416,6 +2592,126 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "2047": {
+    "country": "US",
+    "place": "Congaree National Park",
+    "adventure_title": "Walk the boardwalk under the champion trees",
+    "viator_url": "https://www.viator.com/tours/South-Carolina/Congaree-National-Park-Self-Guided-Audio-Walking-Tour/d294-102020P191",
+    "product_code": "102020P191",
+    "product_title": "Congaree National Park Self Guided Audio Walking Tour",
+    "match_type": "exact",
+    "match_note": "The offline walking guide follows Congaree's 2.4-mile boardwalk through old-growth champion-tree habitat; park transport, meals and parking are not included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2062": {
+    "country": "US",
+    "place": "Beinecke Rare Book Library",
+    "adventure_title": "See the Gutenberg Bible at the Beinecke",
+    "viator_url": "https://www.viator.com/tours/New-Haven/Historic-Yale-Smart-Phone-App-GPS-Self-Guided-Walking-Tour/d23481-222222P65",
+    "product_code": "222222P65",
+    "product_title": "Private Historic Yale Smart Phone Self Guided Walking Tour",
+    "match_type": "guided_option",
+    "match_note": "The self-guided Yale walk says guests may pause and enter Beinecke Library to see the Gutenberg Bible when the library is open. Building access and display availability are not guaranteed by the tour.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2103": {
+    "country": "US",
+    "place": "Annapolis",
+    "adventure_title": "Walk the Naval Academy and the state house",
+    "viator_url": "https://www.viator.com/tours/Annapolis/Best-of-Annapolis-Tour-Colonial-History-and-U-S-Naval-Academy/d40943-5563163P14",
+    "product_code": "5563163P14",
+    "product_title": "Best of Annapolis Tour: Colonial, State House, Naval Academy",
+    "match_type": "exact",
+    "match_note": "The Annapolis walking tour enters the Maryland State House and concludes with a guided visit to the US Naval Academy. Adults need an accepted physical government ID or original passport.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2142": {
+    "country": "US",
+    "place": "National Mall memorials",
+    "adventure_title": "Walk the memorials after dark",
+    "viator_url": "https://www.viator.com/tours/Washington-DC/Washington-DC-Monuments-and-Memorials-Night-Tour/d657-5566300P4",
+    "product_code": "5566300P4",
+    "product_title": "Washington DC Monuments and Memorials Night Tour",
+    "match_type": "exact",
+    "match_note": "The small-group night tour visits Washington's illuminated monuments and memorials after dark; the precise stop order can vary.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2146": {
+    "country": "US",
+    "place": "Smithsonian National Museum of Natural History",
+    "adventure_title": "See the Hope Diamond and the whale at Natural History",
+    "viator_url": "https://www.viator.com/tours/Washington-DC/Small-Group-Smithsonian-Combo-Tour-Museum-of-American-History-and-Air-and-Space-Museum/d657-40048P23",
+    "product_code": "40048P23",
+    "product_title": "Smithsonian Natural History + Air & Space Museum Tour 8ppl Max",
+    "match_type": "exact",
+    "match_note": "The Smithsonian Natural History tour explicitly covers the Hope Diamond and the museum's large taxidermied elephant before continuing to Air and Space.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2160": {
+    "country": "US",
+    "place": "West Quoddy Head",
+    "adventure_title": "Stand at the easternmost point in the United States",
+    "viator_url": "https://www.viator.com/tours/Bar-Harbor/Downeast-Acadia-Private-Driving-Tour/d4371-5596065P7",
+    "product_code": "5596065P7",
+    "product_title": "Campobello Island Downeast Maine and Acadia Private Driving Tour",
+    "match_type": "exact",
+    "match_note": "The private Downeast driving tour stops at West Quoddy Head, described as the easternmost point in the United States, with lighthouse and cliff views.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2174": {
+    "country": "US",
+    "place": "Tupelo",
+    "adventure_title": "See the two-room house Elvis was born in",
+    "viator_url": "https://www.viator.com/tours/Memphis/Gracelands-Elvis-Presley-Tupleo-Tour/d783-3935P3",
+    "product_code": "3935P3",
+    "product_title": "Elvis Presley's Childhood Home Sightseeing Daytrip from Memphis",
+    "match_type": "exact",
+    "match_note": "The Memphis day trip includes admission to Elvis Presley's two-room Tupelo birthplace, museum, childhood church and Walk of Life.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2326": {
+    "country": "ID",
+    "place": "Wae Rebo",
+    "adventure_title": "Stay in the cone houses at Wae Rebo",
+    "viator_url": "https://www.viator.com/tours/East-Nusa-Tenggara/2-Day-Wae-Rebo-Village-Cultural-Trek-from-Labuan-Bajo/d23784-5656509P6",
+    "product_code": "5656509P6",
+    "product_title": "2-Day Wae Rebo Village Cultural Trek from Labuan Bajo",
+    "match_type": "exact",
+    "match_note": "A two-day cultural trek from Labuan Bajo reaches Wae Rebo village for the overnight village experience.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2331": {
+    "country": "IN",
+    "place": "Elephanta Caves",
+    "adventure_title": "Take the ferry to Elephanta Island",
+    "viator_url": "https://www.viator.com/tours/Mumbai/Elephanta-Caves-Mumbai-Excursion/d953-34181P23",
+    "product_code": "34181P23",
+    "product_title": "Elephanta Caves & Island Tour with Multiple Options",
+    "match_type": "exact",
+    "match_note": "The tour takes the ferry from Mumbai to Elephanta Island and provides a guided visit to its caves.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2333": {
+    "country": "IN",
+    "place": "Mawlynnong",
+    "adventure_title": "Walk the cleanest village in Asia",
+    "viator_url": "https://www.viator.com/tours/Shillong/Day-Trip-to-Mawlynnong-Guided-Private-Sightseeing-Experience-from-Shillong/d51511-205224P150",
+    "product_code": "205224P150",
+    "product_title": "Day Trip to Mawlynnong (Guided Private Sightseeing Experience from Shillong)",
+    "match_type": "exact",
+    "match_note": "A private Shillong day trip walks through Mawlynnong and also visits a living-root bridge.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "2357": {
     "country": "ZA",
     "place": "Table Mountain",
@@ -1425,6 +2721,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "TheMajestic TableMountain Shared Tour,Penguin&Cape Point Full-Day",
     "match_type": "guided_option",
     "match_note": "On this full-day tour from Cape Town, the tour visits Table Mountain with a cableway option; cableway operation depends on conditions.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2358": {
+    "country": "ZA",
+    "place": "Platteklip Gorge",
+    "adventure_title": "Hike Platteklip Gorge to the top of Table Mountain",
+    "viator_url": "https://www.viator.com/tours/Cape-Town/Hike-Table-Mountain-sunrise-via-Platteklip-gorge/d318-147942P4",
+    "product_code": "147942P4",
+    "product_title": "Table Mountain Hike via Platteklip Gorge at Sunrise",
+    "match_type": "exact",
+    "match_note": "A guided sunrise hike ascends Table Mountain by the Platteklip Gorge route; weather and trail conditions apply.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2359": {
+    "country": "ZA",
+    "place": "Robben Island",
+    "adventure_title": "Tour Robben Island with a former political prisoner as guide",
+    "viator_url": "https://www.viator.com/tours/Cape-Town/Robben-Island-Pre-Booked-Tickets/d318-423416P8",
+    "product_code": "423416P8",
+    "product_title": "Robben Island Ticket + Former Prisoner Guide",
+    "match_type": "exact",
+    "match_note": "The package includes the Robben Island ferry ticket and the museum tour led on the island by a former political prisoner.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1464,6 +2784,66 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "2365": {
+    "country": "ZA",
+    "place": "Franschhoek Wine Tram",
+    "adventure_title": "Hop between estates on the Franschhoek Wine Tram",
+    "viator_url": "https://www.viator.com/tours/Cape-Town/Franschhoek-Wine-Tram-Hop-On-Hop-Off-Tour/d318-458083P10",
+    "product_code": "458083P10",
+    "product_title": "Ultimate Full Day Franschhoek Wine Tram Hop On Hop Off Experience",
+    "match_type": "exact",
+    "match_note": "The full-day product supplies a pre-selected Franschhoek Wine Tram line ticket for hopping between estates; line availability varies by day.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2368": {
+    "country": "ZA",
+    "place": "Knysna Heads",
+    "adventure_title": "Cruise the Knysna Lagoon to the Heads",
+    "viator_url": "https://www.viator.com/tours/Knysna/Knysna-Lagoon-Boat-Cruises/d50538-146176P4",
+    "product_code": "146176P4",
+    "product_title": "Knysna Heads & Lagoon Boat Cruises- 75 min Scenic Experience",
+    "match_type": "exact",
+    "match_note": "A 75-minute scenic boat experience cruises Knysna Lagoon toward the Heads.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2371": {
+    "country": "ZA",
+    "place": "Cape Agulhas",
+    "adventure_title": "Stand where the Indian and Atlantic oceans meet at Cape Agulhas",
+    "viator_url": "https://www.viator.com/tours/Cape-Town/Table-Mountain-Cape-Point-Penguins-Boulders-Beach-Cape-Town/d318-340477P8",
+    "product_code": "340477P8",
+    "product_title": "Cape Agulhas Southernmost Tip of Africa and Hermanus Tour",
+    "match_type": "guided_option",
+    "match_note": "The full-day coastal tour stops at Cape Agulhas and its official ocean-meeting marker, alongside several other destinations.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2374": {
+    "country": "ZA",
+    "place": "Bloukrans Bridge",
+    "adventure_title": "Bungee jump the Bloukrans Bridge",
+    "viator_url": "https://www.viator.com/tours/Western-Cape/Worlds-Highest-Bridge-Bungy-Jump-at-Bloukrans-Bridge/d23346-73320P1",
+    "product_code": "73320P1",
+    "product_title": "Bloukrans Bungy, the worlds best bungy jump!",
+    "match_type": "exact",
+    "match_note": "A dedicated Bloukrans Bridge bungy activity; age, health, weather and operator restrictions apply.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2382": {
+    "country": "ZA",
+    "place": "iSimangaliso Wetland Park",
+    "adventure_title": "Cruise the estuary for hippos and crocodiles at St Lucia",
+    "viator_url": "https://www.viator.com/tours/Durban/Full-Day-Isimangaliso-Wetlands-Tour-from-Durban/d315-375099P8",
+    "product_code": "375099P8",
+    "product_title": "Full Day Isimangaliso Wetlands & Boat Cruise Tour from Durban",
+    "match_type": "exact",
+    "match_note": "The full-day iSimangaliso trip includes a boat cruise on the St Lucia Estuary to look for hippos and crocodiles; sightings are not guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "2399": {
     "country": "ZA",
     "place": "Vilakazi Street",
@@ -1485,6 +2865,78 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Half Guided Day Tour of Soweto And Apartheid Museum",
     "match_type": "guided_option",
     "match_note": "On this half-day tour from Johannesburg, the Apartheid Museum is a named part of the guided half-day itinerary.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2401": {
+    "country": "ZA",
+    "place": "Sterkfontein Caves",
+    "adventure_title": "Descend into the Sterkfontein Caves at the Cradle of Humankind",
+    "viator_url": "https://www.viator.com/tours/Johannesburg/Cradle-of-humankind-Sterkfontein-caves-and-Apartheid-museum-tour/d314-158516P50",
+    "product_code": "158516P50",
+    "product_title": "Cradle of Humankind/sterkfontein caves & Apartheid Museum Tour",
+    "match_type": "guided_option",
+    "match_note": "The combined tour describes an admitted guided descent into Sterkfontein Caves plus the Apartheid Museum; reconfirm current cave access before booking.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2408": {
+    "country": "ZA",
+    "place": "Pilanesberg National Park",
+    "adventure_title": "Spot the Big Five in an extinct volcanic crater at Pilanesberg",
+    "viator_url": "https://www.viator.com/tours/Johannesburg/Pilanesberg-half-day-Tour/d314-5489542P4",
+    "product_code": "5489542P4",
+    "product_title": "1 Day Pilanesberg National Park",
+    "match_type": "exact",
+    "match_note": "A day safari explores Pilanesberg's extinct-volcano landscape while looking for the Big Five and other wildlife; sightings are not guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2416": {
+    "country": "IS",
+    "place": "Blue Lagoon",
+    "adventure_title": "Soak in the Blue Lagoon's milky geothermal water",
+    "viator_url": "https://www.viator.com/tours/Reykjavik/The-Blue-Lagoon-Comfort-Package-Including-Transfers/d905-24308P53",
+    "product_code": "24308P53",
+    "product_title": "Blue Lagoon Admission with Mask, Drink, Transfers from Reykjavik",
+    "match_type": "exact",
+    "match_note": "Blue Lagoon package includes admission, a silica mask, a drink and return transfers from Reykjavik; Comfort and Premium inclusions differ.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2420": {
+    "country": "IS",
+    "place": "Reykjavik whale watching",
+    "adventure_title": "Spot minke whales in Faxafloi Bay from Reykjavik harbour",
+    "viator_url": "https://www.viator.com/tours/Reykjavik/Whale-Watching-Reykjavik-and-Lava-Show-Reykjavik/d905-21533P14",
+    "product_code": "21533P14",
+    "product_title": "Reykjavik Whale Watching and Lava Show",
+    "match_type": "guided_option",
+    "match_note": "Reykjavik harbour whale-watching trip sails into the local bay before a separately timed Lava Show; wildlife sightings are never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2426": {
+    "country": "IS",
+    "place": "Diamond Beach",
+    "adventure_title": "Photograph glacier ice washed up on the black sand at Diamond Beach",
+    "viator_url": "https://www.viator.com/tours/Reykjavik/Jokulsarlon-Glacier-Lagoon-Diamond-Beach-Waterfalls-and-much-more/d905-101905P7",
+    "product_code": "101905P7",
+    "product_title": "Glacier Lagoon, Diamond Beach, Black Sand Beaches and Waterfalls",
+    "match_type": "guided_option",
+    "match_note": "Private South Coast day tour includes a dedicated Diamond Beach visit alongside Jokulsarlon, black-sand beaches and waterfalls.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2427": {
+    "country": "IS",
+    "place": "Crystal Ice Cave",
+    "adventure_title": "Descend into a winter-only Crystal Ice Cave",
+    "viator_url": "https://www.viator.com/tours/Reykjavik/2-Day-Crystal-Ice-Cave-and-South-Coast-Experience-from-Reykjavik/d905-18305P16",
+    "product_code": "18305P16",
+    "product_title": "2-Day Crystal Ice Cave and South Coast Experience from Reykjavik",
+    "match_type": "exact",
+    "match_note": "Two-day South Coast trip includes a guided winter crystal ice-cave experience at Vatnajokull plus waterfalls, Reynisfjara and Jokulsarlon.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1548,6 +3000,78 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "2515": {
+    "country": "AT",
+    "place": "Schonbrunn Palace",
+    "adventure_title": "Book ahead for the Habsburgs' 1,441-room summer palace",
+    "viator_url": "https://www.viator.com/tours/Vienna/Skip-the-Line-Schonbrunn-Palace-Guided-Tour/d454-46089P1",
+    "product_code": "46089P1",
+    "product_title": "Vienna: Skip the Line Sch\u00f6nbrunn Palace and Gardens Guided Tour",
+    "match_type": "guided_option",
+    "match_note": "Two-hour guided Sch\u00f6nbrunn visit enters the palace showrooms with skip-the-line access and continues into the imperial gardens.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2530": {
+    "country": "CZ",
+    "place": "Pilsner Urquell Brewery",
+    "adventure_title": "Drink unfiltered lager from the tank at Pilsner Urquell",
+    "viator_url": "https://www.viator.com/tours/Prague/Pilsner-Urquell-brewery-Private-day-trip-Pilsen-City-and-Chateau-tour-Lunch/d462-123929P34",
+    "product_code": "123929P34",
+    "product_title": "Pilsner Urquell brewery Private day trip, Pilsen City and Chateau tour + Lunch",
+    "match_type": "guided_option",
+    "match_note": "Private Pilsen day trip includes the Pilsner Urquell brewery tour and explicitly finishes with unfiltered lager tapped from traditional oak barrels; lunch and other stops are included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2536": {
+    "country": "PL",
+    "place": "Zakopane",
+    "adventure_title": "Ride the funicular up Gubalowka for the view over Zakopane",
+    "viator_url": "https://www.viator.com/tours/Krakow/Zakopane-Tour-with-Hot-Bath-Pools-and-Hotel-Pickup/d529-103840P9",
+    "product_code": "103840P9",
+    "product_title": "Krakow\u2013Zakopane: Cable Car, Chocholow Baths, Cheese & Vodka",
+    "match_type": "guided_option",
+    "match_note": "Full-day Zakopane trip includes the Guba\u0142\u00f3wka funicular and its tickets, plus Chocholow village, tastings and three hours at thermal baths.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2558": {
+    "country": "HR",
+    "place": "Dubrovnik cable car",
+    "adventure_title": "Ride the rebuilt cable car above Dubrovnik's rooftops",
+    "viator_url": "https://www.viator.com/tours/Dubrovnik/Dubrovnik-Super-Saver-Mt-Srd-Cable-Car-Ride-plus-Old-Town-and-City-Walls-Walking-Tour/d904-5360CABLEWALLS",
+    "product_code": "5360CABLEWALLS",
+    "product_title": "Dubrovnik Cable Car Ride and Old Town Walking Tour",
+    "match_type": "guided_option",
+    "match_note": "Dubrovnik combination includes a round-trip Mount Srd cable-car ticket, summit views and an Old Town walk; a same-day city-walls ticket is also supplied.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2560": {
+    "country": "HR",
+    "place": "Vis Island",
+    "adventure_title": "Boat to the electric-blue Blue Cave from undeveloped Vis Island",
+    "viator_url": "https://www.viator.com/tours/Hvar/Blue-cave-excursion/d22146-109783P1",
+    "product_code": "109783P1",
+    "product_title": "Blue Cave & Vis Island speedboat tour from Hvar",
+    "match_type": "guided_option",
+    "match_note": "Hvar speedboat day visits Vis-area stops and transfers by shuttle boat into the Blue Cave; cave admission is paid separately.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2565": {
+    "country": "HR",
+    "place": "Elaphiti Islands",
+    "adventure_title": "Island-hop the car-free Elaphiti Islands from Dubrovnik",
+    "viator_url": "https://www.viator.com/tours/Dubrovnik/Dubrovnik-Boat-to-Elaphiti-Islands-with-drinks/d904-354826P6",
+    "product_code": "354826P6",
+    "product_title": "Dubrovnik Elaphiti Islands Boat Tour \u2013 Swim, Beaches & Free Time",
+    "match_type": "exact",
+    "match_note": "Full-day Dubrovnik cruise visits the car-free Elaphiti islands of Lopud, Sipan and Kolocep with free time for beaches, villages and swimming.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "2591": {
     "country": "WS",
     "place": "Piula Cave Pool",
@@ -1608,6 +3132,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "2652": {
+    "country": "PT",
+    "place": "Palacio da Pena",
+    "adventure_title": "See the painted towers of the Palacio da Pena",
+    "viator_url": "https://www.viator.com/tours/Lisbon/Sintra-Cabo-da-Roca-and-Cascais-Day-Trip-from-Lisbon/d538-10523P3",
+    "product_code": "10523P3",
+    "product_title": "Sintra, Pena Palace, Cabo da Roca, Cascais Day Trip from Lisbon",
+    "match_type": "guided_option",
+    "match_note": "Sintra day trip spends about two hours visiting Pena Palace, its gardens and terraces with a guide; timed palace admission must be purchased separately.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "2653": {
     "country": "US",
     "place": "Statue of Liberty",
@@ -1620,6 +3156,78 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "2661": {
+    "country": "MX",
+    "place": "Chapultepec Castle",
+    "adventure_title": "Tour Chapultepec Castle",
+    "viator_url": "https://www.viator.com/tours/Mexico-City/Mexico-City-Downtown-Private-Full-Day-Tour/d628-109890P3",
+    "product_code": "109890P3",
+    "product_title": "PRIVATE Tour Chapultepec Castle | Skip-the-Line Tickets Included",
+    "match_type": "exact",
+    "match_note": "The private Chapultepec Castle tour includes skip-the-line museum admission and a guide through the castle and park, with views over Paseo de la Reforma.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2696": {
+    "country": "BW",
+    "place": "Okavango Delta mokoro trip",
+    "adventure_title": "Pole a mokoro through the Okavango Delta's channels",
+    "viator_url": "https://www.viator.com/tours/Maun/1-Day-Okavango-Delta-Full-Day-Trip/d25875-104558P8",
+    "product_code": "104558P8",
+    "product_title": "1 Day Okavango Delta Mokoro/Canoe Daytrip",
+    "match_type": "exact",
+    "match_note": "A local guide poles a mokoro through Okavango Delta channels on this full-day community-supported trip.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2698": {
+    "country": "BW",
+    "place": "Moremi Game Reserve",
+    "adventure_title": "Game drive through Moremi Game Reserve",
+    "viator_url": "https://www.viator.com/tours/Maun/Moremi-One-Day-Game-Drive-Safari/d25875-53286P2",
+    "product_code": "53286P2",
+    "product_title": "Moremi One Day Game Drive Safari",
+    "match_type": "exact",
+    "match_note": "A full-day Moremi Game Reserve safari from Maun is built around game viewing; particular wildlife sightings are never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2705": {
+    "country": "BW",
+    "place": "Chobe National Park",
+    "adventure_title": "Game drive through Chobe National Park",
+    "viator_url": "https://www.viator.com/tours/Kasane/Chobe-National-Park-Game-Drive/d24110-40481P8",
+    "product_code": "40481P8",
+    "product_title": "Chobe National Park Game Drive, Botswana",
+    "match_type": "exact",
+    "match_note": "A three-hour drive enters Chobe National Park for wildlife viewing. The operator requires at least two guests and sightings are never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2721": {
+    "country": "ZW",
+    "place": "Victoria Falls Bridge",
+    "adventure_title": "Walk across the historic Victoria Falls Bridge",
+    "viator_url": "https://www.viator.com/tours/Victoria-Falls/Bokun-Free-Product-1/d5309-324046P213",
+    "product_code": "324046P213",
+    "product_title": "Victoria Falls Bridge Guided Walking Tour and Bush Walk",
+    "match_type": "exact",
+    "match_note": "A guided small-group walk reaches and crosses the historic Victoria Falls Bridge; passport and border requirements apply.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2722": {
+    "country": "ZW",
+    "place": "Victoria Falls Bridge bungee",
+    "adventure_title": "Bungee jump 111m off the Victoria Falls Bridge",
+    "viator_url": "https://www.viator.com/tours/Victoria-Falls/Bungee-Jumping-Off-The-Victoria-Falls-Bridge/d5309-147008P20",
+    "product_code": "147008P20",
+    "product_title": "Victoria Falls Bridge Bungee Jump | 111m Zambezi Adventure",
+    "match_type": "exact",
+    "match_note": "A dedicated 111-metre Victoria Falls Bridge bungee activity; border, weather, age and health requirements apply.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "2724": {
     "country": "ZW",
     "place": "Hwange National Park",
@@ -1629,6 +3237,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Full Day Hwange Day Trip",
     "match_type": "exact",
     "match_note": "This is a full-day game-viewing trip in Hwange National Park.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2743": {
+    "country": "ZM",
+    "place": "Devil's Pool",
+    "adventure_title": "Swim in Devil's Pool at the edge of the falls",
+    "viator_url": "https://www.viator.com/tours/Livingstone/DEVILS-POOL-LIVINGSTONE-ISLAND/d5313-121867P3",
+    "product_code": "121867P3",
+    "product_title": "Devil's pool Livingstone Island Tour",
+    "match_type": "exact",
+    "match_note": "A Livingstone Island tour offers a guided swim in Devil's Pool when water levels and seasonal access permit.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2747": {
+    "country": "ZM",
+    "place": "Mosi-oa-Tunya National Park",
+    "adventure_title": "Game drive in Mosi-oa-Tunya National Park",
+    "viator_url": "https://www.viator.com/tours/Livingstone/Rhino-Game-Drive-in-Mosi-oa-Tunya-National-Park/d5313-5591437P4",
+    "product_code": "5591437P4",
+    "product_title": "Rhino Game Drive in Mosi-oa-Tunya National Park",
+    "match_type": "exact",
+    "match_note": "A Mosi-oa-Tunya game drive includes a short guided walk to track white rhinos; sightings and access depend on park conditions.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1665,6 +3297,54 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Cape Coast Castle, Elmina Castle & Kakum National Park Day Tour",
     "match_type": "exact",
     "match_note": "This 11-to-15-hour day tour from Accra includes the suspended treetop canopy walkway in Kakum National Park.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2792": {
+    "country": "GH",
+    "place": "Manhyia Palace Museum",
+    "adventure_title": "Tour the Manhyia Palace Museum in Kumasi",
+    "viator_url": "https://www.viator.com/tours/Kumasi/TOUR-GUIDING/d5535-133039P1",
+    "product_code": "133039P1",
+    "product_title": "Kumasi City Tour",
+    "match_type": "guided_option",
+    "match_note": "The broader private Kumasi package includes an admitted stop at Manhyia Palace Museum; confirm the applicable tour option and two-day scope before booking.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2843": {
+    "country": "LS",
+    "place": "Sani Pass",
+    "adventure_title": "Drive the Sani Pass switchbacks into the highlands",
+    "viator_url": "https://www.viator.com/tours/Durban/Sani-Pass-Lesotho-Mountain-Kingdom/d315-105547P10",
+    "product_code": "105547P10",
+    "product_title": "Sani Pass - Lesotho Mountain Kingdom",
+    "match_type": "exact",
+    "match_note": "A 4WD trip climbs Sani Pass, crosses into Lesotho and visits Sani Top; a valid passport and current border conditions are essential.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2862": {
+    "country": "CV",
+    "place": "Pico do Fogo",
+    "adventure_title": "Climb the active volcano Pico do Fogo",
+    "viator_url": "https://www.viator.com/tours/Ilha-do-Fogo/7-Ascension-of-VOLCAN-Grand-Pico-to-FOGO/d51449-157296P8",
+    "product_code": "157296P8",
+    "product_title": "Ascent of Pico do Fogo, Fogo Volcano",
+    "match_type": "exact",
+    "match_note": "A demanding guided ascent reaches Pico do Fogo's summit area and descends on volcanic ash; current volcanic, weather and trail conditions still govern access.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2869": {
+    "country": "BJ",
+    "place": "Ouidah Slave Route",
+    "adventure_title": "Walk the Slave Route from Ouidah to the Door of No Return",
+    "viator_url": "https://www.viator.com/tours/Cotonou/Ouidah-Slave-Route-and-Door-of-No-Return-Day-Tour-from-Cotonou/d4446-5694707P1",
+    "product_code": "5694707P1",
+    "product_title": "Ouidah Slave Route and Door of No Return Day Tour from Cotonou",
+    "match_type": "exact",
+    "match_note": "The day tour stops along Ouidah's Slave Route and at the Door of No Return, with about two hours assigned to the route itself.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1812,6 +3492,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "2947": {
+    "country": "MA",
+    "place": "Majorelle Garden",
+    "adventure_title": "Find the cobalt-blue villa in the Majorelle Garden",
+    "viator_url": "https://www.viator.com/tours/Marrakech/Marrakech-Private-Tour-Gardens-half-day-Majorelle-Menara-and-Anima-Garden/d5408-195159P15",
+    "product_code": "195159P15",
+    "product_title": "Majorelle Garden,St Laurent & Berber Museum, Round-Trip & Tickets",
+    "match_type": "guided_option",
+    "match_note": "The package supplies Majorelle Garden admission and round-trip transport, with Saint Laurent and Berber museum visits.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "2951": {
     "country": "MA",
     "place": "Ourika Valley",
@@ -1833,6 +3525,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Agafay Desert Sunset Tour",
     "match_type": "exact",
     "match_note": "This four-hour trip from Marrakech is timed around viewing sunset in the Agafay Desert.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2953": {
+    "country": "MA",
+    "place": "Chouara Tanneries",
+    "adventure_title": "Look down on the dye pits of the Chouara Tanneries",
+    "viator_url": "https://www.viator.com/tours/Fez/Full-day-Guided-Tour-Fes-Medina/d22151-315686P3",
+    "product_code": "315686P3",
+    "product_title": "Fes Private Tour: Medina, Chouara Tannery & Artisans",
+    "match_type": "guided_option",
+    "match_note": "A private Fes medina tour visits Chouara Tannery and later panoramic viewpoints over the old city.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2954": {
+    "country": "MA",
+    "place": "Fes el Bali Medina",
+    "adventure_title": "Navigate the 9,000 alleys of the Fes el Bali medina",
+    "viator_url": "https://www.viator.com/tours/Fez/Fes-Guided-Tours-Full-Day/d22151-118008P2",
+    "product_code": "118008P2",
+    "product_title": "Private Full-Day Fes Medina Walking Tour with Local Guide",
+    "match_type": "exact",
+    "match_note": "A private full-day walking tour begins at Bab Boujloud and navigates the ancient Fes medina with a local guide.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2961": {
+    "country": "MA",
+    "place": "Cape Spartel",
+    "adventure_title": "Stand where the Atlantic meets the Mediterranean at Cape Spartel",
+    "viator_url": "https://www.viator.com/tours/Tangier/Cap-Spartel-and-Hercules-Cave-3H-Tour-Camel-Ride-Included/d4388-417304P13",
+    "product_code": "417304P13",
+    "product_title": "Cape Spartel & Hercules Caves 5-Hour Tour with Camel Ride",
+    "match_type": "exact",
+    "match_note": "The five-hour Tangier tour stops at Cape Spartel where the Atlantic and Mediterranean meet, alongside other coastal stops.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1884,6 +3612,66 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "2973": {
+    "country": "MA",
+    "place": "Paradise Valley",
+    "adventure_title": "Swim the rock pools of Paradise Valley near Agadir",
+    "viator_url": "https://www.viator.com/tours/Agadir/Paradise-Valley-Day-Trips-from-Agadir/d4383-147559P22",
+    "product_code": "147559P22",
+    "product_title": "Paradise Valley Excursion with Botanical Garden & Berber Breakfast",
+    "match_type": "exact",
+    "match_note": "The Paradise Valley excursion includes a guided gorge walk and time to swim in natural rock pools; water and access conditions vary.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2992": {
+    "country": "TZ",
+    "place": "Ngorongoro Crater",
+    "adventure_title": "Descend into the wildlife-packed caldera of Ngorongoro Crater",
+    "viator_url": "https://www.viator.com/tours/Arusha/Ngorongoro-Crater-Day-Trip/d5593-120217P4",
+    "product_code": "120217P4",
+    "product_title": "Ngorongoro Crater Day Trip",
+    "match_type": "exact",
+    "match_note": "A full-day safari descends into Ngorongoro Crater for game viewing; wildlife sightings are never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "2994": {
+    "country": "TZ",
+    "place": "Tarangire National Park",
+    "adventure_title": "Watch elephant herds move between giant baobabs in Tarangire",
+    "viator_url": "https://www.viator.com/tours/Arusha/Tarangire-National-Park-Guided-Day-Tour-from-Arusha/d5593-36000P2",
+    "product_code": "36000P2",
+    "product_title": "Tarangire National Park: Guided Day Tour from Arusha",
+    "match_type": "exact",
+    "match_note": "A guided Tarangire day safari crosses baobab country while looking for elephant herds and other wildlife; sightings are never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3005": {
+    "country": "TZ",
+    "place": "Mandara Huts",
+    "adventure_title": "Day hike to Mandara Huts on Kilimanjaro's Marangu route",
+    "viator_url": "https://www.viator.com/tours/Arusha/Kilimanjaro-day-hike/d5593-464614P5",
+    "product_code": "464614P5",
+    "product_title": "Private Day Tour Kilimanjaro Hike",
+    "match_type": "exact",
+    "match_note": "A private Kilimanjaro day hike uses the Marangu route from the gate to Mandara Huts; it is a long, strenuous outing.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3006": {
+    "country": "TZ",
+    "place": "Materuni Waterfall",
+    "adventure_title": "Trek to Materuni waterfall and roast coffee with a Chagga family",
+    "viator_url": "https://www.viator.com/tours/Kilimanjaro/Materuni-Waterfall-and-Coffee-Tour/d24050-201393P1",
+    "product_code": "201393P1",
+    "product_title": "Moshi Cultural Day: Materuni Waterfall, Coffee Tour | City Tour",
+    "match_type": "exact",
+    "match_note": "The private day combines the Materuni Waterfall hike with a Chagga family coffee ceremony where guests roast and grind coffee.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3009": {
     "country": "TZ",
     "place": "Stone Town",
@@ -1905,6 +3693,54 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Spice Tour + Stone Town Tour + Prison Island",
     "match_type": "guided_option",
     "match_note": "On this Zanzibar combination day tour, a Zanzibar spice-farm tour is one of the product's named components.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3034": {
+    "country": "KE",
+    "place": "Nairobi National Park",
+    "adventure_title": "Spot lions with the city skyline behind them in Nairobi National Park",
+    "viator_url": "https://www.viator.com/tours/Nairobi/Nairobi-National-Park-Tour/d5280-44482P25",
+    "product_code": "44482P25",
+    "product_title": "Safari Tour; Nairobi National Park",
+    "match_type": "exact",
+    "match_note": "A Nairobi National Park safari searches for lions and other wildlife against the city's distant skyline; sightings are never guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3035": {
+    "country": "KE",
+    "place": "Giraffe Centre",
+    "adventure_title": "Hand-feed endangered Rothschild's giraffes at the Giraffe Centre",
+    "viator_url": "https://www.viator.com/tours/Nairobi/Giraffe-Center-Tour-from-Nairobi/d5280-10067P9",
+    "product_code": "10067P9",
+    "product_title": "Tour to Giraffe Center from Nairobi",
+    "match_type": "exact",
+    "match_note": "A dedicated Giraffe Centre visit includes feeding endangered Rothschild's giraffes from the raised platform.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3047": {
+    "country": "KE",
+    "place": "Ol Pejeta Conservancy",
+    "adventure_title": "See the last northern white rhinos on Earth at Ol Pejeta",
+    "viator_url": "https://www.viator.com/tours/Nairobi/Day-tour-to-Olpejeta-Conservancy-from-Nairobi/d5280-105040P16",
+    "product_code": "105040P16",
+    "product_title": "Day tour to Olpejeta Conservancy from Nairobi",
+    "match_type": "exact",
+    "match_note": "The Ol Pejeta day tour visits the conservancy's northern white rhino enclosure. Wildlife conditions and access can change.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3049": {
+    "country": "KE",
+    "place": "Point Lenana",
+    "adventure_title": "Trek to Point Lenana on Mount Kenya",
+    "viator_url": "https://www.viator.com/tours/Nairobi/5-Day-Mount-Kenya-Trek-via-Chogoria-Route-Point-Lenana/d5280-5572756P9",
+    "product_code": "5572756P9",
+    "product_title": "5 Day Mount Kenya Trek via Chogoria Route to Point Lenana",
+    "match_type": "exact",
+    "match_note": "A fully supported five-day Mount Kenya trek follows the Chogoria route to a sunrise finish at Point Lenana.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -1956,6 +3792,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "3082": {
+    "country": "UG",
+    "place": "Source of the Nile",
+    "adventure_title": "Stand at the source of the Nile in Jinja",
+    "viator_url": "https://www.viator.com/tours/Kampala/Half-Day-Tour-In-Jinja-and-Source-of-the-Nile/d5576-404578P2",
+    "product_code": "404578P2",
+    "product_title": "1-Day Jinja & River Nile Tour(Women-Guided-Experience)",
+    "match_type": "guided_option",
+    "match_note": "The broader women-guided Jinja day trip includes a stop at the Source of the Nile along with several cultural and nature stops.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3107": {
     "country": "MU",
     "place": "Le Morne Brabant",
@@ -2001,6 +3849,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Giant Panda and Buddha 1 day tour",
     "match_type": "exact",
     "match_note": "This full-day tour from Chengdu includes a boat trip below the 71-metre Leshan Giant Buddha.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3165": {
+    "country": "CN",
+    "place": "Li River",
+    "adventure_title": "Cruise the Li River between Guilin and Yangshuo",
+    "viator_url": "https://www.viator.com/tours/Guilin/Guilin-Coach-Day-Tour-to-Yangshuo-Old-Town-including-Li-River-Cruise-and-Lunch/d323-31774P14",
+    "product_code": "31774P14",
+    "product_title": "Li River Cruise ticket from Guilin to Yangshuo with pickup",
+    "match_type": "exact",
+    "match_note": "A Li River cruise ticket travels from Guilin to Yangshuo and includes downtown pickup.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3167": {
+    "country": "CN",
+    "place": "Yulong River",
+    "adventure_title": "Bamboo raft down the quieter Yulong River",
+    "viator_url": "https://www.viator.com/tours/Guilin/3-hours-Yangshuo-Yulong-bamboo-boat-tour-with-the-round-way-private-transfer/d323-40944P545",
+    "product_code": "40944P545",
+    "product_title": "2-hours Yangshuo Yulong Bamboo Boat Tour with the Round-way Private Transfers",
+    "match_type": "exact",
+    "match_note": "A two-hour bamboo-raft trip travels along the Yulong River with private round-trip transfers.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2052,6 +3924,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "3224": {
+    "country": "KH",
+    "place": "Tonle Sap",
+    "adventure_title": "Boat through Tonle Sap's floating villages",
+    "viator_url": "https://www.viator.com/tours/Siem-Reap/Kampong-Phluk-and-Tonle-Sap-Lake-Half-day-small-group-tour/d5480-39527P4",
+    "product_code": "39527P4",
+    "product_title": "Tonle Sap Lake & Kampong Phluk Village Half-Day Tour",
+    "match_type": "exact",
+    "match_note": "A half-day Tonle Sap boat tour explores Kampong Phluk's stilted and floating village area; water levels vary seasonally.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3249": {
     "country": "NP",
     "place": "Pashupatinath",
@@ -2097,6 +3981,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Bohol Highlights Tour: Chocolate Hills, Tarsier Spotting and Loboc River Cruise",
     "match_type": "exact",
     "match_note": "This eight-hour Bohol day tour includes a floating lunch buffet while cruising the Loboc River.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3315": {
+    "country": "SG",
+    "place": "Marina Bay Sands SkyPark",
+    "adventure_title": "Take in the skyline from Marina Bay Sands SkyPark",
+    "viator_url": "https://www.viator.com/tours/Singapore/Marina-Bay-Sands-Skypark-Observation-Deck/d60449-40856P30",
+    "product_code": "40856P30",
+    "product_title": "Marina Bay Sands Skypark Observation Deck Ticket",
+    "match_type": "guided_option",
+    "match_note": "An admission product for Marina Bay Sands SkyPark Observation Deck; check the selected entry time and current access rules.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2172,6 +4068,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "3392": {
+    "country": "CR",
+    "place": "Rainforest Aerial Tram",
+    "adventure_title": "Glide above the canopy on the Braulio Carrillo aerial tram",
+    "viator_url": "https://www.viator.com/tours/San-Jose/6-In-1-Rainforest-Adventure-in-Braulio-Carrillo-National-Park/d793-169734P61",
+    "product_code": "169734P61",
+    "product_title": "Braulio Carrillo 6-in-1 Aerial Tram & Zipline Adventure",
+    "match_type": "exact",
+    "match_note": "The Braulio Carrillo experience includes about 80 minutes on the rainforest aerial tram; it is bundled with ziplining, a nature walk, gardens and wildlife exhibits.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3394": {
+    "country": "CR",
+    "place": "Rincon de la Vieja",
+    "adventure_title": "Walk the mud pots and hot springs of Rincon de la Vieja",
+    "viator_url": "https://www.viator.com/tours/Liberia/Volcano-Hike-Waterfall-Oropendola-Swim-in-a-Hot-Springs-on-Rincon-de-la-Vieja/d22740-102091P47",
+    "product_code": "102091P47",
+    "product_title": "Rincon de la Vieja Volcano Hike, Mud Bath and Hot Springs",
+    "match_type": "exact",
+    "match_note": "The Rincon de la Vieja day hike follows the La Pailas volcanic trail past fumaroles and bubbling mud pots, then visits a waterfall and included hot springs.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3399": {
+    "country": "CR",
+    "place": "Isla del Cano",
+    "adventure_title": "Dive Isla del Cano from Drake Bay",
+    "viator_url": "https://www.viator.com/tours/Osa-Peninsula-and-Gulfo-Dulce/Cano-Island-diving/d22696-120233P58",
+    "product_code": "120233P58",
+    "product_title": "Cano Island Scuba Diving Tour from Drake Bay (Isla del Ca\u00f1o)",
+    "match_type": "exact",
+    "match_note": "The Drake Bay trip makes two guided scuba dives at Cano Island, with equipment, park entry, boat transport and lunch included. Certification and current diving requirements must be checked before booking.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3406": {
     "country": "PA",
     "place": "Casco Viejo",
@@ -2205,6 +4137,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Pipeline Road Private Birding Expedition with Expert Naturalist",
     "match_type": "exact",
     "match_note": "The five-to-six-hour private experience is specifically a Pipeline Road birding expedition led by an expert naturalist.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3419": {
+    "country": "GT",
+    "place": "Indian Nose",
+    "adventure_title": "Hike Indian Nose for sunrise over Lake Atitlan",
+    "viator_url": "https://www.viator.com/tours/San-Pedro-La-Laguna/Sunrise-Tour-in-Indian-Nose-Hike-and-Views-of-Lake-Atitlan/d24370-5497974P4",
+    "product_code": "5497974P4",
+    "product_title": "Sunrise Tour in Indian Nose Hike and Views of Lake Atitlan",
+    "match_type": "exact",
+    "match_note": "The early-morning tour hikes 30 to 45 minutes to Indian Nose for sunrise views over Lake Atitlan and its volcanoes, with the trail entrance included. Sunrise visibility depends on weather.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2244,6 +4188,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "3439": {
+    "country": "BZ",
+    "place": "Mountain Pine Ridge",
+    "adventure_title": "Swim the granite pools of Rio On in Mountain Pine Ridge",
+    "viator_url": "https://www.viator.com/tours/San-Ignacio/Mopan-River-Kayaking-and-Xunantunich/d5083-6219P16",
+    "product_code": "6219P16",
+    "product_title": "Mountain Pine Ridge & Jungle Hike: Waterfalls & Caves with Lunch",
+    "match_type": "exact",
+    "match_note": "The Mountain Pine Ridge tour explicitly stops at Rio On Pools for swimming in the natural granite pools and cascades, alongside Rio Frio Cave and Big Rock Falls.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3440": {
     "country": "BZ",
     "place": "Cockscomb Basin",
@@ -2253,6 +4209,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Cockscomb Basin Jungle Hike & Waterfalls Tour from Hopkins",
     "match_type": "exact",
     "match_note": "The five-hour product is a guided jungle hike on the trails of Cockscomb Basin Wildlife Preserve, with preserve admission included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3447": {
+    "country": "NI",
+    "place": "Mombacho Volcano",
+    "adventure_title": "Walk the cloud forest crater trail on Mombacho Volcano",
+    "viator_url": "https://www.viator.com/tours/Granada/Mombacho-Volcano-Cloud-Forest/d4853-69457P3",
+    "product_code": "69457P3",
+    "product_title": "Mombacho Volcano Cloud Forest",
+    "match_type": "exact",
+    "match_note": "The Mombacho product walks through the cloud forest around crater one on the crater trail; harder El Tigrillo and El Puma routes cost extra and require arrangement with the guide.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2289,6 +4257,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Jamaica Combo Tour: Dunn's River Falls and Bob Marley\u2019s Nine Mile",
     "match_type": "exact",
     "match_note": "Product explicitly visits Bob Marley's Nine Mile birthplace.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3491": {
+    "country": "JM",
+    "place": "Rio Grande Rafting",
+    "adventure_title": "Bamboo raft the Rio Grande near Port Antonio",
+    "viator_url": "https://www.viator.com/tours/Port-Antonio/Rio-Grande-Bamboo-Rafting-Tour-from-Port-Antonio/d50121-14302P333",
+    "product_code": "14302P333",
+    "product_title": "Rio Grande Bamboo Rafting Tour from Port Antonio",
+    "match_type": "exact",
+    "match_note": "The Port Antonio outing travels about ten kilometres down the Rio Grande on a two-person bamboo raft poled by an expert raftsman, with rafting fees and transfers included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3494": {
+    "country": "JM",
+    "place": "Appleton Estate",
+    "adventure_title": "Tour Jamaica's oldest rum distillery at Appleton Estate",
+    "viator_url": "https://www.viator.com/tours/Montego-Bay/Appleton-Rum-Estate-Admission-Ticket/d432-3991GOOD",
+    "product_code": "3991GOOD",
+    "product_title": "Appleton Estate Admission Ticket & Distillery Tour with Tastings",
+    "match_type": "exact",
+    "match_note": "The Appleton Estate entry and distillery tour includes the ageing house, rum-making interpretation and a guided tasting of three aged rums. Alcohol participation is for eligible adults.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2388,6 +4380,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "3550": {
+    "country": "DM",
+    "place": "Titou Gorge",
+    "adventure_title": "Swim the narrow volcanic walls of Titou Gorge",
+    "viator_url": "https://www.viator.com/tours/Dominica/Dominica-Nature-Island-Water-Therapy/d814-26327P32",
+    "product_code": "26327P32",
+    "product_title": "Dominica Treasures: Waterfals, Hot Springs, & Titou Gorge",
+    "match_type": "exact",
+    "match_note": "The Dominica itinerary includes a swim through Titou Gorge's narrow volcanic walls, bundled with hot springs and a Trafalgar Falls viewpoint; site entry fees are paid locally.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3555": {
     "country": "GD",
     "place": "Gouyave Nutmeg Station",
@@ -2436,6 +4440,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "3581": {
+    "country": "CW",
+    "place": "Hato Caves",
+    "adventure_title": "Tour the limestone chambers of Hato Caves",
+    "viator_url": "https://www.viator.com/tours/Curacao/Surf-and-Turf/d725-74296P3",
+    "product_code": "74296P3",
+    "product_title": "Hato Caves, Turtles & Beach",
+    "match_type": "guided_option",
+    "match_note": "The Curacao combination tour includes a one-hour guided visit through Hato Caves' limestone chambers before turtle snorkelling and beach time.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3589": {
+    "country": "VG",
+    "place": "White Bay Jost Van Dyke",
+    "adventure_title": "Drink a Painkiller at the beach bar that invented it",
+    "viator_url": "https://www.viator.com/tours/Tortola/All-Inclusive-Day-Sail-to-Soggy-Dollar-Bar-White-Bay-JVD/d50314-143137P4",
+    "product_code": "143137P4",
+    "product_title": "All Inclusive Day Sail to Soggy Dollar Bar, White Bay, JVD",
+    "match_type": "guided_option",
+    "match_note": "The day sail stops at White Bay and the Soggy Dollar Bar, identified as the inventor of the Painkiller. Guests swim ashore; any drink bought at the bar is separate from the boat's included drinks.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3605": {
     "country": "SI",
     "place": "Postojna Cave",
@@ -2472,6 +4500,66 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "3631": {
+    "country": "BG",
+    "place": "Seven Rila Lakes",
+    "adventure_title": "Hike the Seven Rila Lakes ridgeline",
+    "viator_url": "https://www.viator.com/tours/Sofia/7-Rila-Lakes-and-Sofia-Aerial-Tour-by-Small-Airplane/d5630-5554322P8",
+    "product_code": "5554322P8",
+    "product_title": "From Sofia: Seven Rila Lakes Hike, Thermal Pools & Rila Monastery",
+    "match_type": "guided_option",
+    "match_note": "Full-day Sofia trip includes guided or independent hiking among the Seven Rila Lakes; the chairlift and thermal-pool entry are paid separately.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3636": {
+    "country": "BG",
+    "place": "Devil's Throat Cave",
+    "adventure_title": "Follow the underground river through the Devil's Throat cave",
+    "viator_url": "https://www.viator.com/tours/Plovdiv/Hiking-to-the-Eagles-eye-and-the-Devils-Throat-cave/d22041-87479P53",
+    "product_code": "87479P53",
+    "product_title": "Hiking to Eagle's Eye and Devil's Throat Cave",
+    "match_type": "guided_option",
+    "match_note": "Plovdiv day trip enters Devil's Throat Cave and follows the underground Trigrad River to its large waterfall; it also includes the Eagle's Eye hike.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3641": {
+    "country": "RS",
+    "place": "Golubac Fortress",
+    "adventure_title": "Cruise the Iron Gates gorge below Golubac fortress",
+    "viator_url": "https://www.viator.com/tours/Belgrade/Golubac-Fortress-and-Iron-Gates-Gorge-with-Boat-Ride/d22817-341612P9",
+    "product_code": "341612P9",
+    "product_title": "Golubac Fortress and Iron Gates Gorge with Boat Ride",
+    "match_type": "guided_option",
+    "match_note": "Belgrade day trip includes a 90-minute speedboat journey through the Iron Gates gorge below the Golubac area, plus fortress and Lepenski Vir visits.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3648": {
+    "country": "BA",
+    "place": "Vrelo Bosne",
+    "adventure_title": "Walk or ride a carriage at Vrelo Bosne",
+    "viator_url": "https://www.viator.com/tours/Sarajevo/Private-Carriage-Ride-through-beautiful-tree-line-Vrelo-Bosne-Nature-Park/d22427-289925P2",
+    "product_code": "289925P2",
+    "product_title": "Private Horse-Drawn Carriage Ride to Vrelo Bosne",
+    "match_type": "exact",
+    "match_note": "Private return horse-drawn carriage follows Sarajevo's Great Alley to Vrelo Bosne and includes park admission plus time among the springs and bridges.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3652": {
+    "country": "BA",
+    "place": "Una National Park",
+    "adventure_title": "Raft the Una at Strbacki buk",
+    "viator_url": "https://www.viator.com/tours/Bosnia-and-Herzegovina/Ultimate-Rafting-Experience-in-the-Heart-of-Una-National-Park/d22158-416444P4",
+    "product_code": "416444P4",
+    "product_title": "Ultimate Rafting Experience in the Heart of Una National Park",
+    "match_type": "exact",
+    "match_note": "Rafting activity runs inside Una National Park around the Strbacki Buk area, with guide-led rapids, swimming and action photographs.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "3655": {
     "country": "ME",
     "place": "Our Lady of the Rocks",
@@ -2481,6 +4569,54 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Perast and Our Lady of the Rocks 2h Private Speedboat Tour",
     "match_type": "exact",
     "match_note": "Two-hour private speedboat departure from Kotor includes a landing at Our Lady of the Rocks; optional museum admission is paid separately in cash.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3693": {
+    "country": "LT",
+    "place": "Trakai Castle",
+    "adventure_title": "Cross the footbridge to Trakai island castle",
+    "viator_url": "https://www.viator.com/tours/Vilnius/Small-Group-Sightseeing-Tour-to-Trakai/d5479-10887P2",
+    "product_code": "10887P2",
+    "product_title": "Tour to Ponary Memorial Park, The Hill of Angels & Trakai Castle",
+    "match_type": "guided_option",
+    "match_note": "Guided day trip reaches Trakai's island castle by the lake and also visits Paneriai Memorial Park and the Hill of Angels.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3710": {
+    "country": "MT",
+    "place": "Blue Lagoon",
+    "adventure_title": "Swim in Comino's Blue Lagoon",
+    "viator_url": "https://www.viator.com/tours/Malta/Gozo-Comino-Blue-Lagoon-and-Caves-Tour/d4141-70853P2",
+    "product_code": "70853P2",
+    "product_title": "Blue Lagoon, Comino & Gozo Island Cruise - Swim, Slide & Sightsee",
+    "match_type": "exact",
+    "match_note": "Comino and Gozo cruise provides a Blue Lagoon swimming stop plus sea caves and free time; conditions and the day's route remain weather-dependent.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3711": {
+    "country": "MT",
+    "place": "Popeye Village",
+    "adventure_title": "Wander the film set at Popeye Village",
+    "viator_url": "https://www.viator.com/tours/Malta/Popeye-Village-Malta-Film-Set/d4141-283562P1",
+    "product_code": "283562P1",
+    "product_title": "Popeye Village Film Set",
+    "match_type": "exact",
+    "match_note": "Popeye Village admission enters the original 1980 film set at Anchor Bay and includes its guided set tour and seasonal activities.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "3744": {
+    "country": "MD",
+    "place": "Milestii Mici",
+    "adventure_title": "Tour the world's largest wine collection at Milestii Mici",
+    "viator_url": "https://www.viator.com/tours/Chisinau/Visit-Milestii-Mici-the-Largest-Wine-Cellar-in-the-World/d25271-316230P16",
+    "product_code": "316230P16",
+    "product_title": "Visit Milestii Mici the Largest Wine Cellar in the World",
+    "match_type": "exact",
+    "match_note": "Guided Mile\u0219tii Mici visit enters the underground winery complex known for its vast collection; tasting inclusions depend on the selected option.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2520,6 +4656,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "4003": {
+    "country": "PE",
+    "place": "Inca Trail",
+    "adventure_title": "Trek the classic four-day Inca Trail to Machu Picchu",
+    "viator_url": "https://www.viator.com/tours/Cusco/4-Day-Inca-Trail-to-Machu-Picchu/d937-100574P5",
+    "product_code": "100574P5",
+    "product_title": "Classic Inca Trail 4 days to Machu Picchu",
+    "match_type": "exact",
+    "match_note": "The four-day Classic Inca Trail product hikes from kilometre 82 through Inca sites and reaches Machu Picchu via the Sun Gate, with permits and camping support included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "4010": {
     "country": "PE",
     "place": "Humantay Lake",
@@ -2529,6 +4677,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "3-Day Cusco Tour: Machu Picchu, Humantay & Rainbow Mountain",
     "match_type": "exact",
     "match_note": "This three-day Cusco package explicitly hikes to Humantay Lake on day one; the lake hike is one segment of the combo.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4012": {
+    "country": "PE",
+    "place": "Uros Floating Islands",
+    "adventure_title": "Step onto a hand-built reed island on Lake Titicaca",
+    "viator_url": "https://www.viator.com/tours/Puno/3-Hour-Small-Group-Uros-Floating-Islands-Tour/d4726-5593465P4",
+    "product_code": "5593465P4",
+    "product_title": "3-Hour Small Group Uros Floating Islands Tour",
+    "match_type": "exact",
+    "match_note": "The three-hour Uros tour travels by boat from Puno and steps onto the totora-built floating islands to meet resident families; a separate reed-raft ride is excluded.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4019": {
+    "country": "PE",
+    "place": "Cabanaconde",
+    "adventure_title": "Trek down into Colca Canyon to the Sangalle oasis",
+    "viator_url": "https://www.viator.com/tours/Arequipa/TREKKING-AT-THE-COLCA-COLCA-2DAY-AND-1NIGHTS/d5020-100328P1",
+    "product_code": "100328P1",
+    "product_title": "Colca Canyon Trek Cabanaconde -Oasis Sangalle 3D/2N",
+    "match_type": "exact",
+    "match_note": "The three-day Colca Canyon trek descends from Cabanaconde and spends a night at the Sangalle oasis before climbing out; accommodation, listed meals and guide transport are included.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2568,6 +4740,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "4025": {
+    "country": "PE",
+    "place": "Paracas Red Beach",
+    "adventure_title": "Find the ochre sand of Playa Roja in Paracas National Reserve",
+    "viator_url": "https://www.viator.com/tours/Paracas/Guided-excursion-to-the-Paracas-National-Reserve/d23785-141662P70",
+    "product_code": "141662P70",
+    "product_title": "Guided excursion to the Paracas National Reserve",
+    "match_type": "exact",
+    "match_note": "The Paracas reserve itinerary stops at Playa Roja and explicitly describes its distinctive reddish sand; government reserve fees are excluded.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4034": {
+    "country": "PE",
+    "place": "Pacaya-Samiria Reserve",
+    "adventure_title": "Spot pink river dolphins in the Pacaya-Samiria reserve",
+    "viator_url": "https://www.viator.com/tours/Iquitos/Full-Day-Pacaya-Samiria-Birth-of-the-Amazon-and-Dolphin-River/d4725-5653887P12",
+    "product_code": "5653887P12",
+    "product_title": "Full Day Pacaya Samiria Birth of the Amazon and Dolphin River",
+    "match_type": "exact",
+    "match_note": "The full-day Pacaya-Samiria itinerary travels to the reserve and the Amazon headwaters to watch for grey and pink river dolphins; wildlife sightings are not guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4038": {
+    "country": "PE",
+    "place": "Kuelap",
+    "adventure_title": "Ride the cable car up to the fortress of Kuelap",
+    "viator_url": "https://www.viator.com/tours/Chachapoyas/Kuelap-Ancient-Fortress-Dau-Trip-by-Cable-Car-from-Chachapoyas/d36402-5243P112",
+    "product_code": "5243P112",
+    "product_title": "Kuelap Ancient Fortress Day Trip by Cable Car from Chachapoyas",
+    "match_type": "exact",
+    "match_note": "The Kuelap day trip boards the cable car from Nuevo Tingo and continues on foot to the fortress, with a guided archaeological visit. The listing does not separately itemise site or cable-car admission.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "4094": {
     "country": "AR",
     "place": "Perito Moreno Glacier",
@@ -2589,6 +4797,54 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Adventure on Ice: MiniTrekking in the Perito Moreno Glacier",
     "match_type": "exact",
     "match_note": "Product is a guided hiking/ice-trekking experience on Perito Moreno Glacier.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4096": {
+    "country": "AR",
+    "place": "Fitz Roy",
+    "adventure_title": "Hike to Laguna de los Tres beneath Mount Fitz Roy",
+    "viator_url": "https://www.viator.com/tours/El-Chalten/Full-Day-Chalten-Trek-with-lunch/d23529-3851P51",
+    "product_code": "3851P51",
+    "product_title": "El Chalten: Full Day Trekking to Laguna de los Tres and Mount Fitz Roy",
+    "match_type": "exact",
+    "match_note": "The guided El Chalten trek climbs to Laguna de los Tres beneath Mount Fitz Roy and returns through the valley; lunch, water, entry fees and return hotel transport are excluded.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4100": {
+    "country": "AR",
+    "place": "Tierra del Fuego National Park",
+    "adventure_title": "Ride the End of the World Train into Tierra del Fuego National Park",
+    "viator_url": "https://www.viator.com/tours/Ushuaia/Half-Day-Trip-to-Tierra-del-Fuego-National-Park-by-Bus-or-by-the-End-of-The-World-Train-from-Ushuaia/d933-5674P292",
+    "product_code": "5674P292",
+    "product_title": "Tierra del Fuego National Park with optional End of the World Train",
+    "match_type": "guided_option",
+    "match_note": "The Tierra del Fuego National Park tour offers the End of the World Train as a selectable option. The train ticket and ride apply only when that option is booked; park fees are excluded.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4101": {
+    "country": "AR",
+    "place": "Beagle Channel",
+    "adventure_title": "Cruise the Beagle Channel past sea lions and the Lighthouse at the End of the World",
+    "viator_url": "https://www.viator.com/tours/Ushuaia/Beagle-Channel-and-Sea-Wolves-Island-Catamaran-Cruise/d933-5674USHBEAGLE",
+    "product_code": "5674USHBEAGLE",
+    "product_title": "Navigation to Beagle Channel and Sea Lions Island with Transfers",
+    "match_type": "exact",
+    "match_note": "The Beagle Channel cruise passes Les Eclaireurs Lighthouse and visits the sea-lion and bird islands, with hotel transfers included and the local boarding fee excluded.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4103": {
+    "country": "AR",
+    "place": "Devil's Throat, Iguazu (Argentina)",
+    "adventure_title": "Walk the catwalk over the Devil's Throat on the Argentine side",
+    "viator_url": "https://www.viator.com/tours/Foz-do-Iguacu/Private-Iguazu-Falls-Tour-in-Argentina/d970-346348P3",
+    "product_code": "346348P3",
+    "product_title": "Iguazu Falls : Private day tour both Brazil & Argentina",
+    "match_type": "exact",
+    "match_note": "The private two-country Iguazu tour uses the Argentine ecological train and walkways to reach Devil's Throat; national-park admission is excluded.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2652,6 +4908,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "4145": {
+    "country": "CL",
+    "place": "Isla Magdalena",
+    "adventure_title": "Walk among 60,000 penguins on Isla Magdalena",
+    "viator_url": "https://www.viator.com/tours/Punta-Arenas/Walk-with-thousands-of-Penguins-on-Isla-Magdalena-and-sail-around-Isla-Marta/d4416-162979P4",
+    "product_code": "162979P4",
+    "product_title": "Walk alongside Penguins on Magdalene Island and navigate Marta Island",
+    "match_type": "exact",
+    "match_note": "The boat trip lands on Isla Magdalena for a one-hour walk beside its seasonal Magellanic penguin colony, then circles Isla Marta; current product text estimates about 50,000 penguins.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4158": {
+    "country": "CO",
+    "place": "Rosario Islands",
+    "adventure_title": "Snorkel the coral reefs of the Rosario Islands by boat from Cartagena",
+    "viator_url": "https://www.viator.com/tours/Cartagena/Boat-Tour-to-the-Rosario-Islands-with-Lunch-Forts-and-Snorkeling/d4498-383344P8",
+    "product_code": "383344P8",
+    "product_title": "Cartagena's Rosario Islands 5-Site Boat Tour with Lunch & Snorkel",
+    "match_type": "exact",
+    "match_note": "The Rosario Islands boat tour includes a 30-to-45-minute guided snorkel at a fish habitat and several island stops from Cartagena; the tourist port tax is excluded.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "4169": {
     "country": "CO",
     "place": "Comuna 13",
@@ -2685,6 +4965,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Guatap\u00e9 Tour: Piedra del Pe\u00f1ol with Boat Tour, Breakfast, Lunch",
     "match_type": "exact",
     "match_note": "Product includes Guatape's colorful zocalo streets and plazas.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4174": {
+    "country": "CO",
+    "place": "Santa Fe de Antioquia",
+    "adventure_title": "Cross the colonial bridge into Santa Fe de Antioquia",
+    "viator_url": "https://www.viator.com/tours/Medellin/Santa-Fe-de-Antioquia-Flower-Museum-Rural-Gondola-All-in-One-Amazing-Tour/d4563-65811P18",
+    "product_code": "65811P18",
+    "product_title": "Private Santa Fe de Antioquia & Colonial Bridge Tour:Door to Door",
+    "match_type": "exact",
+    "match_note": "The private Santa Fe de Antioquia day tour explicitly visits and crosses the historic Western Suspension Bridge before a walking tour of the colonial town. Lunch is extra.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2724,6 +5016,42 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "4184": {
+    "country": "EC",
+    "place": "Galapagos Giant Tortoises",
+    "adventure_title": "See wild giant tortoises roam the highlands of Santa Cruz",
+    "viator_url": "https://www.viator.com/tours/Santa-Cruz/Santa-Cruz-Highland-Tour-Giant-Tortoises-Lava-Tunnel-and-Gemelos/d50212-181466P6",
+    "product_code": "181466P6",
+    "product_title": "Santa Cruz Highland Tour: Giant Tortoises, Lava Tunnel & Gemelos",
+    "match_type": "exact",
+    "match_note": "The Santa Cruz highlands tour visits a ranch where wild giant Galapagos tortoises roam in their natural habitat, with ranch admission included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4185": {
+    "country": "EC",
+    "place": "Los Tuneles, Isabela",
+    "adventure_title": "Snorkel with sea lions and reef sharks at Los Tuneles, Isabela",
+    "viator_url": "https://www.viator.com/tours/Puerto-Villamil/Tour-to-Tuneles-and-Cabo-Rosa-Isabela-Island/d50317-167786P10",
+    "product_code": "167786P10",
+    "product_title": "Tour to Tuneles & Cabo Rosa (Isabela Island)",
+    "match_type": "exact",
+    "match_note": "The Los Tuneles and Cabo Rosa tour from Isabela includes guided snorkelling for sea lions, sharks, seahorses and other wildlife; sightings are not guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4186": {
+    "country": "EC",
+    "place": "North Seymour Island",
+    "adventure_title": "Watch blue-footed boobies perform their mating dance on North Seymour",
+    "viator_url": "https://www.viator.com/tours/Santa-Cruz/Day-Trip-to-North-Seymour-Island-from-Puerto-Ayora/d50212-62552P3",
+    "product_code": "62552P3",
+    "product_title": "Day Trip to North Seymour Island from Puerto Ayora",
+    "match_type": "guided_option",
+    "match_note": "The North Seymour day trip lands on the island and looks for nesting blue-footed boobies and seasonal courtship displays. The mating dance is wildlife behaviour and is not guaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "4190": {
     "country": "EC",
     "place": "Telef\u00e9riQo, Quito",
@@ -2748,6 +5076,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "4193": {
+    "country": "EC",
+    "place": "Cotopaxi Volcano",
+    "adventure_title": "Hike to the refuge on Cotopaxi, one of the world's highest active volcanoes",
+    "viator_url": "https://www.viator.com/tours/Quito/Cotopaxi-National-Park-Daytour-PRIVATE/d735-102956P3",
+    "product_code": "102956P3",
+    "product_title": "Cotopaxi Volcano Quest!",
+    "match_type": "exact",
+    "match_note": "The Cotopaxi itinerary hikes from the 4,600-metre car park to the refuge at about 4,864 metres; the downhill bike segment can be replaced by another short hike on this private tour.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4196": {
+    "country": "EC",
+    "place": "Casa del Arbol",
+    "adventure_title": "Ride the Swing at the End of the World over the Tungurahua valley",
+    "viator_url": "https://www.viator.com/tours/Banos/Private-Tour-House-of-the-Tree-and-Pailon-del-Diablo-with-Pickup/d22150-337923P11",
+    "product_code": "337923P11",
+    "product_title": "Bathrooms Full Day Tour : Waterfalls Route & Tree House in Ecuador",
+    "match_type": "guided_option",
+    "match_note": "The Banos day tour visits Casa del Arbol and describes its End of the World Swing over the Tungurahua valley. Entrance fees and optional adventure activities are excluded.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "4198": {
     "country": "EC",
     "place": "Otavalo Market",
@@ -2757,6 +5109,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Private Otavalo Market & Andean Highlands Tour",
     "match_type": "exact",
     "match_note": "Product centers on Otavalo Market and its handicraft/textile vendors.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4200": {
+    "country": "EC",
+    "place": "Cajas National Park",
+    "adventure_title": "Hike between glacial lakes in the paramo of Cajas National Park",
+    "viator_url": "https://www.viator.com/tours/Cuenca/Cajas-National-Park-Day-Tour/d23726-30796P15",
+    "product_code": "30796P15",
+    "product_title": "Cajas National Park Hiking Tour from Cuenca",
+    "match_type": "exact",
+    "match_note": "The Cajas hiking day spends about three hours walking the high-paramo Toreadora area among glacial lakes, with additional viewpoints and a lower-valley stop.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4204": {
+    "country": "EC",
+    "place": "Papallacta Hot Springs",
+    "adventure_title": "Soak in thermal pools with an Andean glacier view at Papallacta",
+    "viator_url": "https://www.viator.com/tours/Quito/Papallacta-hot-springs-tour/d735-58466P5",
+    "product_code": "58466P5",
+    "product_title": "Papallacta Hot Springs & Cloud Forest Reserve Private Tour",
+    "match_type": "guided_option",
+    "match_note": "The private Papallacta tour allows time in the thermal pools amid the Andean landscape. Hot-springs admission is excluded, and a view of Antisana is possible rather than guaranteed.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2841,6 +5217,66 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Half-Day Potos\u00ed Active Mine Trip to Cerro Rico",
     "match_type": "exact",
     "match_note": "Product descends into an active Cerro Rico mine with a guide.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4223": {
+    "country": "BO",
+    "place": "Madidi National Park",
+    "adventure_title": "Spend the night in a jungle lodge inside Madidi National Park",
+    "viator_url": "https://www.viator.com/tours/Rurrenabaque/Madidi-Park-and-Pampas-del-Yacuma-in-4-days-from-Rurrenabaque/d51259-120233P32",
+    "product_code": "120233P32",
+    "product_title": "4-Day Amazon Tour: Madidi & Yacuma Pampas from Rurrenabaque",
+    "match_type": "exact",
+    "match_note": "The four-day Madidi and Yacuma itinerary spends nights in community-run eco-lodges, including a lodge inside Madidi National Park; local park charges are excluded.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4224": {
+    "country": "BO",
+    "place": "Beni Pampas",
+    "adventure_title": "Spot caimans and pink river dolphins on a Beni pampas tour",
+    "viator_url": "https://www.viator.com/tours/Rurrenabaque/Yacuma-Pampas-Jungle-Tour-3-Days-from-Rurrenabaque/d51259-120233P80",
+    "product_code": "120233P80",
+    "product_title": "3-Day Yacuma Pampas Wildlife Tour from Rurrenabaque at Eco Lodge",
+    "match_type": "exact",
+    "match_note": "The three-day Yacuma pampas tour looks for caimans and pink dolphins from an eco-lodge. Swimming with dolphins occurs only if conditions allow, and all wildlife remains unguaranteed.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4253": {
+    "country": "GY",
+    "place": "Kaieteur Falls",
+    "adventure_title": "Fly over the jungle to Kaieteur, the world's largest single-drop falls by volume",
+    "viator_url": "https://www.viator.com/tours/Georgetown/round-trip-flight-to-Kaiteur-Falls-4-hours/d28060-5645055P1",
+    "product_code": "5645055P1",
+    "product_title": "round trip flight to Kaiteur Falls 4 hours",
+    "match_type": "exact",
+    "match_note": "The four-hour Kaieteur trip is a round-trip scenic flight from Georgetown over the rainforest, followed by guided walks to several falls viewpoints.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "4573": {
+    "country": "AG",
+    "place": "Betty\u2019s Hope open-air museum",
+    "adventure_title": "Confront plantation history at Betty\u2019s Hope",
+    "viator_url": "https://www.viator.com/tours/Antigua/Private-Shore-Tour-Antigua-Historical-Island/d22046-417844P183",
+    "product_code": "417844P183",
+    "product_title": "Private Shore Tour: Antigua Historical Island",
+    "match_type": "guided_option",
+    "match_note": "The private Antigua history tour stops at Betty's Hope to explore the restored 17th-century sugar plantation and open-air museum as one part of a wider island itinerary.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "5359": {
+    "country": "LC",
+    "place": "Morne Coubaril Estate",
+    "adventure_title": "Walk through Morne Coubaril's sugar and cocoa estate",
+    "viator_url": "https://www.viator.com/tours/St-Lucia/Historical-18th-Century-Estate-Tour-with-Coconut-Tasting/d38-30889P5",
+    "product_code": "30889P5",
+    "product_title": "Historical 18th Century Estate Tour with Coconut Tasting",
+    "match_type": "exact",
+    "match_note": "The one-hour Morne Coubaril estate tour demonstrates historic sugar-cane, cocoa and coconut processing, including tastings; transport and lunch are excluded.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -2988,6 +5424,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "5373": {
+    "country": "NL",
+    "place": "Van Gogh Village Nuenen",
+    "adventure_title": "Follow Van Gogh's working years through Nuenen village",
+    "viator_url": "https://www.viator.com/tours/Eindhoven/Van-Goghs-Nuenen-Self-Guided-GPS-Audio-Walking-Tour-App/d24978-222222P209",
+    "product_code": "222222P209",
+    "product_title": "Van Gogh's Nuenen Self Guided GPS Audio Walking Tour App",
+    "match_type": "exact",
+    "match_note": "Self-guided GPS audio walk follows Van Gogh's Nuenen years through his studio, church, home area, painted windmill and Potato Eaters sites.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "5374": {
     "country": "AU",
     "place": "Huskisson guided stargazing",
@@ -3084,6 +5532,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "5382": {
+    "country": "AW",
+    "place": "Arikok National Park caves",
+    "adventure_title": "Explore an Indigenous cave in Arikok National Park",
+    "viator_url": "https://www.viator.com/tours/Aruba/4x4-Tour-and-Natural-Pool-Snorkeling-in-Aruba/d28-6841POOL",
+    "product_code": "6841POOL",
+    "product_title": "Aruba Natural Pool and Indian Cave Rugged Jeep Safari",
+    "match_type": "guided_option",
+    "match_note": "The rugged jeep safari visits Arikok National Park's Indian Caves and Fontein area as part of a wider route to Conchi Natural Pool; park entrance fees are excluded.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "5383": {
     "country": "CL",
     "place": "Ahu Akivi",
@@ -3144,6 +5604,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "5388": {
+    "country": "NO",
+    "place": "Oslo Fjord",
+    "adventure_title": "Cruise among the islands of Oslo Fjord",
+    "viator_url": "https://www.viator.com/tours/Oslo/Oslo-Fjord-Sightseeing-Cruise/d902-35182FC",
+    "product_code": "35182FC",
+    "product_title": "2-Hour Oslo Fjord Sightseeing Cruise by Sailing Ship",
+    "match_type": "exact",
+    "match_note": "Two-hour sightseeing cruise sails among Oslo Fjord scenery aboard a traditional sailing ship; it is a cruise rather than an island landing tour.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "5389": {
+    "country": "IS",
+    "place": "Secret Lagoon",
+    "adventure_title": "Soak in the Secret Lagoon after the Golden Circle",
+    "viator_url": "https://www.viator.com/tours/Reykjavik/Private-Golden-circle-tour-with-Secret-Lagoon-Admission-Included/d905-5502646P23",
+    "product_code": "5502646P23",
+    "product_title": "Combo Tour: Private Golden circle with Secret Lagoon Experience",
+    "match_type": "guided_option",
+    "match_note": "Private Golden Circle day tour includes guaranteed mid-afternoon Secret Lagoon admission and bathing time after the sightseeing circuit.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "5390": {
     "country": "SI",
     "place": "Bled Castle",
@@ -3153,6 +5637,30 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Slovenia in One Day: Small-Group Bled, Postojna Cave & Predjama",
     "match_type": "guided_option",
     "match_note": "Full-day Ljubljana departure schedules one hour at Bled Castle and describes entering its museum; Bled Castle admission is paid separately, as are the other attraction admissions.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "5391": {
+    "country": "GR",
+    "place": "Nea Kameni",
+    "adventure_title": "Climb Nea Kameni's volcanic crater and swim by Palea Kameni",
+    "viator_url": "https://www.viator.com/tours/Santorini/Santorini-Volcanic-Islands-Cruise-Volcano-Hot-Springs-Thirassia-and-Oia-Sunset/d959-21977P14",
+    "product_code": "21977P14",
+    "product_title": "Santorini Volcanic Islands Cruise: Volcano,Hot Springs,Thirassia and Oia Sunset",
+    "match_type": "guided_option",
+    "match_note": "Santorini cruise lands at Nea Kameni for a crater-rim walk and then stops for swimming in the volcanic hot-spring waters; Thirassia and Oia are also included.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "5392": {
+    "country": "PT",
+    "place": "Cascais",
+    "adventure_title": "Walk Cascais's Atlantic waterfront on a Sintra coast trip",
+    "viator_url": "https://www.viator.com/tours/Lisbon/Sintra-Cabo-da-Roca-Cascais-Estoril-Tour/d538-126453P1",
+    "product_code": "126453P1",
+    "product_title": "Guided Tour to Sintra, Pena, Regaleira, Cabo da Roca and Cascais",
+    "match_type": "guided_option",
+    "match_note": "Full-day Sintra coast trip finishes with about 30 minutes in Cascais and explicitly allows a walk around the bay; the itinerary also visits Cabo da Roca and Sintra.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
@@ -3228,6 +5736,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "checked_at": "2026-09-23",
     "status": "verified"
   },
+  "5399": {
+    "country": "PR",
+    "place": "Luquillo Beach",
+    "adventure_title": "Relax on Luquillo Beach after El Yunque",
+    "viator_url": "https://www.viator.com/tours/Luquillo/El-Yunque-Nature-Walk-Waterslide-Beach-Dine-and-Shop/d36682-195978P10",
+    "product_code": "195978P10",
+    "product_title": "San Juan to El Yunque Rainforest Waterslides and Luquillo Beach",
+    "match_type": "exact",
+    "match_note": "The day tour visits El Yunque first and then provides swimming and free time at Luquillo Beach and its food kiosks; food is an additional cost.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
   "5400": {
     "country": "IT",
     "place": "St Mark's Basilica",
@@ -3249,6 +5769,18 @@ const VIATOR_BOOKING_LINKS = Object.freeze({
     "product_title": "Venice In a Day St Mark's Doges Palace Gondola Ride and City Tour",
     "match_type": "guided_option",
     "match_note": "The main options include a 30-minute traditional gondola ride on the Grand Canal. The shorter Venice Express option excludes the gondola, and weather can cause substitution.",
+    "checked_at": "2026-09-23",
+    "status": "verified"
+  },
+  "5402": {
+    "country": "IT",
+    "place": "Uffizi Gallery",
+    "adventure_title": "See Renaissance masters inside the Uffizi Gallery",
+    "viator_url": "https://www.viator.com/tours/Florence/Florence-Uffizi-Guided-Tour-with-Timed-Entrance-Ticket/d519-15932P88",
+    "product_code": "15932P88",
+    "product_title": "Renaissance Masters: Uffizi Gallery Small Group Tour",
+    "match_type": "exact",
+    "match_note": "One-hour Uffizi tour with timed admission covers Botticelli, Giotto and High Renaissance works by Raphael, Leonardo and Michelangelo.",
     "checked_at": "2026-09-23",
     "status": "verified"
   },
