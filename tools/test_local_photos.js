@@ -325,9 +325,12 @@ function harness() {
       recoveryRequestBusy: true, recoveryRequestAttempt: 0,
       accountIsAnonymous: false, progress: new Map(), personalProgress: new Map(), personalCacheReady: true,
       photos: [{}], pendingPhotos: [], trips: [], myGroups: [], members: new Map(), activeGroupId: null,
-      signedUrls: new Map(), releaseCalls: 0, groupTripCacheCleared: 0,
+      signedUrls: new Map(), releaseCalls: 0, groupTripCacheCleared: 0, groupFeedbackCleared: 0,
+      personalConfirmationsCleared: 0,
       releaseLocalPhotoUrls() { h.releaseCalls++; },
       clearGroupTripCache() { h.groupTripCacheCleared++; },
+      clearGroupFeedback() { h.groupFeedbackCleared++; },
+      clearPersonalConfirmations() { h.personalConfirmationsCleared++; },
       flushOutbox() {}, flushPhotoQueue() {}, flushTrips() {}, showAccountLock() {},
       LS: { progress:'a',personalProgress:'b',outbox:'c',trips:'d',tripOutbox:'e',group:'f',who:'g',view:'h',owner:'i' },
       localStorage: { removeItem() {} }, sb: null, idbClear: async () => {},
@@ -338,6 +341,8 @@ function harness() {
     await h.handleSignedOut();
     assert.equal(h.releaseCalls, 1, 'sign-out must revoke private local-photo URLs');
     assert.equal(h.groupTripCacheCleared, 1, 'sign-out must clear group trip details');
+    assert.equal(h.groupFeedbackCleared, 1, 'sign-out must clear other members’ feedback');
+    assert.equal(h.personalConfirmationsCleared, 1, 'sign-out must clear old-entry confirmation state');
     assert.equal(h.photos.length, 0);
     assert.equal(h.passwordRecoveryMode, false);
     assert.equal(h.passwordRecoveryBusy, false);
@@ -410,6 +415,8 @@ function harness() {
       photos:[],pendingPhotos:[],trips:[],myGroups:[],members:new Map(),activeGroupId:null,signedUrls:new Map(),
       recs:[],myVotes:new Map(),recBusy:false,pushedName:null,releaseLocalPhotoUrls(){},
       clearGroupTripCache(){},
+      groupFeedbackCleared:0,clearGroupFeedback(){h.groupFeedbackCleared++;},
+      clearPersonalConfirmations(){},
       flushOutbox(){},flushPhotoQueue(){},flushTrips(){},showAccountLock(){},accountDeletionInProgress:false,
       LS:{progress:'p',personalProgress:'pp',outbox:'o',trips:'t',tripOutbox:'to',group:'g',who:'w',view:'v',owner:'owner'},
       localStorage:{getItem:key=>values.get(key)||null,removeItem:key=>values.delete(key)},
@@ -421,6 +428,7 @@ function harness() {
     h.flushOutbox.requested=h.flushPhotoQueue.requested=h.flushTrips.requested=false;
     vm.createContext(h);vm.runInContext(ownerQueueFunctions+signedOutFunction,h);
     await h.handleSignedOut();
+    assert.equal(h.groupFeedbackCleared,1,'sign-out clears group feedback before the next account');
     assert.equal(queue[0].owner_id,owner,'explicit sign-out stamps legacy queue rows to the outgoing owner');
     assert.equal(values.has('owner'),false,'owner marker is removed only after queue attribution commits');
   }
@@ -443,6 +451,8 @@ function harness() {
     const queued = [{ id: 'legacy-a' }, { id: 'owned-a', owner_id: ownerA }];
     const h = { userId: ownerB, queued, progress: new Map(), personalProgress: new Map(),
       personalCacheReady: true, trips: [], who: 'A', activeGroupId: null, progressView: 'personal',
+      groupFeedbackCleared: 0, clearGroupFeedback() { h.groupFeedbackCleared++; },
+      clearPersonalConfirmations() {},
       LS: { owner: 'owner', progress: 'p', personalProgress: 'pp', outbox: 'o', trips: 't',
         tripOutbox: 'to', group: 'g', who: 'w', view: 'v', accountUpgrade: 'u' },
       localStorage: { value: ownerA, getItem() { return this.value; }, setItem(_k, v) { this.value = v; }, removeItem() {} },
@@ -464,10 +474,12 @@ function harness() {
       loadLocalProgress() {}, loadLocalTrips() {}, clearGroupTripCache() {}, queueMicrotask };
     vm.createContext(h); vm.runInContext(bindFunction, h);
     await h.bindLocalDataToUser();
+    assert.equal(h.groupFeedbackCleared, 1, 'direct account replacement clears group feedback');
     assert.deepEqual(queued.map(x => x.owner_id), [ownerA, ownerA],
       'A queue rows must survive and legacy rows must be stamped to A during A to B');
     h.userId = ownerA;
     await h.bindLocalDataToUser();
+    assert.equal(h.groupFeedbackCleared, 2, 'switching back clears the previous account’s group feedback');
     assert.deepEqual(queued.filter(x => x.owner_id === ownerA).map(x => x.id), ['legacy-a', 'owned-a'],
       'A queue rows must still be recoverable after B to A');
   }
@@ -650,6 +662,8 @@ function harness() {
     const ownerB = '22222222-2222-4222-8222-222222222222';
     const h = { userId: ownerB, progress: new Map(), personalProgress: new Map(), personalCacheReady: true,
       trips: [], who: 'A', activeGroupId: null, progressView: 'personal',
+      groupFeedbackCleared: 0, clearGroupFeedback() { h.groupFeedbackCleared++; },
+      clearPersonalConfirmations() {},
       LS: { owner: 'owner', progress: 'p', personalProgress: 'pp', outbox: 'o', trips: 't',
         tripOutbox: 'to', group: 'g', who: 'w', view: 'v', accountUpgrade: 'u' },
       localStorage: { value: ownerA, getItem() { return this.value; },
@@ -663,6 +677,8 @@ function harness() {
       loadLocalProgress() {}, loadLocalTrips() {}, clearGroupTripCache() {}, queueMicrotask };
     vm.createContext(h); vm.runInContext(bindFunction, h);
     await assert.rejects(h.bindLocalDataToUser(), /write failed/);
+    assert.equal(h.groupFeedbackCleared, 1,
+      'failed queue migration still clears the previous account’s group feedback');
     assert.equal(h.localStorage.value, ownerA,
       'failed legacy queue migration must not bind its uncertain rows to B');
   }

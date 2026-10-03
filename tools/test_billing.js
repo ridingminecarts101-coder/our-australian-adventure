@@ -86,13 +86,13 @@ async function testStoreFeedback(accountA, accountB) {
 }
 
 async function testAppLifecycleHooks(accountA, accountB) {
-  const calls = { foreground: 0, renders: 0, warnings: 0 };
+  const calls = { foreground: 0, feedbackClears: 0, renders: 0, warnings: 0, order: [] };
   let foregroundResult = Promise.resolve([]);
   const context = {
     Billing: {
       onChange: null,
       _appUserId: accountA,
-      foreground() { calls.foreground++; return foregroundResult; },
+      foreground() { calls.foreground++; calls.order.push('billing'); return foregroundResult; },
     },
     userId: accountA,
     authGeneration: 7,
@@ -100,6 +100,7 @@ async function testAppLifecycleHooks(accountA, accountB) {
     accountDeletionInProgress: false,
     document: { hidden: false },
     renderAll() { calls.renders++; },
+    clearGroupFeedbackForForeground() { calls.feedbackClears++; calls.order.push('feedback'); },
     flushOutbox() {}, pullProgress() {},
     pullPhotos() { return new Promise(() => {}); },
     flushPhotoQueue() {}, flushTrips() {},
@@ -127,13 +128,21 @@ async function testAppLifecycleHooks(accountA, accountB) {
 
   Object.assign(context, { userId: accountA, authGeneration: 7,
     passwordRecoveryMode: false, accountDeletionInProgress: false });
-  const visible = arrowCallbackAfter("addEventListener('visibilitychange', () => {\n    if (document.hidden) return;\n    const billingOwner");
+  const visible = arrowCallbackAfter("addEventListener('visibilitychange', () => {\n    if (document.hidden) return;\n    clearGroupFeedbackForForeground();");
   const visibleHandler = vm.runInContext(`(${visible})`, context);
   foregroundResult = Promise.resolve([]);
   visibleHandler();
   await settle();
   assert.equal(calls.foreground, 1);
+  assert.equal(calls.feedbackClears, 1, 'foreground hides stale group feedback before refreshing');
+  assert.deepEqual(calls.order.slice(0, 2), ['feedback', 'billing']);
   assert.equal(calls.renders, 2, 'a current foreground refresh repaints access');
+
+  context.document.hidden = true;
+  visibleHandler();
+  assert.equal(calls.feedbackClears, 1, 'background visibility does not clear the active view');
+  assert.equal(calls.foreground, 1, 'background visibility does not refresh billing');
+  context.document.hidden = false;
 
   let releaseOld;
   foregroundResult = new Promise(resolve => { releaseOld = resolve; });

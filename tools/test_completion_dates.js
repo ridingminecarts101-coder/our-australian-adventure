@@ -119,6 +119,14 @@ run(`online=true; sb={from:table=>({upsert:row=>capture(row)})};`);
   assert.equal(run('readLS(LS.outbox,[])[0].completed_on'), null);
   run(`progress.set(17,{adventure_id:17,completed:true,completed_at:'2026-10-04T06:00:00Z',
     completed_by_id:'account-b',completed_by:'Bob'}); renderSheet(17);`);
+  assert.doesNotMatch(element('#sheetBody').innerHTML, /Ticked off by Bob/,
+    'offline group view cannot name a member from a stale aggregate');
+  run(`online=true; activeGroupId='group-a';
+    groupFeedbackScope={ownerId:userId,groupId:activeGroupId};
+    groupCompletions=indexGroupCompletions([{adventure_id:17,completed:true,
+      completed_by_id:'account-b',completed_by:'Bob',completed_at:'2026-10-04T06:00:00Z',
+      source_is_personal:true,source_user_id:'account-b',shared_by_id:'account-b'}]);
+    renderSheet(17);`);
   assert.match(element('#sheetBody').innerHTML, /Ticked off by Bob/);
   assert.match(element('#sheetBody').innerHTML, />\s*Mark as completed\s*</);
   assert.doesNotMatch(element('#sheetBody').innerHTML, /id="completedOnInput"/,
