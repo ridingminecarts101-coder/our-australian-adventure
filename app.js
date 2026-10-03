@@ -2562,7 +2562,7 @@ function renderMe_groups() {
         ${active.share_completions ? 'Stop sharing my completion ticks' : 'Share my completion ticks'}
       </button>
       <p class="fineprint">${active.share_feedback && active.share_completions
-        ? 'Your past and future ratings and written memories for completed adventures are visible to this group. Photos and shortlist stay private.'
+        ? 'Your personal ratings and written memories for completed adventures are visible to this group. Older group-era notes, photos and shortlist stay private.'
         : 'Your ratings and written memories stay private. Photos and shortlist stay private.'}</p>
       <button class="btn-ghost" data-groupact="feedback-sharing" data-enabled="${active.share_feedback ? 'false' : 'true'}" ${!active.share_completions ? 'disabled' : ''}>
         ${active.share_feedback ? 'Stop sharing my ratings and memories' : 'Share my ratings and memories'}
@@ -5175,7 +5175,7 @@ ${url}`);
       const group = myGroups.find(g => g.id === groupId);
       const enabled = b.dataset.enabled === 'true';
       if (enabled && !group?.share_completions) return toast('Share completion ticks first');
-      if (enabled && !confirm(`Share your past and future ratings and written memories for completed adventures with everyone in ${group.name}?\n\nPhotos, shortlist and purchases stay private. You can stop sharing these ratings and memories later.`)) return;
+      if (enabled && !confirm(`Share the ratings and written memories on your personal completed adventures with everyone in ${group.name}?\n\nThis includes existing and future personal entries. Some older group-era notes, photos, shortlist and purchases stay private. You can stop sharing these ratings and memories later.`)) return;
       const changed = await setFeedbackSharing(groupId, enabled);
       if (changed === null || owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
       if (!changed) return toast('Could not change rating and memory sharing');
