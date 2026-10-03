@@ -208,6 +208,56 @@ async function main() {
   assert.equal(reordered.run('progress.get(17).completed_by_id'), 'charlie',
     'older completion summary cannot replace the newer result');
 
+  const burst = harness(), timers = new Map();
+  let timerId = 0, burstRenders = 0, burstPulls = 0;
+  burst.context.setTimeout = callback => {
+    const id = ++timerId;
+    timers.set(id, callback);
+    return id;
+  };
+  burst.context.clearTimeout = id => timers.delete(id);
+  burst.context.renderAll = () => { burstRenders++; };
+  burst.context.pullProgress = () => { burstPulls++; return Promise.resolve(); };
+  burst.run(`groupFeedback=indexGroupFeedback([
+    {adventure_id:17,completed_by_id:'bob',rating:4,memory:'Shared note'}
+  ]); groupFeedbackScope={ownerId:userId,groupId:activeGroupId};`);
+  burst.run("queueGroupProgressRefresh({new:{group_id:'group-b'}})");
+  assert.equal(burst.run('groupFeedback.size'), 1,
+    'another group event must not clear the current group feed');
+  assert.equal(timers.size, 0, 'another group event must not queue a pull');
+  burst.run("queueGroupProgressRefresh({new:{group_id:'group-a'}})");
+  assert.equal(burst.run('groupFeedback.size'), 0,
+    'the first event immediately hides displayed feedback');
+  assert.equal(burstRenders, 1, 'the first event immediately redraws the detail view');
+  for (let i = 0; i < 100; i++)
+    burst.run("queueGroupProgressRefresh({new:{group_id:'group-a'}})");
+  assert.equal(timers.size, 1, 'a burst of projection changes has one pending pull');
+  assert.equal(burstRenders, 1, 'later events do not repeatedly redraw an empty feed');
+  assert.equal(burstPulls, 0, 'the pull waits until the burst settles');
+  [...timers.values()][0]();
+  timers.clear();
+  assert.equal(burstPulls, 1, 'the burst produces exactly one progress pull');
+
+  burst.run("queueGroupProgressRefresh({old:{group_id:'group-a'}})");
+  burst.run("activeGroupId='group-b'");
+  [...timers.values()][0]();
+  timers.clear();
+  assert.equal(burstPulls, 1, 'a delayed event cannot pull after a group switch');
+  burst.run("activeGroupId='group-a'; queueGroupProgressRefresh({new:{group_id:'group-a'}}); userId='other-account'");
+  [...timers.values()][0]();
+  timers.clear();
+  assert.equal(burstPulls, 1, 'a delayed event cannot pull after an account switch');
+  burst.run("userId='alice'; queueGroupProgressRefresh({new:{group_id:'group-a'}})");
+  burst.run('clearGroupFeedback()');
+  assert.equal(timers.size, 0, 'leaving the feed cancels a pending refresh');
+
+  burst.run(`sb={}; groupSchemaReady=true; myGroups=[{id:'group-a',name:'First',
+    owner_id:'alice',share_completions:true,share_feedback:false,invite_enabled:false}];
+    renderMe_groups();`);
+  assert.match(burst.elements.get('#groupPanel').innerHTML,
+    /ratings and written memories are not shared with this group/,
+    'the off-state describes only the selected group');
+
   const revoked = harness(), beforeRevocation = deferred();
   revoked.context.groupRpc = name => name === 'group_completion_feed'
     ? query({ data: [], error: null })

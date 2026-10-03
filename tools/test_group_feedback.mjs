@@ -156,8 +156,12 @@ equal('feedback identifies its actual owner', firstFeedback[0].completed_by_id, 
 equal('feedback feed has only its four specified fields',
   Object.keys(firstFeedback[0]).sort().join(','),
   'adventure_id,completed_by_id,memory,rating');
-equal('consent touches the existing realtime projection',
-  (await refreshTime(first.group_id)) > new Date('2000-01-01T00:00:00Z'), true);
+equal('consent uses group_members realtime without rewriting every completion',
+  (await refreshTime(first.group_id)).getTime(), new Date('2000-01-01T00:00:00Z').getTime());
+equal('group member changes are in the realtime publication',
+  (await db.query(`select count(*)::int n from pg_publication_tables
+    where pubname='supabase_realtime' and schemaname='public'
+      and tablename='group_members'`)).rows[0].n, 1);
 equal('consent to one group leaves another group private',
   (await feedback(charlie, second.group_id)).length, 0);
 equal('non-member cannot fetch another group feedback',
@@ -196,8 +200,8 @@ equal('revocation immediately removes feedback from the server feed',
 equal('revocation retains consented completion facts',
   (await asUser(alice, 'select count(*)::int n from public.group_completion_feed($1)',
     [first.group_id])).rows[0].n, 1);
-equal('revocation touches the realtime projection',
-  (await refreshTime(first.group_id)) > new Date('2000-01-01T00:00:00Z'), true);
+equal('revocation does not rewrite every completion projection',
+  (await refreshTime(first.group_id)).getTime(), new Date('2000-01-01T00:00:00Z').getTime());
 await db.query(`update public.group_progress set refreshed_at='2000-01-01T00:00:00Z'
   where group_id=$1 and shared_by_id=$2`, [first.group_id,bob]);
 await asUser(bob, `update public.progress set memory='Private again' where adventure_id=42`);

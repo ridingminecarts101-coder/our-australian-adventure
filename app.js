@@ -65,6 +65,8 @@ let personalProgress = new Map(); // canonical rows used when editing a group ag
 let groupFeedback = new Map(); // adventure_id -> consented member feedback, memory only
 let groupFeedbackScope = null; // owner and group that supplied the in-memory feed
 let progressPullEpoch = 0; // a later pull or revocation makes earlier responses stale
+let groupProgressRefreshTimer = null;
+const GROUP_PROGRESS_REFRESH_DELAY = 150;
 let personalCacheReady = false;
 let who = localStorage.getItem(LS.who) || null;
 let online = navigator.onLine;
@@ -288,6 +290,10 @@ function saveLocalProgress() {
   if (personalCacheReady) writeLS(LS.personalProgress, [...personalProgress.values()]);
 }
 function clearGroupFeedback() {
+  if (groupProgressRefreshTimer !== null) {
+    clearTimeout(groupProgressRefreshTimer);
+    groupProgressRefreshTimer = null;
+  }
   progressPullEpoch++;
   groupFeedback = new Map();
   groupFeedbackScope = null;
@@ -296,6 +302,20 @@ function clearGroupFeedbackForForeground() {
   if (progressView !== 'group') return;
   clearGroupFeedback();
   if (openId !== null) renderSheet(openId);
+}
+function queueGroupProgressRefresh(payload) {
+  if (progressView !== 'group' || !activeGroupId) return;
+  const changed = payload?.new || payload?.old;
+  if (changed?.group_id && changed.group_id !== activeGroupId) return;
+  const hadFeedback = groupFeedback.size > 0;
+  clearGroupFeedback();
+  if (hadFeedback) renderAll();
+  const owner = userId, generation = authGeneration, groupId = activeGroupId;
+  groupProgressRefreshTimer = setTimeout(() => {
+    groupProgressRefreshTimer = null;
+    if (owner === userId && generation === authGeneration && groupId === activeGroupId
+        && progressView === 'group' && online) void pullProgress();
+  }, GROUP_PROGRESS_REFRESH_DELAY);
 }
 
 async function bindLocalDataToUser() {
@@ -684,13 +704,9 @@ function subscribeRealtime() {
     });
 
   sb.channel('group-progress-sync')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'group_progress' }, () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'group_progress' }, payload => {
       if (!subscriptionCurrent()) return;
-      if (progressView === 'group') {
-        clearGroupFeedback();
-        renderAll();
-        pullProgress();
-      }
+      queueGroupProgressRefresh(payload);
     })
     .subscribe();
 
@@ -2563,7 +2579,7 @@ function renderMe_groups() {
       </button>
       <p class="fineprint">${active.share_feedback && active.share_completions
         ? 'Your personal ratings and written memories for completed adventures are visible to this group. Older group-era notes, photos and shortlist stay private.'
-        : 'Your ratings and written memories stay private. Photos and shortlist stay private.'}</p>
+        : 'Your ratings and written memories are not shared with this group. Photos and shortlist stay private.'}</p>
       <button class="btn-ghost" data-groupact="feedback-sharing" data-enabled="${active.share_feedback ? 'false' : 'true'}" ${!active.share_completions ? 'disabled' : ''}>
         ${active.share_feedback ? 'Stop sharing my ratings and memories' : 'Share my ratings and memories'}
       </button>

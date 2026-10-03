@@ -143,29 +143,25 @@ as $$
      and public.is_group_member(p_group_id);
 $$;
 
--- Reuse the existing group_progress realtime subscription to tell current
--- members to refetch after consent or the owner's feedback changes. The
--- projection contains neither rating nor memory.
-create or replace function public.refresh_group_feedback_on_consent()
-returns trigger
-language plpgsql
-security definer
-set search_path = pg_catalog, public
-as $$
+-- Consent changes arrive through the existing group_members subscription.
+-- Ensure that table is published; touching every group_progress projection
+-- for one toggle would fan out thousands of redundant events for active users.
+do $realtime$
 begin
-  if old.share_feedback is distinct from new.share_feedback then
-    update public.group_progress gp
-       set refreshed_at = clock_timestamp()
-     where gp.group_id = new.group_id and gp.shared_by_id = new.user_id;
+  if not exists (
+    select 1 from pg_publication_tables
+     where pubname = 'supabase_realtime'
+       and schemaname = 'public' and tablename = 'group_members'
+  ) then
+    alter publication supabase_realtime add table public.group_members;
   end if;
-  return new;
-end;
-$$;
-
+end
+$realtime$;
 drop trigger if exists group_members_refresh_feedback on public.group_members;
-create trigger group_members_refresh_feedback
-after update of share_feedback on public.group_members
-for each row execute function public.refresh_group_feedback_on_consent();
+drop function if exists public.refresh_group_feedback_on_consent();
+
+-- Reuse the existing group_progress subscription for edits to feedback that
+-- is already shared. The projection contains neither rating nor memory.
 
 create or replace function public.refresh_group_feedback_on_edit()
 returns trigger
@@ -200,8 +196,6 @@ revoke all on function public.group_completion_feedback_feed(uuid)
 grant execute on function public.set_group_feedback_sharing(uuid, boolean) to authenticated;
 grant execute on function public.group_completion_feedback_feed(uuid) to authenticated;
 revoke all on function public.clear_feedback_without_completion()
-  from PUBLIC, anon, authenticated;
-revoke all on function public.refresh_group_feedback_on_consent()
   from PUBLIC, anon, authenticated;
 revoke all on function public.refresh_group_feedback_on_edit()
   from PUBLIC, anon, authenticated;
