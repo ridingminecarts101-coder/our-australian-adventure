@@ -241,6 +241,31 @@ equal('unticking a shared experience removes its feedback',
 await asUser(bob, 'update public.progress set completed=true where adventure_id=42');
 equal('reticking restores feedback only while consent is current',
   (await feedback(charlie, second.group_id))[0].rating, 5);
+// Older clients could leave a second, group-scoped row for the same owner and
+// adventure. The current client prefers the personal row; feedback must agree.
+await asUser(bob, `insert into public.progress
+  (adventure_id,user_id,group_id,completed,completed_at,rating,memory)
+  values (42,$1,$2,true,now(),1,'Legacy group-only note')`, [bob,second.group_id]);
+const duplicateFeedback = (await feedback(charlie, second.group_id))
+  .filter(row => row.adventure_id === 42);
+equal('duplicate group-scoped note is excluded', duplicateFeedback.length, 1);
+equal('the canonical personal note wins over the legacy duplicate',
+  duplicateFeedback[0].memory, 'Private again');
+const legacyDuplicateId = (await asUser(bob, `select id from public.progress
+  where adventure_id=42 and group_id=$1`, [second.group_id])).rows[0].id;
+await db.query(`update public.group_progress set refreshed_at='2000-01-01T00:00:00Z'
+  where group_id=$1 and progress_id=$2`, [second.group_id,legacyDuplicateId]);
+await asUser(bob, `update public.progress set memory='Legacy edit remains private'
+  where id=$1`, [legacyDuplicateId]);
+equal('editing hidden legacy feedback does not signal a group refresh',
+  (await db.query(`select refreshed_at from public.group_progress
+    where group_id=$1 and progress_id=$2`, [second.group_id,legacyDuplicateId]))
+    .rows[0].refreshed_at.getTime(), new Date('2000-01-01T00:00:00Z').getTime());
+await asUser(bob, `insert into public.progress
+  (adventure_id,user_id,group_id,completed,completed_at,rating,memory)
+  values (44,$1,$2,true,now(),2,'Legacy-only private note')`, [bob,second.group_id]);
+equal('legacy-only group-scoped feedback stays private',
+  (await feedback(charlie, second.group_id)).filter(row => row.adventure_id === 44).length, 0);
 // Pre-migration group records may truthfully attribute the completion to a
 // person other than the personal row owner. Do not mislabel that owner's note.
 await asUser(bob, `insert into public.progress

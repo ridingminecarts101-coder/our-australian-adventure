@@ -131,6 +131,10 @@ as $$
       on gm.group_id = gp.group_id and gm.user_id = gp.shared_by_id
    where gp.group_id = p_group_id
      and p.completed
+     -- The aligned client treats a group_id-free personal row as canonical.
+     -- Legacy group-scoped rows can duplicate it or be the sole old copy;
+     -- neither case authorizes exposing their separate private feedback.
+     and p.group_id is null
      -- Historical group rows can name someone other than their record owner
      -- as completer. Never label the owner's private note as that person's.
      and p.completed_by_id = gp.shared_by_id
@@ -170,7 +174,7 @@ security definer
 set search_path = pg_catalog, public
 as $$
 begin
-  if new.completed and
+  if new.completed and new.group_id is null and
      (old.rating is distinct from new.rating or old.memory is distinct from new.memory) then
     update public.group_progress gp
        set refreshed_at = clock_timestamp()
