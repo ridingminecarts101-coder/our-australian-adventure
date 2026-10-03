@@ -13,7 +13,7 @@ As of 23 September 2026, the active catalogue has **5,412 adventures**, includin
 - Read already-loaded catalogue content and device-local memories offline. Progress changes queue for sync when the account reconnects.
 - Buy the optional **All continents** hidden-gem collection for AUD $14.99 once, or a standalone continent collection for AUD $2.99 once. Antarctica is bundle-only. Store availability and transaction handling depend on the native platform.
 
-The PWA and native iOS/Android builds share the web app source, but their signing, purchases, file storage and platform releases are separate. This source prepares PWA v65 and iOS 1.0.9 (build 9) for internal TestFlight. The earlier 1.0.7 (build 7) and its eight purchases remain in App Review with manual public release. Android store distribution is separate. See the dated release records in the coordination workspace for current receipts; do not infer public store availability from a PWA or TestFlight deployment.
+The PWA and native iOS/Android builds share the web app source, but their signing, purchases, file storage and platform releases are separate. **Wayfinder: Adventure Lists 1.0.9 (build 9)** and all eight optional purchases are approved and live on the [Australian App Store](https://apps.apple.com/au/app/wayfinder-adventure-lists/id6812170174). This checkout includes later website and help-page updates, served by PWA v66; they are not changes to the published native binary. The next native upload must be 1.0.10 (build 10). Android store distribution is separate and not live. See the dated release records in the coordination workspace for receipts.
 
 ## Source and checks
 
