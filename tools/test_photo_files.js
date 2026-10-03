@@ -171,6 +171,26 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
     'Android startup uses native backup rules without reading photo data');
   await assert.rejects(android.prepare('not-an-owner'), /account UUID/);
 
+  const galleryCalls = [];
+  const gallery = load({}, true, 'ios', {
+    async prepare() {}, async exclude() {},
+    async requestPhotoLibraryAddAccess() { galleryCalls.push(['permission']); },
+    async saveToPhotoLibrary(options) { galleryCalls.push(['save', options]); },
+  });
+  assert.equal(gallery.canSaveToGallery(), true);
+  await gallery.requestGalleryAccess();
+  await gallery.saveToGallery(OWNER, PATH, '2026-09-01T03:04:05.000Z');
+  assert.deepEqual(galleryCalls, [
+    ['permission'],
+    ['save', { path: PATH, takenAt: '2026-09-01T03:04:05.000Z' }],
+  ]);
+  await assert.rejects(gallery.saveToGallery(OTHER, PATH), /does not belong/);
+  await assert.rejects(gallery.saveToGallery(OWNER, `${PATH}/../another.jpg`), /canonical/);
+  assert.equal(galleryCalls.length, 2, 'foreign-owner path cannot reach Photos plugin');
+  assert.equal(web.canSaveToGallery(), false);
+  assert.equal(android.canSaveToGallery(), false);
+  assert.equal(ios.canSaveToGallery(), false, 'an older iOS build reports Photos export unavailable');
+
   const manifest = fs.readFileSync('android/app/src/main/AndroidManifest.xml', 'utf8');
   assert.match(manifest, /android:allowBackup="false"/);
   assert.match(manifest, /android:dataExtractionRules="@xml\/data_extraction_rules"/);
@@ -183,6 +203,17 @@ function load(plugin, native = true, platform = 'android', backupPlugin = null) 
   const iosNative = fs.readFileSync('ios/App/App/WayfinderPhotoBackupPlugin.swift', 'utf8');
   assert.match(iosNative, /isExcludedFromBackup = true/);
   assert.match(iosNative, /WayfinderBridgeViewController/);
+  assert.match(iosNative, /requestAuthorization\(for: \.addOnly/);
+  assert.match(iosNative, /PHAssetCreationRequest\.forAsset\(\)/);
+  assert.match(iosNative, /shouldMoveFile = false/);
+  assert.match(iosNative, /resolvingSymlinksInPath\(\)/,
+    'native export resolves links before checking the account photo root');
+  assert.match(iosNative, /\[0-9a-f\]\{12\}\/\[A-Za-z0-9_-\]\{1,128\}/,
+    'native export accepts only canonical UUID/photo-ID file paths');
+  assert.match(iosNative, /wholeSeconds\.date\(from: \$0\)/,
+    'Photos capture date supports timestamps without fractional seconds');
+  const info = fs.readFileSync('ios/App/App/Info.plist', 'utf8');
+  assert.match(info, /NSPhotoLibraryAddUsageDescription/);
   const scene = fs.readFileSync('ios/App/App/SceneDelegate.swift', 'utf8');
   assert.match(scene, /sceneDidEnterBackground[\s\S]*applyToPersistentDirectories/);
   assert.doesNotMatch(scene, /try\?/,

@@ -1,13 +1,14 @@
 /* User-controlled encrypted photo transfer. No network or account credentials. */
 (function exposePhotoTransfer(global) {
   'use strict';
-  let adapter, state = null, sequence = 0;
+  let adapter, state = null, sequence = 0, galleryBusy = false, gallerySession = null;
   const $ = selector => document.querySelector(selector);
-  const same = session => {
+  const sameAccount = session => {
     const now = adapter.session();
-    return now.owner && !now.deleting && now.owner === session.owner && now.generation === session.generation
-      && (session.operation == null || (session.operation === sequence && state && state.session === session));
+    return now.owner && !now.deleting && now.owner === session.owner && now.generation === session.generation;
   };
+  const same = session => sameAccount(session)
+    && (session.operation == null || (session.operation === sequence && state && state.session === session));
   const requireSession = session => {
     if (!same(session)) throw new Error('Your account changed. Reopen photo backup in the correct account.');
   };
@@ -73,6 +74,75 @@
   }
   function sessionChanged() {
     if (state && !same(state.session)) close(true);
+    if (gallerySession && !sameAccount(gallerySession)) {
+      gallerySession = null;
+      $('#savePhotosStatus').textContent = '';
+    }
+  }
+
+  async function savePhotosToCameraRoll() {
+    if (galleryBusy) return;
+    const status = $('#savePhotosStatus'), button = $('#savePhotosBtn');
+    const session = adapter.session();
+    if (!session.owner || session.deleting) {
+      status.textContent = 'Sign in before saving your photos.';
+      return;
+    }
+    gallerySession = session;
+    const files = global.WayfinderPhotoFiles;
+    if (!files || !files.canSaveToGallery || !files.canSaveToGallery()) {
+      status.textContent = 'Saving to Photos is available in the iPhone and iPad app. Use Export photos from this device for a portable backup.';
+      return;
+    }
+    galleryBusy = true; button.disabled = true;
+    let saved = 0, failed = 0, total = 0;
+    try {
+      status.textContent = 'Checking photos stored in this account on this device…';
+      const rows = await adapter.list(session.owner);
+      if (!sameAccount(session)) return;
+      if (!rows.length) {
+        status.textContent = 'There are no photos stored in this account on this device.';
+        return;
+      }
+      if (rows.some(row => row.owner_id !== session.owner || !row.native_path)) {
+        status.textContent = 'Some photos are still being saved inside Wayfinder. Wait a moment and try again.';
+        return;
+      }
+      total = rows.length;
+      const noun = total === 1 ? 'photo' : 'photos';
+      const approved = global.confirm(`Copy ${total} ${noun} from this Wayfinder account to this device’s Photos library? Your Wayfinder copies stay here. Repeating this may create duplicates. Photos may sync through iCloud if you use iCloud Photos.`);
+      if (!approved || !sameAccount(session)) {
+        if (sameAccount(session)) status.textContent = 'No photos were copied.';
+        return;
+      }
+      status.textContent = 'Waiting for permission to add photos…';
+      await files.requestGalleryAccess();
+      if (!sameAccount(session)) return;
+      for (const row of rows) {
+        if (!sameAccount(session)) return;
+        try {
+          await adapter.saveToGallery(session.owner, row);
+          saved++;
+        } catch (error) {
+          failed++;
+          if (error && error.code === 'PHOTO_LIBRARY_DENIED') throw error;
+        }
+        if (!sameAccount(session)) return;
+        status.textContent = `Saved ${saved} of ${total} ${noun} to Photos${failed ? `; ${failed} could not be saved` : ''}…`;
+      }
+      status.textContent = failed
+        ? `Saved ${saved} of ${total} ${noun} to Photos. ${failed} could not be saved; your Wayfinder photos are unchanged. Repeating the action may duplicate the saved copies.`
+        : `Saved ${saved} ${noun} to Photos. Your Wayfinder photos are unchanged.`;
+    } catch (error) {
+      if (sameAccount(session)) {
+        const reason = error && error.code === 'PHOTO_LIBRARY_DENIED'
+          ? 'Allow Wayfinder to add photos in device Settings, then try again.'
+          : (error && error.message) || 'Could not save photos to the camera roll.';
+        status.textContent = `${saved ? `${saved} of ${total} photos were saved. ` : ''}${reason}${saved ? ' Repeating the action may duplicate those copies.' : ''}`;
+      }
+    } finally {
+      galleryBusy = false; button.disabled = false;
+    }
   }
   function open(mode) {
     const current = adapter.session();
@@ -219,6 +289,7 @@
     adapter = options;
     $('#exportPhotosBtn').onclick = () => open('export');
     $('#importPhotosBtn').onclick = () => open('import');
+    $('#savePhotosBtn').onclick = savePhotosToCameraRoll;
     $('#photoBackupClose').onclick = () => close();
     $('#photoBackupStart').onclick = start;
     $('#photoBackupSave').onclick = save;

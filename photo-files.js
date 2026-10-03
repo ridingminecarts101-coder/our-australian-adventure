@@ -76,6 +76,30 @@
     return plugin;
   }
 
+  function galleryPlugin() {
+    const capacitor = global.Capacitor;
+    if (!isNativePlatform() || !capacitor || typeof capacitor.getPlatform !== 'function'
+        || capacitor.getPlatform() !== 'ios') return null;
+    const plugin = capacitor.Plugins && capacitor.Plugins.WayfinderPhotoBackup;
+    return plugin && typeof plugin.requestPhotoLibraryAddAccess === 'function'
+      && typeof plugin.saveToPhotoLibrary === 'function' ? plugin : null;
+  }
+
+  function canSaveToGallery() { return !!galleryPlugin(); }
+
+  async function requestGalleryAccess() {
+    const plugin = galleryPlugin();
+    if (!plugin) throw new Error('Saving to Photos is unavailable in this build.');
+    return plugin.requestPhotoLibraryAddAccess();
+  }
+
+  async function saveToGallery(owner, path, takenAt) {
+    const safe = scopedPath(owner, path);
+    const plugin = galleryPlugin();
+    if (!plugin) throw new Error('Saving to Photos is unavailable in this build.');
+    await plugin.saveToPhotoLibrary({ path: safe, takenAt: takenAt || null });
+  }
+
   function isMissing(error) {
     return !!error && error.code === NOT_FOUND;
   }
@@ -195,5 +219,6 @@
 
   global.WayfinderPhotoFiles = Object.freeze({
     isNative: isNativePlatform, prepare, verifyExcluded, save, read, remove, list,
+    canSaveToGallery, requestGalleryAccess, saveToGallery,
   });
 })(window);
