@@ -113,6 +113,19 @@ async function refreshTime(groupId) {
   return (await db.query(`select refreshed_at from public.group_progress
     where group_id=$1 and shared_by_id=$2`, [groupId,bob])).rows[0].refreshed_at;
 }
+async function visibleProjection(who, groupId, progressId) {
+  return (await asUser(who, `select count(*)::int n from public.group_progress
+    where group_id=$1 and progress_id=$2`, [groupId, progressId])).rows[0].n;
+}
+function anonymousCompletion(label, row) {
+  equal(`${label} keeps only an aggregate tick`,
+    JSON.stringify([row.adventure_id, row.completed, row.source_is_personal]),
+    JSON.stringify([row.adventure_id, true, false]));
+  for (const field of [
+    'completed_at', 'completed_on', 'completed_by_id', 'completed_by',
+    'updated_at', 'source_user_id', 'shared_by_id',
+  ]) equal(`${label} masks ${field}`, row[field], null);
+}
 
 // Both groups existed, with completion sharing enabled, before the new feature.
 const first = (await asUser(alice, `select * from public.create_group('First','Alice')`)).rows[0];
@@ -152,6 +165,16 @@ equal('historical projection previously exposed the cloud object',
     [photoPath])).rows[0].n, 1);
 const beforeCompletion = (await asUser(alice,
   'select * from public.group_completion_feed($1)', [first.group_id])).rows[0];
+// A deleted source group can leave a NULL-group row that is indistinguishable
+// from a personal row by the time this migration runs. Keep it incomplete so
+// existing completion-count assertions below are unaffected until its test.
+const deletedBeforeMigration = (await asUser(bob,
+  `select * from public.create_group('Deleted old source','Bob')`)).rows[0];
+const oldUnattributedOrphanId = (await asUser(bob, `insert into public.progress
+  (adventure_id,user_id,group_id,completed,rating,memory)
+  values (47,$1,$2,false,3,'Deleted group private note') returning id`,
+  [bob,deletedBeforeMigration.group_id])).rows[0].id;
+await db.query('delete from public.groups where id=$1', [deletedBeforeMigration.group_id]);
 await db.exec(migration);
 
 equal('migration remembers existing group-scoped progress without changing it',
@@ -161,6 +184,19 @@ equal('provenance backfill does not rewrite old progress timestamps',
   (await db.query('select updated_at from public.progress where id=$1',
     [orphanCandidateId])).rows[0].updated_at.getTime(),
   legacyUpdatedBeforeMigration.getTime());
+const oldPersonalId = (await asUser(bob,
+  'select id from public.progress where adventure_id=42')).rows[0].id;
+equal('no historical NULL-group row is silently marked personal',
+  (await db.query(`select count(*)::int n from public.personal_progress_sharing_origins
+    where progress_id in ($1,$2)`, [oldPersonalId,oldUnattributedOrphanId])).rows[0].n, 0);
+equal('deleted-before-migration group row has no knowable group-origin marker',
+  (await db.query(`select count(*)::int n from public.group_scoped_progress_origins
+    where progress_id=$1`, [oldUnattributedOrphanId])).rows[0].n, 0);
+await rejected('ordinary members cannot read private personal-origin records', () =>
+  asUser(bob, 'select * from public.personal_progress_sharing_origins'));
+await rejected('owner cannot forge a personal-origin marker', () =>
+  asUser(bob, `insert into public.personal_progress_sharing_origins(progress_id)
+    values ($1)`, [oldPersonalId]));
 await rejected('ordinary members cannot read private origin records', () =>
   asUser(bob, 'select * from public.group_scoped_progress_origins'));
 await rejected('owner cannot erase durable group provenance', () =>
@@ -227,19 +263,42 @@ equal('existing completion feed still excludes note',
     'select * from public.group_completion_feed($1)', [first.group_id])).rows[0], 'memory'), false);
 const personalCompletion = (await asUser(alice,
   'select * from public.group_completion_feed($1)', [first.group_id])).rows[0];
-equal('completion feed retains the original fields before source markers',
+equal('completion feed retains the original field names before source markers',
   Object.keys(personalCompletion).slice(0,7).join(','),
   'adventure_id,completed,completed_at,completed_on,completed_by_id,completed_by,updated_at');
-equal('migration preserves every pre-existing completion fact',
-  JSON.stringify(Object.values(personalCompletion).slice(0,7)),
-  JSON.stringify(Object.values(beforeCompletion)));
+equal('migration preserves the old aggregate adventure and tick',
+  JSON.stringify([personalCompletion.adventure_id, personalCompletion.completed]),
+  JSON.stringify([beforeCompletion.adventure_id, beforeCompletion.completed]));
 equal('completion feed exposes only the three trailing source markers',
   Object.keys(personalCompletion).slice(7).join(','),
   'source_user_id,source_is_personal,shared_by_id');
-equal('personal completion source identifies its owner',
-  personalCompletion.source_user_id, bob);
-equal('personal completion is marked canonical', personalCompletion.source_is_personal, true);
-equal('personal completion projection identifies its sharer', personalCompletion.shared_by_id, bob);
+anonymousCompletion('unconfirmed historical completion', personalCompletion);
+equal('old personal row still exists unchanged for its owner',
+  (await asUser(bob, 'select completed_by_id from public.progress where id=$1',
+    [oldPersonalId])).rows[0].completed_by_id, bob);
+equal('owner can read own unconfirmed completion projection',
+  await visibleProjection(bob, first.group_id, oldPersonalId), 1);
+equal('member cannot directly read unconfirmed completion projection',
+  await visibleProjection(alice, first.group_id, oldPersonalId), 0);
+equal('member in a second group cannot directly read the same unconfirmed projection',
+  await visibleProjection(charlie, second.group_id, oldPersonalId), 0);
+equal('outsider cannot directly read a completion projection',
+  await visibleProjection(outsider, first.group_id, oldPersonalId), 0);
+equal('only the owner can list the old completed personal candidate',
+  (await asUser(bob, 'select adventure_id from public.list_unconfirmed_personal_progress()'))
+    .rows.map(row => row.adventure_id).join(','), '42');
+equal('another member cannot list the owner candidate',
+  (await asUser(alice, 'select * from public.list_unconfirmed_personal_progress()')).rows.length, 0);
+await rejected('another member cannot confirm the owner candidate', () =>
+  asUser(alice, 'select public.revalidate_personal_progress($1)', [oldPersonalId]));
+await rejected('owner cannot confirm an unfinished legacy row', () =>
+  asUser(bob, 'select public.revalidate_personal_progress($1)', [oldUnattributedOrphanId]));
+equal('anonymous role cannot list old personal candidates',
+  (await db.query(`select has_function_privilege('anon',
+    'public.list_unconfirmed_personal_progress()', 'EXECUTE') allowed`)).rows[0].allowed, false);
+equal('anonymous role cannot confirm old personal progress',
+  (await db.query(`select has_function_privilege('anon',
+    'public.revalidate_personal_progress(uuid)', 'EXECUTE') allowed`)).rows[0].allowed, false);
 equal('anonymous role cannot execute the extended completion feed',
   (await db.query(`select has_function_privilege('anon',
     'public.group_completion_feed(uuid)', 'EXECUTE') allowed`)).rows[0].allowed, false);
@@ -270,9 +329,38 @@ equal('anonymous role cannot change feedback consent',
 await db.query(`update public.group_progress set refreshed_at='2000-01-01T00:00:00Z'
   where group_id=$1 and shared_by_id=$2`, [first.group_id,bob]);
 await asUser(bob, 'select public.set_group_feedback_sharing($1,true)', [first.group_id]);
+equal('consent alone cannot release an old rating or note',
+  (await feedback(alice, first.group_id)).length, 0);
+equal('consent alone does not rewrite every completion projection',
+  (await refreshTime(first.group_id)).getTime(), new Date('2000-01-01T00:00:00Z').getTime());
+await asUser(bob, `update public.progress set rating=3,memory='Still private'
+  where id=$1`, [oldPersonalId]);
+equal('substantive direct edit cannot bypass explicit reconfirmation',
+  (await feedback(alice, first.group_id)).length, 0);
+equal('quarantined edit does not signal private feedback to a group',
+  (await refreshTime(first.group_id)).getTime(), new Date('2000-01-01T00:00:00Z').getTime());
+await asUser(bob, `update public.progress set rating=4,memory='A private old note'
+  where id=$1`, [oldPersonalId]);
+await asUser(bob, 'select public.revalidate_personal_progress($1)', [oldPersonalId]);
 const firstFeedback = await feedback(alice, first.group_id);
 equal('consented rating is visible to another current member', firstFeedback[0].rating, 4);
 equal('consented note is visible to another current member', firstFeedback[0].memory, 'A private old note');
+equal('explicit reconfirmation changes old tick to safely named personal',
+  (await asUser(alice,
+    'select source_is_personal from public.group_completion_feed($1) where adventure_id=42',
+    [first.group_id])).rows[0].source_is_personal, true);
+equal('confirmed completion identifies its owner to a group member',
+  (await asUser(alice,
+    'select completed_by_id from public.group_completion_feed($1) where adventure_id=42',
+    [first.group_id])).rows[0].completed_by_id, bob);
+equal('confirmation opens direct projection reads in the first consented group',
+  await visibleProjection(alice, first.group_id, oldPersonalId), 1);
+equal('confirmation opens direct projection reads in the second consented group',
+  await visibleProjection(charlie, second.group_id, oldPersonalId), 1);
+equal('explicit reconfirmation wakes only this owner projected row',
+  (await refreshTime(first.group_id)) > new Date('2000-01-01T00:00:00Z'), true);
+equal('confirmed row drops out of the Personal-view candidate list',
+  (await asUser(bob, 'select * from public.list_unconfirmed_personal_progress()')).rows.length, 0);
 equal('feedback opt-in does not share a projected historical photo',
   (await asUser(alice, 'select count(*)::int n from storage.objects where name=$1',
     [photoPath])).rows[0].n, 0);
@@ -280,8 +368,10 @@ equal('feedback identifies its actual owner', firstFeedback[0].completed_by_id, 
 equal('feedback feed has only its four specified fields',
   Object.keys(firstFeedback[0]).sort().join(','),
   'adventure_id,completed_by_id,memory,rating');
-equal('consent uses group_members realtime without rewriting every completion',
-  (await refreshTime(first.group_id)).getTime(), new Date('2000-01-01T00:00:00Z').getTime());
+const refreshedAfterConfirmation = (await refreshTime(first.group_id)).getTime();
+await asUser(bob, 'select public.revalidate_personal_progress($1)', [oldPersonalId]);
+equal('reconfirmation is idempotent and does not rebroadcast',
+  (await refreshTime(first.group_id)).getTime(), refreshedAfterConfirmation);
 equal('group member changes are in the realtime publication',
   (await db.query(`select count(*)::int n from pg_publication_tables
     where pubname='supabase_realtime' and schemaname='public'
@@ -391,6 +481,10 @@ equal('the canonical personal note wins over the legacy duplicate',
   duplicateFeedback[0].memory, 'Private again');
 const legacyDuplicateId = (await asUser(bob, `select id from public.progress
   where adventure_id=42 and group_id=$1`, [second.group_id])).rows[0].id;
+equal('owner can read own group-only projection',
+  await visibleProjection(bob, second.group_id, legacyDuplicateId), 1);
+equal('member cannot directly read a group-only completion projection',
+  await visibleProjection(charlie, second.group_id, legacyDuplicateId), 0);
 await db.query(`update public.group_progress set refreshed_at='2000-01-01T00:00:00Z'
   where group_id=$1 and progress_id=$2`, [second.group_id,legacyDuplicateId]);
 await asUser(bob, `update public.progress set memory='Legacy edit remains private'
@@ -412,28 +506,22 @@ await asUser(bob, `insert into public.progress
 await db.exec('alter table public.progress disable trigger progress_attribute_personal_completion');
 await db.query('update public.progress set completed_by_id=$1 where adventure_id=43', [charlie]);
 await db.exec('alter table public.progress enable trigger progress_attribute_personal_completion');
-equal('historical non-owner completion attribution remains in completion feed',
-  (await asUser(charlie, 'select completed_by_id from public.group_completion_feed($1) where adventure_id=43',
-    [second.group_id])).rows[0].completed_by_id, charlie);
 const legacyCompletion = (await asUser(charlie,
   'select * from public.group_completion_feed($1) where adventure_id=43',
   [second.group_id])).rows[0];
-equal('legacy group completion is marked as nonpersonal',
-  legacyCompletion.source_is_personal, false);
-equal('legacy group completion retains its true source owner',
-  legacyCompletion.source_user_id, bob);
-equal('legacy group completion retains its projection sharer',
-  legacyCompletion.shared_by_id, bob);
+anonymousCompletion('historical non-owner group completion', legacyCompletion);
 equal('completion feed does not reveal the source group ID',
   Object.hasOwn(legacyCompletion, 'source_group_id'), false);
 equal('owner note is not mislabelled as the historical completer note',
   (await feedback(charlie, second.group_id)).filter(row => row.adventure_id === 43).length, 0);
 
 await asUser(bob, 'update public.progress set completed=true where id=$1', [orphanCandidateId]);
-equal('live group-scoped row is not canonical',
+anonymousCompletion('known group-scoped completion',
   (await asUser(charlie,
-    'select source_is_personal from public.group_completion_feed($1) where adventure_id=46',
-    [second.group_id])).rows[0].source_is_personal, false);
+    'select * from public.group_completion_feed($1) where adventure_id=46',
+    [second.group_id])).rows[0]);
+equal('member cannot directly read known group-scoped projection',
+  await visibleProjection(charlie, second.group_id, orphanCandidateId), 0);
 await db.query('delete from public.groups where id=$1', [legacySourceGroup.group_id]);
 equal('deleting the old group clears its nullable source ID',
   (await db.query('select group_id from public.progress where id=$1',
@@ -441,19 +529,61 @@ equal('deleting the old group clears its nullable source ID',
 equal('durable origin marker survives the source group deletion',
   (await db.query(`select count(*)::int n from public.group_scoped_progress_origins
     where progress_id=$1`, [orphanCandidateId])).rows[0].n, 1);
-equal('orphaned legacy completion stays noncanonical in another group',
+anonymousCompletion('orphaned known group-scoped completion',
   (await asUser(charlie,
-    'select source_is_personal from public.group_completion_feed($1) where adventure_id=46',
-    [second.group_id])).rows[0].source_is_personal, false);
+    'select * from public.group_completion_feed($1) where adventure_id=46',
+    [second.group_id])).rows[0]);
 equal('orphaned legacy note remains outside the feedback feed',
   (await feedback(charlie, second.group_id)).filter(row => row.adventure_id === 46).length, 0);
+await rejected('known group-origin row cannot be reconfirmed after its group was deleted', () =>
+  asUser(bob, 'select public.revalidate_personal_progress($1)', [orphanCandidateId]));
+// This row lost its group ID before the migration, so there is no surviving
+// group-origin marker to distinguish it. The migration nevertheless keeps it
+// anonymous and keeps its old group-only note private until explicit owner
+// reconfirmation, even after ordinary changes to the completion.
+await asUser(bob, 'update public.progress set completed=true where id=$1',
+  [oldUnattributedOrphanId]);
+anonymousCompletion('pre-migration ambiguous orphan',
+  (await asUser(charlie,
+    'select * from public.group_completion_feed($1) where adventure_id=47',
+    [second.group_id])).rows[0]);
+equal('member cannot directly read pre-migration ambiguous orphan projection',
+  await visibleProjection(charlie, second.group_id, oldUnattributedOrphanId), 0);
+equal('pre-migration ambiguous orphan note remains private despite consent',
+  (await feedback(charlie, second.group_id)).filter(row => row.adventure_id === 47).length, 0);
+await asUser(bob, `update public.progress set rating=4,memory='Changed but still private'
+  where id=$1`, [oldUnattributedOrphanId]);
+equal('ordinary update cannot release pre-migration ambiguous orphan feedback',
+  (await feedback(charlie, second.group_id)).filter(row => row.adventure_id === 47).length, 0);
+equal('old ambiguous row is not marked personal after its update',
+  (await db.query(`select count(*)::int n from public.personal_progress_sharing_origins
+    where progress_id=$1`, [oldUnattributedOrphanId])).rows[0].n, 0);
 await asUser(charlie, 'select public.leave_group($1)', [second.group_id]);
 equal('leaving immediately removes read access to the remaining feedback',
   (await feedback(charlie, second.group_id)).length, 0);
 await asUser(charlie, 'select * from public.join_group_by_code($1,$2)', [second.join_code,'Charlie again']);
 equal('rejoined member sees only currently consented feedback',
   (await feedback(charlie, second.group_id))[0].rating, 5);
+const newPersonalId = (await asUser(bob, `insert into public.progress
+  (adventure_id,user_id,completed,rating,memory)
+  values (49,$1,true,4,'New personal note') returning id`, [bob])).rows[0].id;
+equal('fresh authenticated personal insert is marked at creation',
+  (await db.query(`select count(*)::int n from public.personal_progress_sharing_origins
+    where progress_id=$1`, [newPersonalId])).rows[0].n, 1);
+equal('new personal completion has named attribution automatically',
+  (await asUser(charlie,
+    'select source_is_personal from public.group_completion_feed($1) where adventure_id=49',
+    [second.group_id])).rows[0].source_is_personal, true);
+equal('new personal feedback follows consent normally',
+  (await feedback(charlie, second.group_id)).find(row => row.adventure_id === 49).memory,
+  'New personal note');
 await db.exec(migration);
+equal('migration replay never reseeds ambiguous historical personal markers',
+  (await db.query(`select count(*)::int n from public.personal_progress_sharing_origins
+    where progress_id=$1`, [oldUnattributedOrphanId])).rows[0].n, 0);
+equal('migration replay keeps explicit and fresh personal markers',
+  (await db.query(`select count(*)::int n from public.personal_progress_sharing_origins
+    where progress_id in ($1,$2)`, [oldPersonalId,newPersonalId])).rows[0].n, 2);
 equal('migration replay keeps the historical photo private',
   (await asUser(charlie, 'select count(*)::int n from public.photos where id=$1',
     [photoId])).rows[0].n, 0);

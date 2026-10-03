@@ -260,6 +260,186 @@ for each row execute function public.remember_group_scoped_progress();
 revoke all on function public.remember_group_scoped_progress()
   from PUBLIC, anon, authenticated;
 
+-- A NULL group_id cannot prove that an old row was personal: its former
+-- group may already have been deleted. Fail closed for EVERY pre-migration
+-- row, including rows without feedback. Only fresh authenticated owner-made
+-- personal rows receive this private provenance marker automatically. Do not
+-- backfill this table on replay. Upserts, date/tick edits and group deletion
+-- never release old notes or turn old completions into named personal ticks.
+create table if not exists public.personal_progress_sharing_origins (
+  progress_id uuid primary key references public.progress(id) on delete cascade
+);
+alter table public.personal_progress_sharing_origins enable row level security;
+revoke all on public.personal_progress_sharing_origins
+  from PUBLIC, anon, authenticated;
+
+create or replace function public.remember_new_personal_progress()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+begin
+  if new.group_id is null and new.user_id = auth.uid() then
+    insert into public.personal_progress_sharing_origins (progress_id)
+    values (new.id) on conflict do nothing;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists progress_remember_new_personal on public.progress;
+create trigger progress_remember_new_personal
+after insert on public.progress
+for each row execute function public.remember_new_personal_progress();
+revoke all on function public.remember_new_personal_progress()
+  from PUBLIC, anon, authenticated;
+
+-- The client must offer an explicit Personal-view reconfirmation or call this
+-- only after a substantive personal rating/memory save. SQL cannot infer UI
+-- intent from an unrelated progress upsert. Known group-origin rows can
+-- never be confirmed as personal.
+create or replace function public.revalidate_personal_progress(
+  p_progress_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  caller uuid := auth.uid();
+  source_row record;
+begin
+  if caller is null then raise exception 'not signed in'; end if;
+  select p.user_id, p.group_id, p.completed, p.completed_by_id into source_row
+    from public.progress p
+   where p.id = p_progress_id
+   for update;
+  if not found or source_row.user_id is distinct from caller then
+    raise exception 'personal progress not found';
+  end if;
+  if not source_row.completed or source_row.completed_by_id is distinct from caller then
+    raise exception 'only your completed personal adventure can be confirmed';
+  end if;
+  if source_row.group_id is not null or exists (
+    select 1 from public.group_scoped_progress_origins origin
+     where origin.progress_id = p_progress_id
+  ) then
+    raise exception 'historical group progress cannot be shared as personal';
+  end if;
+  insert into public.personal_progress_sharing_origins (progress_id)
+  values (p_progress_id) on conflict do nothing;
+  if found then
+    -- Wake only projections for this one newly confirmed row. This carries
+    -- the newly named tick (and optional feedback) to current group members.
+    update public.group_progress gp
+       set refreshed_at = clock_timestamp()
+      from public.group_members gm
+     where gp.progress_id = p_progress_id
+       and gp.group_id = gm.group_id
+       and gp.shared_by_id = caller
+       and gm.user_id = caller
+       and gm.share_completions;
+  end if;
+end;
+$$;
+revoke all on function public.revalidate_personal_progress(uuid)
+  from PUBLIC, anon, authenticated;
+grant execute on function public.revalidate_personal_progress(uuid)
+  to authenticated;
+
+-- Return only the caller's older candidate rows, so Personal view can offer
+-- a per-adventure reconfirmation instead of silently exposing legacy data.
+create or replace function public.list_unconfirmed_personal_progress()
+returns table (progress_id uuid, adventure_id integer)
+language plpgsql
+security definer
+stable
+set search_path = pg_catalog, public
+as $$
+declare caller uuid := auth.uid();
+begin
+  if caller is null then raise exception 'not signed in'; end if;
+  return query
+    select p.id, p.adventure_id
+      from public.progress p
+     where p.user_id = caller
+       and p.group_id is null
+       and p.completed
+       and p.completed_by_id = caller
+       and not exists (
+         select 1 from public.group_scoped_progress_origins origin
+          where origin.progress_id = p.id
+       )
+       and not exists (
+         select 1 from public.personal_progress_sharing_origins personal
+          where personal.progress_id = p.id
+       );
+end;
+$$;
+revoke all on function public.list_unconfirmed_personal_progress()
+  from PUBLIC, anon, authenticated;
+grant execute on function public.list_unconfirmed_personal_progress()
+  to authenticated;
+
+-- Projection rows carry their source owner's ID. Members need their Realtime
+-- events only for an owner-confirmed personal completion. Otherwise they could
+-- correlate an anonymous aggregate tick with a directly readable projection.
+-- The owner retains their own rows for revocation and normal maintenance.
+create or replace function public.can_read_named_completion_projection(
+  p_group_id uuid, p_progress_id uuid, p_shared_by_id uuid
+)
+returns boolean
+language sql
+security definer
+stable
+set search_path = pg_catalog, public
+as $$
+  select public.is_group_member(p_group_id) and exists (
+    select 1 from public.progress p
+    join public.personal_progress_sharing_origins personal
+      on personal.progress_id = p.id
+    join public.group_members sharer
+      on sharer.group_id = p_group_id and sharer.user_id = p_shared_by_id
+   where p.id = p_progress_id
+     and p.user_id = p_shared_by_id
+     and p.group_id is null
+     and p.completed
+     and p.completed_by_id = p_shared_by_id
+     and sharer.share_completions
+     and not exists (
+       select 1 from public.group_scoped_progress_origins origin
+        where origin.progress_id = p.id
+     )
+  );
+$$;
+revoke all on function public.can_read_named_completion_projection(uuid,uuid,uuid)
+  from PUBLIC, anon, authenticated;
+grant execute on function public.can_read_named_completion_projection(uuid,uuid,uuid)
+  to authenticated;
+
+do $projection_policy_guard$
+begin
+  if exists (
+    select 1 from pg_policies
+     where schemaname = 'public' and tablename = 'group_progress'
+       and permissive = 'PERMISSIVE' and cmd in ('ALL', 'SELECT')
+       and roles && array['public', 'anon', 'authenticated']::name[]
+       and policyname not in ('members read projections', 'members read named completion projections')
+  ) then
+    raise exception 'unreviewed group completion projection read policy';
+  end if;
+end
+$projection_policy_guard$;
+drop policy if exists "members read projections" on public.group_progress;
+drop policy if exists "members read named completion projections" on public.group_progress;
+create policy "members read named completion projections"
+on public.group_progress for select to authenticated
+using (
+  shared_by_id = auth.uid()
+  or public.can_read_named_completion_projection(group_id, progress_id, shared_by_id)
+);
+
 -- Keep every existing completion fact and legacy row, while marking which
 -- rows came from a canonical personal entry. A raw source group ID could name
 -- a different private group because completion projections span all of a
@@ -284,16 +464,30 @@ security definer
 stable
 set search_path = pg_catalog, public
 as $$
-  select p.adventure_id, p.completed, p.completed_at, p.completed_on,
-         p.completed_by_id, p.completed_by, p.updated_at,
-         p.user_id,
-         p.group_id is null and origin.progress_id is null,
-         gp.shared_by_id
+  select p.adventure_id, p.completed,
+         case when provenance.safe_personal then p.completed_at end,
+         case when provenance.safe_personal then p.completed_on end,
+         case when provenance.safe_personal then p.completed_by_id end,
+         case when provenance.safe_personal then p.completed_by end,
+         case when provenance.safe_personal then p.updated_at end,
+         case when provenance.safe_personal then p.user_id end,
+         provenance.safe_personal,
+         case when provenance.safe_personal then gp.shared_by_id end
     from public.group_progress gp
     join public.progress p on p.id = gp.progress_id
+    join public.group_members gm
+      on gm.group_id = gp.group_id and gm.user_id = gp.shared_by_id
     left join public.group_scoped_progress_origins origin on origin.progress_id = p.id
+    left join public.personal_progress_sharing_origins personal on personal.progress_id = p.id
+    cross join lateral (
+      select p.group_id is null and origin.progress_id is null
+        and personal.progress_id is not null
+        and p.user_id = gp.shared_by_id
+        and p.completed_by_id = gp.shared_by_id as safe_personal
+    ) provenance
    where gp.group_id = p_group_id
      and p.completed
+     and gm.share_completions
      and public.is_group_member(p_group_id);
 $$;
 revoke all on function public.group_completion_feed(uuid)
@@ -362,9 +556,14 @@ as $$
        select 1 from public.group_scoped_progress_origins origin
         where origin.progress_id = p.id
      )
+     and exists (
+       select 1 from public.personal_progress_sharing_origins personal
+        where personal.progress_id = p.id
+     )
      -- Historical group rows can name someone other than their record owner
      -- as completer. Never label the owner's private note as that person's.
      and p.completed_by_id = gp.shared_by_id
+     and p.user_id = gp.shared_by_id
      and gm.share_completions
      and gm.share_feedback
      and public.is_group_member(p_group_id);
@@ -398,6 +597,11 @@ set search_path = pg_catalog, public
 as $$
 begin
   if new.completed and new.group_id is null and
+     new.completed_by_id = new.user_id and
+     exists (select 1 from public.personal_progress_sharing_origins personal
+              where personal.progress_id = new.id) and
+     not exists (select 1 from public.group_scoped_progress_origins origin
+                  where origin.progress_id = new.id) and
      (old.rating is distinct from new.rating or old.memory is distinct from new.memory) then
     update public.group_progress gp
        set refreshed_at = clock_timestamp()
@@ -405,6 +609,7 @@ begin
      where gp.progress_id = new.id
        and gp.group_id = gm.group_id
        and gp.shared_by_id = gm.user_id
+       and gp.shared_by_id = new.user_id
        and gm.share_completions and gm.share_feedback;
   end if;
   return new;

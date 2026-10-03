@@ -326,9 +326,11 @@ function harness() {
       accountIsAnonymous: false, progress: new Map(), personalProgress: new Map(), personalCacheReady: true,
       photos: [{}], pendingPhotos: [], trips: [], myGroups: [], members: new Map(), activeGroupId: null,
       signedUrls: new Map(), releaseCalls: 0, groupTripCacheCleared: 0, groupFeedbackCleared: 0,
+      personalConfirmationsCleared: 0,
       releaseLocalPhotoUrls() { h.releaseCalls++; },
       clearGroupTripCache() { h.groupTripCacheCleared++; },
       clearGroupFeedback() { h.groupFeedbackCleared++; },
+      clearPersonalConfirmations() { h.personalConfirmationsCleared++; },
       flushOutbox() {}, flushPhotoQueue() {}, flushTrips() {}, showAccountLock() {},
       LS: { progress:'a',personalProgress:'b',outbox:'c',trips:'d',tripOutbox:'e',group:'f',who:'g',view:'h',owner:'i' },
       localStorage: { removeItem() {} }, sb: null, idbClear: async () => {},
@@ -340,6 +342,7 @@ function harness() {
     assert.equal(h.releaseCalls, 1, 'sign-out must revoke private local-photo URLs');
     assert.equal(h.groupTripCacheCleared, 1, 'sign-out must clear group trip details');
     assert.equal(h.groupFeedbackCleared, 1, 'sign-out must clear other members’ feedback');
+    assert.equal(h.personalConfirmationsCleared, 1, 'sign-out must clear old-entry confirmation state');
     assert.equal(h.photos.length, 0);
     assert.equal(h.passwordRecoveryMode, false);
     assert.equal(h.passwordRecoveryBusy, false);
@@ -413,6 +416,7 @@ function harness() {
       recs:[],myVotes:new Map(),recBusy:false,pushedName:null,releaseLocalPhotoUrls(){},
       clearGroupTripCache(){},
       groupFeedbackCleared:0,clearGroupFeedback(){h.groupFeedbackCleared++;},
+      clearPersonalConfirmations(){},
       flushOutbox(){},flushPhotoQueue(){},flushTrips(){},showAccountLock(){},accountDeletionInProgress:false,
       LS:{progress:'p',personalProgress:'pp',outbox:'o',trips:'t',tripOutbox:'to',group:'g',who:'w',view:'v',owner:'owner'},
       localStorage:{getItem:key=>values.get(key)||null,removeItem:key=>values.delete(key)},
@@ -448,6 +452,7 @@ function harness() {
     const h = { userId: ownerB, queued, progress: new Map(), personalProgress: new Map(),
       personalCacheReady: true, trips: [], who: 'A', activeGroupId: null, progressView: 'personal',
       groupFeedbackCleared: 0, clearGroupFeedback() { h.groupFeedbackCleared++; },
+      clearPersonalConfirmations() {},
       LS: { owner: 'owner', progress: 'p', personalProgress: 'pp', outbox: 'o', trips: 't',
         tripOutbox: 'to', group: 'g', who: 'w', view: 'v', accountUpgrade: 'u' },
       localStorage: { value: ownerA, getItem() { return this.value; }, setItem(_k, v) { this.value = v; }, removeItem() {} },
@@ -658,6 +663,7 @@ function harness() {
     const h = { userId: ownerB, progress: new Map(), personalProgress: new Map(), personalCacheReady: true,
       trips: [], who: 'A', activeGroupId: null, progressView: 'personal',
       groupFeedbackCleared: 0, clearGroupFeedback() { h.groupFeedbackCleared++; },
+      clearPersonalConfirmations() {},
       LS: { owner: 'owner', progress: 'p', personalProgress: 'pp', outbox: 'o', trips: 't',
         tripOutbox: 'to', group: 'g', who: 'w', view: 'v', accountUpgrade: 'u' },
       localStorage: { value: ownerA, getItem() { return this.value; },

@@ -120,7 +120,7 @@ async function main() {
   renderSheet(17);`);
   const attributedSheet = h.elements.get('#sheetBody').innerHTML;
   assert.match(attributedSheet, /Ticked off by Bob on 1 Oct 2026/);
-  assert.match(attributedSheet, /earlier group completion without verified member attribution/);
+  assert.match(attributedSheet, /earlier shared completion without verified personal attribution/);
   assert.doesNotMatch(attributedSheet, /Ticked off by Charlie/,
     'a legacy aggregate cannot credit the wrong member in the detail sheet');
   assert.equal(h.run('completionCountsByPerson().get("bob")'), 1);
@@ -152,6 +152,8 @@ async function main() {
   assert.equal(h.run('groupFeedback.size'), 0, 'consent change discards the old feed');
 
   h.context.groupRpc = (name) => {
+    if (name === 'list_unconfirmed_personal_progress')
+      return Promise.resolve({ data: [], error: null });
     if (name === 'group_completion_feed') return query({ data: [
       { adventure_id: 17, completed: true, completed_by_id: 'bob', completed_by: 'Bob',
         source_is_personal:true,source_user_id:'bob',shared_by_id:'bob' },

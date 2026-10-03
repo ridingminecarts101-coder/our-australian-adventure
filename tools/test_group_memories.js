@@ -1,6 +1,7 @@
 'use strict';
 // Group Memories shows only the active group's consented text feedback. The
 // device photo library and the signed-in person's private editor stay separate.
+// Older ambiguous personal rows need an owner confirmation before sharing.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -83,7 +84,7 @@ assert.match(card, /Unwritten walk/);
 assert.match(card, /aria-label="5 stars"/);
 assert.match(card, /No memory written yet/, 'a rating without any written note retains the empty text');
 assert.match(card, /Earlier group walk/);
-assert.match(card, /earlier group completion without verified member attribution/);
+assert.match(card, /earlier shared completion without verified personal attribution/);
 assert.doesNotMatch(card, /Earlier group walk[\s\S]*Charlie.*completed/,
   'a historical group row cannot be credited to a different member');
 h.run(`members.set('bob','<Bob & team>'); renderMemories()`);
@@ -169,4 +170,146 @@ assert.match(unavailable.html(), /ratings and memories are temporarily unavailab
 assert.doesNotMatch(unavailable.html(), /No memory written yet/,
   'a failed feedback refresh must not look like an empty memory');
 
-console.log('PASS: Group Memories member ticks/dates, feedback, empty notes, scope, and device photos');
+function confirmationHarness() {
+  const h = harness();
+  h.run(`progressView='personal'; online=true;
+    personalProgress.set(17, {
+      id:'legacy-alice-17', adventure_id:17, user_id:'alice', completed:true,
+      completed_on:'2026-09-20', rating:5, memory:'Alice older note'
+    });
+    progress=new Map(personalProgress);
+    unconfirmedPersonalProgress=new Set(['legacy-alice-17']);
+    unconfirmedPersonalScope='alice';
+    rpcCalls=[]; toastMessages=[]; renderedSheetId=null; confirmCalls=0;
+    window.confirm=()=>{ confirmCalls++; return true; };
+    toast=message=>toastMessages.push(message);
+    renderSheet=id=>{ renderedSheetId=id; };
+    sb={rpc:async(name,args)=>{
+      rpcCalls.push([name,args.p_progress_id]); return {error:null};
+    }};`);
+  return h;
+}
+
+async function testPersonalConfirmation() {
+  const ui = confirmationHarness();
+  const confirmation = () => ui.run('personalConfirmationHTML(personalProgress.get(17))');
+  assert.match(confirmation(), /older entry may count as an unnamed group tick/);
+  assert.match(confirmation(), /name, date, rating and note stay private/);
+  assert.match(confirmation(), /data-act="confirmPersonal"/);
+  assert.doesNotMatch(confirmation(), /data-act="confirmPersonal" disabled/);
+  ui.run(`progressView='group'`);
+  assert.equal(confirmation(), '', 'Group view never offers personal reconfirmation');
+  await ui.run('confirmPersonalProgress(17)');
+  assert.equal(ui.run('rpcCalls.length'), 0, 'Group view cannot invoke the confirmation RPC');
+  ui.run(`progressView='personal'; online=false`);
+  assert.match(confirmation(), /data-act="confirmPersonal" disabled/,
+    'the older entry stays explained offline, but its button is disabled');
+  await ui.run('confirmPersonalProgress(17)');
+  assert.equal(ui.run('rpcCalls.length'), 0, 'offline confirmation cannot call the server');
+  ui.run(`online=true; unconfirmedPersonalScope='bob'`);
+  assert.equal(confirmation(), '', 'a confirmation list from another account is hidden');
+  await ui.run('confirmPersonalProgress(17)');
+  assert.equal(ui.run('rpcCalls.length'), 0);
+  ui.run(`unconfirmedPersonalScope='alice'; personalProgress.get(17).user_id='bob'`);
+  assert.equal(confirmation(), '', 'an unowned row cannot offer an owner confirmation');
+  await ui.run('confirmPersonalProgress(17)');
+  assert.equal(ui.run('rpcCalls.length'), 0, 'an unowned row cannot invoke the RPC');
+  ui.run(`personalProgress.get(17).user_id='alice'; personalProgress.get(17).owner_id='bob'`);
+  assert.equal(confirmation(), '', 'conflicting ownership metadata fails closed');
+  await ui.run('confirmPersonalProgress(17)');
+  assert.equal(ui.run('rpcCalls.length'), 0);
+  ui.run(`personalProgress.get(17).owner_id='alice'; personalProgress.get(17).completed=false`);
+  assert.equal(confirmation(), '', 'only completed older personal entries need reconfirmation');
+
+  const listing = confirmationHarness();
+  listing.run(`clearPersonalConfirmations(); renderAll=()=>{};
+    fetchAllPersonalProgress=async(owner)=>{
+      queriedOwner=owner;
+      return {data:[{id:'legacy-alice-17',adventure_id:17,user_id:'alice',
+        completed:true,rating:5,memory:'Alice older note'}],error:null};
+    };
+    sb.rpc=async(name)=>{
+      listedRpc=name; return {data:[{progress_id:'legacy-alice-17'}],error:null};
+    }`);
+  await listing.run('pullProgress()');
+  assert.equal(listing.run('queriedOwner'), 'alice', 'the Personal pull requests this owner only');
+  assert.equal(listing.run('listedRpc'), 'list_unconfirmed_personal_progress');
+  assert.equal(listing.run('unconfirmedPersonalScope'), 'alice');
+  assert.match(listing.run('personalConfirmationHTML(personalProgress.get(17))'),
+    /data-act="confirmPersonal"/);
+  listing.run(`sb.rpc=async()=>({data:null,error:{message:'cannot list'}})`);
+  await listing.run('pullProgress()');
+  assert.equal(listing.run('unconfirmedPersonalScope'), null,
+    'a failed list refresh cannot keep offering confirmation from stale data');
+  assert.equal(listing.run('personalConfirmationHTML(personalProgress.get(17))'), '');
+
+  const success = confirmationHarness();
+  success.run('openId=17');
+  await success.run('confirmPersonalProgress(17)');
+  assert.equal(success.run('confirmCalls'), 1, 'the owner reviews the sharing consequences');
+  assert.equal(success.run('JSON.stringify(rpcCalls)'),
+    '[["revalidate_personal_progress","legacy-alice-17"]]');
+  assert.equal(success.run("unconfirmedPersonalProgress.has('legacy-alice-17')"), false);
+  assert.equal(success.run('renderedSheetId'), 17, 'the open sheet loses its confirmation button');
+  assert.match(success.run('toastMessages.join(" ")'), /ready for your chosen group sharing/);
+
+  const cancelled = confirmationHarness();
+  cancelled.run('window.confirm=()=>false');
+  await cancelled.run('confirmPersonalProgress(17)');
+  assert.equal(cancelled.run('rpcCalls.length'), 0, 'declining confirmation leaves the row private');
+  assert.equal(cancelled.run("unconfirmedPersonalProgress.has('legacy-alice-17')"), true);
+
+  const failed = confirmationHarness();
+  failed.run(`sb.rpc=async(name,args)=>{
+    rpcCalls.push([name,args.p_progress_id]); return {error:{message:'server refused'}};
+  }`);
+  await failed.run('confirmPersonalProgress(17)');
+  assert.equal(failed.run("unconfirmedPersonalProgress.has('legacy-alice-17')"), true,
+    'a failed RPC must leave the confirmation pending');
+  assert.match(failed.run('toastMessages.join(" ")'), /Could not confirm/);
+  assert.match(failed.run('personalConfirmationHTML(personalProgress.get(17))'), /data-act="confirmPersonal"/);
+
+  const queued = confirmationHarness();
+  queued.run(`writeLS(LS.outbox,[{owner_id:'alice',adventure_id:17,queue_rev:'pending'}]);
+    flushOutbox=async()=>{ flushCalls=(flushCalls||0)+1; writeLS(LS.outbox,[]); };
+    flushCalls=0`);
+  await queued.run('confirmPersonalProgress(17)');
+  assert.equal(queued.run('flushCalls'), 1, 'queued edits sync before the old row is confirmed');
+  assert.equal(queued.run('rpcCalls.length'), 1);
+
+  const stuck = confirmationHarness();
+  stuck.run(`writeLS(LS.outbox,[{owner_id:'alice',adventure_id:17,queue_rev:'pending'}]);
+    flushOutbox=async()=>{ flushCalls=(flushCalls||0)+1; }; flushCalls=0`);
+  await stuck.run('confirmPersonalProgress(17)');
+  assert.equal(stuck.run('flushCalls'), 1);
+  assert.equal(stuck.run('rpcCalls.length'), 0, 'an unsynced edit cannot be overwritten by confirmation');
+  assert.equal(stuck.run("unconfirmedPersonalProgress.has('legacy-alice-17')"), true);
+  assert.match(stuck.run('toastMessages.join(" ")'), /Finish syncing this adventure/);
+
+  const switchedDuringFlush = confirmationHarness();
+  switchedDuringFlush.run(`writeLS(LS.outbox,[{owner_id:'alice',adventure_id:17,queue_rev:'pending'}]);
+    flushOutbox=async()=>{ userId='bob'; authGeneration++; writeLS(LS.outbox,[]); }`);
+  await switchedDuringFlush.run('confirmPersonalProgress(17)');
+  assert.equal(switchedDuringFlush.run('rpcCalls.length'), 0,
+    'an account switch while flushing cancels the confirmation RPC');
+
+  const switchedDuringRpc = confirmationHarness();
+  switchedDuringRpc.run(`sb.rpc=(name,args)=>{
+    rpcCalls.push([name,args.p_progress_id]);
+    return new Promise(resolve=>{ resolveRpc=resolve; });
+  }; openId=17`);
+  const pending = switchedDuringRpc.run('confirmPersonalProgress(17)');
+  switchedDuringRpc.run(`userId='bob'; authGeneration++; resolveRpc({error:null})`);
+  await pending;
+  assert.equal(switchedDuringRpc.run("unconfirmedPersonalProgress.has('legacy-alice-17')"), true,
+    'a response for the former owner cannot change current confirmation state');
+  assert.equal(switchedDuringRpc.run('renderedSheetId'), null);
+  assert.equal(switchedDuringRpc.run('toastMessages.length'), 0);
+}
+
+testPersonalConfirmation().then(() => {
+  console.log('PASS: Group Memories and owner-scoped older personal progress confirmation');
+}).catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
