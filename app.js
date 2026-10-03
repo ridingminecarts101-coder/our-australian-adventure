@@ -64,6 +64,7 @@ let progress = new Map();      // adventure_id -> row
 let personalProgress = new Map(); // canonical rows used when editing a group aggregate
 let groupFeedback = new Map(); // adventure_id -> consented member feedback, memory only
 let groupFeedbackScope = null; // owner and group that supplied the in-memory feed
+let progressPullEpoch = 0; // a later pull or revocation makes earlier responses stale
 let personalCacheReady = false;
 let who = localStorage.getItem(LS.who) || null;
 let online = navigator.onLine;
@@ -287,8 +288,14 @@ function saveLocalProgress() {
   if (personalCacheReady) writeLS(LS.personalProgress, [...personalProgress.values()]);
 }
 function clearGroupFeedback() {
+  progressPullEpoch++;
   groupFeedback = new Map();
   groupFeedbackScope = null;
+}
+function clearGroupFeedbackForForeground() {
+  if (progressView !== 'group') return;
+  clearGroupFeedback();
+  if (openId !== null) renderSheet(openId);
 }
 
 async function bindLocalDataToUser() {
@@ -501,8 +508,20 @@ async function fetchAllGroupFeedback(groupId) {
 
 function indexGroupFeedback(rows) {
   const byAdventure = new Map();
+  const seen = new Map();
   for (const row of rows || []) {
     if (!Number.isInteger(row.adventure_id) || !row.completed_by_id) continue;
+    if (!seen.has(row.adventure_id)) seen.set(row.adventure_id, new Set());
+    const seenMembers = seen.get(row.adventure_id);
+    if (seenMembers.has(row.completed_by_id)) {
+      // More than one source row for a member makes attribution ambiguous.
+      // Hide every candidate, including one seen before this duplicate.
+      const entries = byAdventure.get(row.adventure_id);
+      entries?.delete(row.completed_by_id);
+      if (entries?.size === 0) byAdventure.delete(row.adventure_id);
+      continue;
+    }
+    seenMembers.add(row.completed_by_id);
     const rating = Number.isInteger(row.rating) && row.rating >= 1 && row.rating <= 5
       ? row.rating : null;
     const memory = typeof row.memory === 'string' ? row.memory : null;
@@ -534,9 +553,11 @@ function canonicalPersonalProgress(rows) {
 
 async function pullProgress() {
   if (!sb || !online) return;
+  const runEpoch = ++progressPullEpoch;
   const runOwner = userId, runGeneration = authGeneration;
   const runView = progressView, runGroup = activeGroupId;
-  const stillCurrent = () => runGeneration === authGeneration && runOwner === userId
+  const stillCurrent = () => runEpoch === progressPullEpoch
+    && runGeneration === authGeneration && runOwner === userId
     && runView === progressView && runGroup === activeGroupId;
   let data, error, feedbackRows = [];
   if (runView === 'group' && runGroup) {
@@ -3811,7 +3832,7 @@ function renderTripSheet(id) {
       <button class="btn-primary" data-tripact="save">Save trip</button>
       ${group ? `<button class="btn-ghost" data-tripact="group-toggle" aria-pressed="${!!shared}" ${sharingBusy || !groupTripReady ? 'disabled' : ''}>${groupTripError ? 'Group sharing unavailable — retry below' : !groupTripReady ? 'Checking group sharing…' : shared ? `Remove from ${esc(group.name)}` : `Add to ${esc(group.name)}`}</button>
         ${groupTripError ? '<button class="btn-ghost" data-triprefresh>Retry group sharing</button>' : ''}
-        <p class="fineprint">Sharing makes this trip's name, dates, itinerary and notes visible to everyone in ${esc(group.name)}. Photos, memories and purchases remain private.</p>` : ''}
+        <p class="fineprint">Sharing makes this trip's name, dates, itinerary and trip notes visible to everyone in ${esc(group.name)}. Your separate rating and memory sharing choice does not change. Photos and purchases stay private.</p>` : ''}
       <button class="btn-ghost" data-tripact="share">↗ Share trip details outside Wayfinder</button>
       <button class="btn-ghost danger" data-tripact="delete">Delete trip</button>
     </div>`;
@@ -3868,7 +3889,7 @@ async function setTripGroupSharing(tripId) {
     return toast('A trip sharing change is already in progress');
   }
   const sharing = !groupTripShares.has(tripId);
-  if (sharing && !confirm(`Add “${t.name}” to ${group.name}?\n\nEveryone currently in this group can see its name, dates, itinerary and notes. Only you can edit it. Photos, memories and purchases stay private. You can remove the trip later.`)) return;
+  if (sharing && !confirm(`Add “${t.name}” to ${group.name}?\n\nEveryone currently in this group can see its name, dates, itinerary and trip notes. Only you can edit it. Your separate rating and memory sharing choice does not change. Photos and purchases stay private. You can remove the trip later.`)) return;
   const token = { owner, generation, groupId, tripId };
   tripGroupMutation = token;
   renderTripSheet(tripId);
@@ -5200,6 +5221,7 @@ ${url}`);
   });
   addEventListener('visibilitychange', () => {
     if (document.hidden) return;
+    clearGroupFeedbackForForeground();
     const billingOwner = userId, billingGeneration = authGeneration;
     Billing.foreground().then(() => {
       if (billingOwner && userId === billingOwner && authGeneration === billingGeneration

@@ -67,6 +67,24 @@ async function main() {
   assert.match(html, /A &lt;private&gt; note &amp; more/);
   assert.doesNotMatch(html, /My own|nobody/);
   assert.match(html, /aria-label="4 stars"/);
+  h.run(`groupFeedback=indexGroupFeedback([
+    {adventure_id:17,completed_by_id:'bob',rating:5,memory:'first claim'},
+    {adventure_id:17,completed_by_id:'bob',rating:1,memory:'second claim'},
+    {adventure_id:17,completed_by_id:'bob',rating:4,memory:'third claim'},
+    {adventure_id:17,completed_by_id:'charlie',rating:3,memory:'unambiguous'},
+    {adventure_id:18,completed_by_id:'bob',rating:null,memory:null},
+    {adventure_id:18,completed_by_id:'bob',rating:5,memory:'later claim'}
+  ]);`);
+  assert.equal(h.run('groupFeedback.get(17).has("bob")'), false,
+    'ambiguous duplicate owner rows must all be hidden');
+  assert.equal(h.run('groupFeedback.get(17).has("charlie")'), true,
+    'another member on the same adventure remains visible');
+  assert.equal(h.run('groupFeedback.has(18)'), false,
+    'even an empty first duplicate invalidates the later memory');
+  h.run(`groupFeedback=indexGroupFeedback([
+    {adventure_id:17,completed_by_id:'bob',rating:4,memory:'A <private> note & more'},
+    {adventure_id:17,completed_by_id:'charlie',rating:2,memory:'Second member'}
+  ]);`);
   h.run("activeGroupId='group-b'");
   assert.equal(h.run('groupFeedbackHTML(17)'), '', 'group scope blocks stale feedback');
   h.run("activeGroupId='group-a'; userId='other-account'");
@@ -90,6 +108,14 @@ async function main() {
     'editable memory must come from the signed-in owner');
   assert.doesNotMatch(sheet, /<textarea[^>]*>A &lt;private&gt;/,
     'another member memory must never enter the editable field');
+
+  let foregroundRedraws = 0;
+  h.context.recordForegroundRedraw = () => { foregroundRedraws++; };
+  h.run('openId=17; renderSheet=recordForegroundRedraw; clearGroupFeedbackForForeground()');
+  assert.equal(h.run('groupFeedback.size'), 0,
+    'foreground refresh hides feedback before the server request completes');
+  assert.equal(h.run('groupFeedbackScope'), null);
+  assert.equal(foregroundRedraws, 1, 'an open detail sheet loses its stale note immediately');
 
   const rpcCalls = [];
   h.context.rpc = async (name, args) => {
@@ -147,7 +173,57 @@ async function main() {
   assert.equal(stale.run('groupFeedback.size'), 0,
     'a late response from the previous group must not restore its feedback');
 
-  console.log('PASS: opt-in group feedback, read-only owner boundary, ephemeral cache and stale response');
+  // Two pulls for the same owner, view and group can finish out of order. The
+  // older request may have read a note before its owner revoked consent.
+  const reordered = harness(), oldFeedback = deferred();
+  let completionCalls = 0, feedbackCalls = 0;
+  reordered.context.groupRpc = name => {
+    if (name === 'group_completion_feed') {
+      completionCalls++;
+      return query({ data: [{ adventure_id: 17, completed: true,
+        completed_by_id: completionCalls === 1 ? 'bob' : 'charlie' }], error: null });
+    }
+    if (name === 'group_completion_feedback_feed') {
+      feedbackCalls++;
+      return feedbackCalls === 1
+        ? { order() { return this; }, range() { return oldFeedback.promise; } }
+        : query({ data: [], error: null });
+    }
+    throw new Error(name);
+  };
+  reordered.context.personalQuery = h.context.personalQuery;
+  reordered.run('sb={rpc:groupRpc,from:personalQuery};');
+  const olderPull = reordered.run('pullProgress()');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(feedbackCalls, 1, 'older pull is waiting for its feedback response');
+  await reordered.run('pullProgress()');
+  assert.equal(reordered.run('groupFeedback.size'), 0,
+    'newer empty consent feed clears the group view');
+  assert.equal(reordered.run('progress.get(17).completed_by_id'), 'charlie');
+  oldFeedback.resolve({ data: [{ adventure_id: 17, completed_by_id: 'bob',
+    rating: 5, memory: 'revoked memory' }], error: null });
+  await olderPull;
+  assert.equal(reordered.run('groupFeedback.size'), 0,
+    'older same-group response cannot reinstate a revoked memory');
+  assert.equal(reordered.run('progress.get(17).completed_by_id'), 'charlie',
+    'older completion summary cannot replace the newer result');
+
+  const revoked = harness(), beforeRevocation = deferred();
+  revoked.context.groupRpc = name => name === 'group_completion_feed'
+    ? query({ data: [], error: null })
+    : { order() { return this; }, range() { return beforeRevocation.promise; } };
+  revoked.context.personalQuery = h.context.personalQuery;
+  revoked.run('sb={rpc:groupRpc,from:personalQuery};');
+  const inFlight = revoked.run('pullProgress()');
+  await new Promise(resolve => setImmediate(resolve));
+  revoked.run('clearGroupFeedback()'); // consent revocation or projection event
+  beforeRevocation.resolve({ data: [{ adventure_id: 17, completed_by_id: 'bob',
+    rating: 5, memory: 'old consent' }], error: null });
+  await inFlight;
+  assert.equal(revoked.run('groupFeedback.size'), 0,
+    'clearing after revocation invalidates an in-flight response');
+
+  console.log('PASS: opt-in group feedback, read-only owner boundary, ephemeral cache and response ordering');
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });
