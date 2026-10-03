@@ -257,6 +257,7 @@ async function bindLocalDataToUser() {
     for (const key of privateKeys) localStorage.removeItem(key);
     progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
     trips = []; who = null; activeGroupId = null; progressView = 'personal';
+    clearGroupTripCache();
     // Keep queued photos for their account across a direct A -> B session
     // replacement. Old queue rows predate owner_id, so attach them to the
     // previous account when that stored Supabase owner is valid.
@@ -525,7 +526,7 @@ async function resubscribeRealtime() {
   }
 }
 
-const RT_CHANNELS = ['progress-sync', 'group-progress-sync', 'group-sync', 'member-sync', 'photo-sync', 'trip-sync'];
+const RT_CHANNELS = ['progress-sync', 'group-progress-sync', 'group-sync', 'member-sync', 'photo-sync', 'trip-sync', 'group-trip-sync'];
 
 function subscribeRealtime() {
   if (!sb) return;
@@ -589,6 +590,8 @@ function subscribeRealtime() {
       if (!subscriptionCurrent()) return;
       await loadGroups();
       if (!subscriptionCurrent()) return;
+      await pullGroupTrips();
+      if (!subscriptionCurrent()) return;
       renderAll();
     })
     .subscribe();
@@ -599,6 +602,8 @@ function subscribeRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, async () => {
       if (!subscriptionCurrent()) return;
       await loadGroups();
+      if (!subscriptionCurrent()) return;
+      await pullGroupTrips();
       if (!subscriptionCurrent()) return;
       renderAll();
     })
@@ -621,15 +626,33 @@ function subscribeRealtime() {
   sb.channel('trip-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, payload => {
       if (!subscriptionCurrent()) return;
-      if (readLS(LS.tripOutbox, []).some(t => t.id === (payload.new || payload.old).id)) return;
-      if (payload.eventType === 'DELETE') trips = trips.filter(t => t.id !== payload.old.id);
-      else if (payload.new) {
-        const i = trips.findIndex(t => t.id === payload.new.id);
-        if (i >= 0) trips[i] = payload.new; else trips.push(payload.new);
+      const changed = payload.new || payload.old;
+      if (!changed) return;
+      const pending = readLS(LS.tripOutbox, []).some(t => t.id === changed.id);
+      // Supabase may expose only the primary key in a DELETE's old record.
+      // Remove an id only when it is already in this account's own cache.
+      const ownDelete = payload.eventType === 'DELETE'
+        && trips.some(t => t.id === changed.id);
+      if (!pending && (ownDelete || changed.user_id === userId)) {
+        if (payload.eventType === 'DELETE') trips = trips.filter(t => t.id !== changed.id);
+        else if (payload.new) {
+          const i = trips.findIndex(t => t.id === changed.id);
+          if (i >= 0) trips[i] = payload.new; else trips.push(payload.new);
+        }
+        saveLocalTrips();
+        renderTrips();
+        if (openTripId) renderTripSheet(openTripId);
       }
-      saveLocalTrips();
-      renderTrips();
-      if (openTripId) renderTripSheet(openTripId);
+      // A member's row must never enter the owner's editable/local trip cache.
+      if (activeGroupId) void pullGroupTrips();
+    })
+    .subscribe();
+
+  sb.channel('group-trip-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'group_trips' }, payload => {
+      if (!subscriptionCurrent() || !activeGroupId) return;
+      const changed = payload.new || payload.old;
+      if (!changed || changed.group_id === activeGroupId) void pullGroupTrips();
     })
     .subscribe();
 }
@@ -670,6 +693,7 @@ async function syncNow({ loud = false } = {}) {
     await pullProgress();
     await pullPhotos();
     await pullTrips();
+    await pullGroupTrips();
     if ($('.tab.active') && $('.tab.active').dataset.tab === 'tab-community') {
       await pullRecommendations();
     }
@@ -1623,6 +1647,7 @@ async function shareAdventure(id) {
 async function shareTrip(tripId) {
   const t = trips.find(x => x.id === tripId);
   if (!t) return;
+  if (!confirm('Share this trip’s name, dates and itinerary outside Wayfinder? Anyone receiving the message can read those details. This does not add the recipient to your group.')) return;
   const items = tripAdventures(t);
   const when = t.starts_on
     ? fmtDate(t.starts_on) + (t.ends_on ? ' – ' + fmtDate(t.ends_on) : '')
@@ -1632,8 +1657,10 @@ async function shareTrip(tripId) {
   lines.push('');
   items.forEach((a, i) => {
     lines.push(`${i + 1}. ${safeTitle(a)}`);
-    lines.push(`   ${a.place} · ${countryName(a.country)}`);
+    lines.push(isLocked(a) ? '   Unlock this pack to see the place.'
+      : `   ${a.place} · ${countryName(a.country)}`);
   });
+  lines.push('', 'The Wayfinder link opens only for you or members of a group you shared this trip with. This message itself includes the trip details above.');
   const text = lines.join('\n');
   const url = linkTo({ trip: t.id });
   await share({ title: `${t.name} — Wayfinder`, text, url }, `${text}\n\n${url}`);
@@ -1872,6 +1899,7 @@ async function requireName(reason) {
 async function loadGroups() {
   if (!sb || !online || !userId) return;
   const owner = userId, generation = authGeneration;
+  const previousGroupId = activeGroupId;
   const { data, error } = await sb
     .from('group_members')
     .select('group_id, display_name, share_completions, groups(id, name, join_code, owner_id, invite_enabled)')
@@ -1883,6 +1911,7 @@ async function loadGroups() {
     groupSchemaReady = false;
     myGroups = [];
     activeGroupId = null;
+    clearGroupTripCache();
     members = new Map();
     localStorage.removeItem(LS.group);
     if (progressView === 'group') {
@@ -1903,6 +1932,7 @@ async function loadGroups() {
   const saved = localStorage.getItem(LS.group);
   activeGroupId = myGroups.some(g => g.id === saved) ? saved
                 : (myGroups[0] ? myGroups[0].id : null);
+  if (activeGroupId !== previousGroupId) clearGroupTripCache();
   if (activeGroupId) localStorage.setItem(LS.group, activeGroupId);
   else if (progressView === 'group') {
     progressView = 'personal';
@@ -2035,6 +2065,8 @@ async function createGroup(name) {
   if (activeGroupId !== data.group_id) return;
   await setProgressView('group');
   if (!current() || activeGroupId !== data.group_id) return;
+  await pullGroupTrips();
+  if (!current() || activeGroupId !== data.group_id) return;
   renderMe();
   toast(`Share the code ${data.join_code}`);
   } finally {
@@ -2076,6 +2108,8 @@ async function joinGroup(code) {
   if (!current()) return;
   await pullTrips();
   if (!current()) return;
+  await pullGroupTrips();
+  if (!current()) return;
   renderAll();
   toast(`Joined ${data.group_name}`);
   } finally {
@@ -2095,8 +2129,7 @@ async function leaveGroup(id) {
   const owner = userId, generation = authGeneration;
   const current = () => owner === userId && generation === authGeneration;
   const g = myGroups.find(x => x.id === id);
-  if (!confirm(`Leave ${g ? g.name : 'this group'}?\n\nEverything you ticked comes with you `
-             + 'and stops showing on their list. Theirs stops showing on yours.')) return;
+  if (!confirm(`Leave ${g ? g.name : 'this group'}?\n\nYour personal ticks and trips stay with you. Their shared copies stop showing in this group, and you lose access to other members’ shared trips.`)) return;
 
   toast('Leaving…');
   const { error } = await sb.rpc('leave_group', { p_group_id: id });
@@ -2111,6 +2144,8 @@ async function leaveGroup(id) {
   await pullPhotos();
   if (!current()) return;
   await pullTrips();
+  if (!current()) return;
+  await pullGroupTrips();
   if (!current()) return;
   renderAll();
   toast('Left the group. Your personal data is still yours.');
@@ -2166,7 +2201,7 @@ async function removeGroupMember(groupId, memberId) {
   if (!lifecycle) return toast('A group change is already in progress');
   try {
     const label = nameOf(memberId, 'this member');
-    if (!confirm(`Remove ${label} from this group?\n\nTheir personal progress, trips and photos remain theirs. Their shared completion view is removed from this group.`)) return;
+    if (!confirm(`Remove ${label} from this group?\n\nTheir personal progress, trips and photos remain theirs. Their shared completions and trips stop showing here.`)) return;
     const { error } = await sb.rpc('remove_group_member', {
       p_group_id: groupId, p_user_id: memberId,
     });
@@ -2179,6 +2214,8 @@ async function removeGroupMember(groupId, memberId) {
     await pullPhotos();
     if (!currentGroupLifecycle(lifecycle, groupId)) return;
     await pullTrips();
+    if (!currentGroupLifecycle(lifecycle, groupId)) return;
+    await pullGroupTrips();
     if (!currentGroupLifecycle(lifecycle, groupId)) return;
     renderAll();
     toast(`${label} was removed. Their personal data was not deleted.`);
@@ -2232,6 +2269,8 @@ async function deleteOwnedGroup(groupId) {
     await pullPhotos();
     if (!currentGroupLifecycle(lifecycle)) return;
     await pullTrips();
+    if (!currentGroupLifecycle(lifecycle)) return;
+    await pullGroupTrips();
     if (!currentGroupLifecycle(lifecycle)) return;
     renderAll();
     toast('Group deleted. Everyone’s personal data is unchanged.');
@@ -3219,9 +3258,25 @@ function renderPassport() {
 let trips = [];
 let openTripId = null;
 let tripMutationRevision = 0;
+// Group projections are never placed in the personal trip cache or its outbox.
+// A member may read a shared plan, but only its owner can edit the source row.
+let sharedGroupTrips = [];
+let groupTripShares = new Map();
+let groupTripLoadRevision = 0;
+let groupTripReady = false;
+let groupTripError = '';
+let tripGroupMutation = null;
 
 function loadLocalTrips() { trips = readLS(LS.trips, []); }
 function saveLocalTrips() { writeLS(LS.trips, trips); }
+function clearGroupTripCache() {
+  groupTripLoadRevision++;
+  sharedGroupTrips = [];
+  groupTripShares = new Map();
+  groupTripReady = false;
+  groupTripError = '';
+  if (openTripId && !trips.some(t => t.id === openTripId)) closeTripSheet();
+}
 
 function newTripId() {
   return crypto.randomUUID ? crypto.randomUUID()
@@ -3233,9 +3288,10 @@ function upsertTrip(trip) {
   trip.updated_at = new Date().toISOString();
   if (i >= 0) trips[i] = trip; else trips.push(trip);
   saveLocalTrips();
-  queueTripSync(trip);
+  const queued = queueTripSync(trip);
   renderTrips();
   if (openTripId === trip.id) renderTripSheet(trip.id);
+  return queued;
 }
 
 function removeTrip(id) {
@@ -3246,6 +3302,8 @@ function removeTrip(id) {
     return;
   }
   trips = trips.filter(t => t.id !== id);
+  sharedGroupTrips = sharedGroupTrips.filter(t => t.id !== id);
+  groupTripShares.delete(id);
   saveLocalTrips();
   closeTripSheet();
   renderTrips();
@@ -3351,7 +3409,88 @@ async function pullTrips() {
   for (const t of data) if (!pending.has(t.id)) byId.set(t.id, t);
   trips = [...byId.values()];
   saveLocalTrips();
-  resolvePendingTripDeepLink(true);
+  // A trip link can refer to another member's shared plan. Wait for the
+  // active group's projection pull before deciding it is unavailable.
+  resolvePendingTripDeepLink(!activeGroupId);
+}
+
+async function pullGroupTrips() {
+  if (!userId || !activeGroupId || !myGroups.some(g => g.id === activeGroupId)) {
+    clearGroupTripCache();
+    renderTrips();
+    if (openTripId && !trips.some(t => t.id === openTripId)) closeTripSheet();
+    return;
+  }
+  if (!sb || !online) return;
+  const owner = userId, generation = authGeneration, groupId = activeGroupId;
+  const request = ++groupTripLoadRevision;
+  const current = () => owner === userId && generation === authGeneration
+    && groupId === activeGroupId && request === groupTripLoadRevision
+    && myGroups.some(g => g.id === groupId);
+  const unavailable = message => {
+    // Keep the last confirmed owner share map for this same group, but hide
+    // member content until it can be verified again. Never turn an unknown
+    // share into a misleading "Add" or silently drop the Remove control.
+    sharedGroupTrips = [];
+    groupTripReady = false;
+    groupTripError = message;
+    if (openTripId && !trips.some(t => t.id === openTripId)) closeTripSheet();
+    renderTrips();
+    if (openTripId) renderTripSheet(openTripId);
+  };
+  try {
+    const projections = [], pageSize = 500;
+    let lastId = null;
+    for (;;) {
+      let query = sb.from('group_trips').select('group_id,trip_id,shared_by_id,shared_at')
+        .eq('group_id', groupId).order('trip_id').limit(pageSize);
+      if (lastId !== null) query = query.gt('trip_id', lastId);
+      const result = await query;
+      if (!current()) return;
+      if (result.error) {
+        console.warn('group trips', result.error.message);
+        unavailable('Could not load group trips. Retry when connected.');
+        return;
+      }
+      const page = result.data || [];
+      projections.push(...page);
+      if (page.length < pageSize) break;
+      const nextLastId = page[page.length - 1]?.trip_id;
+      if (!nextLastId || nextLastId === lastId) return;
+      lastId = nextLastId;
+    }
+    const shareById = new Map(projections.map(p => [p.trip_id, p]));
+    const rows = [];
+    const ids = [...shareById.keys()];
+    for (let i = 0; i < ids.length; i += 100) {
+      const result = await sb.from('trips').select('*').in('id', ids.slice(i, i + 100));
+      if (!current()) return;
+      if (result.error) {
+        console.warn('shared trip details', result.error.message);
+        unavailable('Could not load group trips. Retry when connected.');
+        return;
+      }
+      rows.push(...(result.data || []));
+    }
+    if (!current()) return;
+    // Both the projection and the source row must agree on the owner. RLS is
+    // the real access boundary; this also avoids a malformed join.
+    const pendingDeletes = new Set(readLS(LS.tripOutbox, [])
+      .filter(t => t.owner_id === owner && t.deleted).map(t => t.id));
+    for (const id of pendingDeletes) shareById.delete(id);
+    groupTripShares = shareById;
+    groupTripReady = true;
+    groupTripError = '';
+    sharedGroupTrips = rows.filter(t => shareById.get(t.id)?.shared_by_id === t.user_id)
+      .sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
+    renderTrips();
+    if (openTripId) renderTripSheet(openTripId);
+    resolvePendingTripDeepLink(true);
+  } catch (error) {
+    if (!current()) return;
+    console.warn('group trip pull failed', error);
+    unavailable('Could not load group trips. Retry when connected.');
+  }
 }
 
 function tripAdventures(trip) {
@@ -3386,30 +3525,45 @@ function toggleTripMember(tripId, adventureId) {
 function renderTrips() {
   const el = $('#tripList');
   if (!el) return;
-  if (!trips.length) {
-    el.innerHTML = `<div class="empty">No trips yet.<br>Make one, then add adventures to it from their page.</div>`;
-    return;
-  }
-  el.innerHTML = trips.map(t => {
+  const card = (t, inGroup) => {
     const items = tripAdventures(t);
     const done = items.filter(a => isDone(a.id)).length;
     const countries = [...new Set(items.map(a => a.country))];
     const when = t.starts_on
       ? fmtDate(t.starts_on) + (t.ends_on ? ' – ' + fmtDate(t.ends_on) : '')
       : 'No dates set';
-    return `<button class="trip" data-trip="${esc(t.id)}">
+    const group = myGroups.find(g => g.id === activeGroupId);
+    const shareLabel = inGroup
+      ? `Shared by ${t.user_id === userId ? 'you' : nameOf(t.user_id, t.created_by)}`
+      : groupTripShares.has(t.id) && group ? `Shared with ${group.name}` : '';
+    return `<button class="trip" ${inGroup ? 'data-group-trip' : 'data-trip'}="${esc(t.id)}">
       <div class="trip-top">
         <b>${esc(t.name)}</b>
-        <span>${done} / ${items.length}</span>
+        <span>${inGroup ? items.length + ' places' : done + ' / ' + items.length}</span>
       </div>
       <div class="card-meta">${esc(when)}</div>
+      ${shareLabel ? `<div class="trip-share-label">${esc(shareLabel)}</div>` : ''}
       <div class="badges">
         ${countries.slice(0, 6).map(c => `<span class="badge">${countryFlag(c)} ${esc(countryName(c))}</span>`).join('')}
         ${countries.length > 6 ? `<span class="badge">+${countries.length - 6}</span>` : ''}
       </div>
-      ${items.length ? `<div class="minibar"><i style="width:${Math.round((done / items.length) * 100)}%"></i></div>` : ''}
+      ${!inGroup && items.length ? `<div class="minibar"><i style="width:${Math.round((done / items.length) * 100)}%"></i></div>` : ''}
     </button>`;
-  }).join('');
+  };
+  el.innerHTML = trips.length ? trips.map(t => card(t, false)).join('')
+    : `<div class="empty">No trips yet.<br>Make one, then add adventures to it from their page.</div>`;
+  const section = $('#groupTripSection'), list = $('#groupTripList'), title = $('#groupTripTitle');
+  if (!section || !list || !title) return;
+  const group = myGroups.find(g => g.id === activeGroupId);
+  section.classList.toggle('hidden', !group);
+  if (!group) { list.innerHTML = ''; return; }
+  title.textContent = `Shared in ${group.name}`;
+  list.innerHTML = groupTripError
+    ? `<div class="empty">${esc(groupTripError)}<br><button class="btn-ghost" data-triprefresh>Retry group trips</button></div>`
+    : !groupTripReady && online ? '<div class="empty">Loading group trips…</div>'
+    : sharedGroupTrips.length ? sharedGroupTrips.map(t => card(t, true)).join('')
+      : `<div class="empty">${online ? 'No group trips yet. Add one from a trip’s details.'
+        : 'Reconnect to load trips shared with this group.'}</div>`;
 }
 
 function openTripSheet(id) {
@@ -3423,8 +3577,31 @@ function closeTripSheet() {
 }
 
 function renderTripSheet(id) {
-  const t = trips.find(x => x.id === id);
+  const owned = trips.find(x => x.id === id);
+  const t = owned || sharedGroupTrips.find(x => x.id === id);
   if (!t) return closeTripSheet();
+  const items = tripAdventures(t);
+  if (!owned) {
+    const when = t.starts_on
+      ? fmtDate(t.starts_on) + (t.ends_on ? ' – ' + fmtDate(t.ends_on) : '')
+      : 'No dates set';
+    $('#tripBody').innerHTML = `
+      <h2>${esc(t.name)}</h2>
+      <p class="sheet-place">Shared by ${esc(nameOf(t.user_id, t.created_by))} in ${esc(myGroups.find(g => g.id === activeGroupId)?.name || 'your group')}</p>
+      <p class="muted">Only the trip owner can change this plan. Their updates appear here while you are connected.</p>
+      <h3>Dates</h3><p>${esc(when)}</p>
+      <h3>Itinerary</h3>
+      ${items.length ? items.map(a => `<div class="tripitem">
+        ${isLocked(a)
+          ? `<span class="tripitem-body"><span class="card-title">${esc(safeTitle(a))}</span><span class="card-meta">Unlock this pack to see the place.</span></span>`
+          : `<button type="button" class="tripitem-body" data-open="${a.id}" aria-label="Open ${esc(safeTitle(a))}">
+              <span class="card-title">${esc(safeTitle(a))}</span>
+              <span class="card-meta">${esc(a.place)} · ${esc(a.region)}</span>
+            </button>`}
+      </div>`).join('') : '<p class="muted">No adventures in this trip yet.</p>'}
+      <h3>Notes</h3><p class="trip-readonly-note">${t.notes ? esc(t.notes) : 'No notes yet.'}</p>`;
+    return;
+  }
   const notesBox = $('#tripNotes');
   const sameDraft = openTripId === id && notesBox
     && notesBox.dataset?.ownerId === String(userId || '')
@@ -3433,8 +3610,11 @@ function renderTripSheet(id) {
   const draft = sameDraft ? {
     starts: $('#tripStart').value, ends: $('#tripEnd').value, notes: notesBox.value,
   } : null;
-  const items = tripAdventures(t);
   const done = items.filter(a => isDone(a.id)).length;
+  const group = myGroups.find(g => g.id === activeGroupId);
+  const shared = group && groupTripShares.has(id);
+  const sharingBusy = tripGroupMutation?.tripId === id
+    && tripGroupMutation?.groupId === activeGroupId;
 
   // Group the itinerary by country so a multi-country trip reads sensibly.
   const groups = new Map();
@@ -3459,10 +3639,12 @@ function renderTripSheet(id) {
         <div class="tripgroup-head">${countryFlag(code)} ${esc(countryName(code))}</div>
         ${list.map(a => `<div class="tripitem ${isDone(a.id) ? 'done' : ''}">
           <button class="tick ${isDone(a.id) ? 'on' : ''}" data-toggle="${a.id}" aria-label="Mark done">✓</button>
-          <button type="button" class="tripitem-body" data-open="${a.id}" aria-label="Open ${esc(safeTitle(a))}">
-            <span class="card-title">${esc(safeTitle(a))}</span>
-            <span class="card-meta">${esc(a.place)} · ${esc(a.region)}</span>
-          </button>
+          ${isLocked(a)
+            ? `<span class="tripitem-body"><span class="card-title">${esc(safeTitle(a))}</span><span class="card-meta">Unlock this pack to see the place.</span></span>`
+            : `<button type="button" class="tripitem-body" data-open="${a.id}" aria-label="Open ${esc(safeTitle(a))}">
+                <span class="card-title">${esc(safeTitle(a))}</span>
+                <span class="card-meta">${esc(a.place)} · ${esc(a.region)}</span>
+              </button>`}
           <button class="tripitem-remove" data-tripremove="${a.id}" aria-label="Remove from trip">✕</button>
         </div>`).join('')}
       </div>`).join('')
@@ -3473,28 +3655,103 @@ function renderTripSheet(id) {
 
     <div class="sheet-actions">
       <button class="btn-primary" data-tripact="save">Save trip</button>
-      <button class="btn-ghost" data-tripact="share">↗ Share this trip</button>
+      ${group ? `<button class="btn-ghost" data-tripact="group-toggle" aria-pressed="${!!shared}" ${sharingBusy || !groupTripReady ? 'disabled' : ''}>${groupTripError ? 'Group sharing unavailable — retry below' : !groupTripReady ? 'Checking group sharing…' : shared ? `Remove from ${esc(group.name)}` : `Add to ${esc(group.name)}`}</button>
+        ${groupTripError ? '<button class="btn-ghost" data-triprefresh>Retry group sharing</button>' : ''}
+        <p class="fineprint">Sharing makes this trip's name, dates, itinerary and notes visible to everyone in ${esc(group.name)}. Photos, memories and purchases remain private.</p>` : ''}
+      <button class="btn-ghost" data-tripact="share">↗ Share trip details outside Wayfinder</button>
       <button class="btn-ghost danger" data-tripact="delete">Delete trip</button>
     </div>`;
 }
 
-function saveOpenTrip() {
+function saveOpenTrip({ quiet = false } = {}) {
   const t = trips.find(x => x.id === openTripId);
-  if (!t) return;
+  if (!t) return false;
   const starts = $('#tripStart').value || null;
   const ends = $('#tripEnd').value || null;
   // A trip that finishes before it starts was accepted and then displayed as
   // a nonsense range. Say so rather than storing it - the person has almost
   // certainly typed one of the two into the wrong box.
   if (starts && ends && ends < starts) {
-    return toast('That trip ends before it starts');
+    toast('That trip ends before it starts');
+    return false;
   }
   t.starts_on = starts;
   t.ends_on = ends;
   t.notes = $('#tripNotes').value.trim() || null;
   $('#tripNotes').value = t.notes || '';
-  upsertTrip(t);
-  toast('Trip saved');
+  if (!upsertTrip(t)) {
+    toast('This trip could not be queued for syncing');
+    return false;
+  }
+  if (!quiet) toast('Trip saved');
+  return true;
+}
+
+async function waitForTripSync(tripId, owner, generation) {
+  const pending = () => readLS(LS.tripOutbox, []).some(t =>
+    t.id === tripId && t.owner_id === owner);
+  const deadline = Date.now() + 15000;
+  while (pending() && Date.now() < deadline) {
+    if (owner !== userId || generation !== authGeneration || !online) return false;
+    await flushTrips();
+    if (pending()) await new Promise(resolve => setTimeout(resolve, 150));
+  }
+  return !pending() && owner === userId && generation === authGeneration;
+}
+
+async function setTripGroupSharing(tripId) {
+  const t = trips.find(x => x.id === tripId);
+  const group = myGroups.find(g => g.id === activeGroupId);
+  if (!t || !group || !userId) return;
+  if (t.user_id && t.user_id !== userId) return toast('Only the trip owner can share it');
+  if (!groupTripReady) return toast('Wait for group trips to load, then try again');
+  if (!sb || !online) return toast('Reconnect to change trip sharing');
+  const owner = userId, generation = authGeneration, groupId = group.id;
+  const current = () => owner === userId && generation === authGeneration
+    && groupId === activeGroupId && myGroups.some(g => g.id === groupId);
+  if (tripGroupMutation && tripGroupMutation.owner === owner
+      && tripGroupMutation.generation === generation) {
+    return toast('A trip sharing change is already in progress');
+  }
+  const sharing = !groupTripShares.has(tripId);
+  if (sharing && !confirm(`Add “${t.name}” to ${group.name}?\n\nEveryone currently in this group can see its name, dates, itinerary and notes. Only you can edit it. Photos, memories and purchases stay private. You can remove the trip later.`)) return;
+  const token = { owner, generation, groupId, tripId };
+  tripGroupMutation = token;
+  renderTripSheet(tripId);
+  try {
+    if (sharing) {
+      // New trips are local-first. The projection's FK must not be inserted
+      // until the owner row (including any draft edits) is confirmed on server.
+      if (openTripId === tripId && !saveOpenTrip({ quiet: true })) return;
+      if (!await waitForTripSync(tripId, owner, generation)) {
+        if (current()) toast('Save this trip online before adding it to the group');
+        return;
+      }
+    }
+    if (!current()) return;
+    const result = sharing
+      ? await sb.from('group_trips').insert({ group_id: groupId, trip_id: tripId,
+        shared_by_id: owner })
+      : await sb.from('group_trips').delete().eq('group_id', groupId)
+        .eq('trip_id', tripId).eq('shared_by_id', owner);
+    if (!current()) return;
+    if (result.error && !(sharing && result.error.code === '23505')) {
+      console.warn('trip group sharing', result.error.message);
+      toast('Could not change this trip’s group sharing');
+      return;
+    }
+    await pullGroupTrips();
+    if (!current()) return;
+    toast(sharing ? `Added to ${group.name}` : `Removed from ${group.name}`);
+  } catch (error) {
+    if (current()) {
+      console.warn('trip group sharing failed', error);
+      toast('Could not change this trip’s group sharing');
+    }
+  } finally {
+    if (tripGroupMutation === token) tripGroupMutation = null;
+    if (current()) renderTripSheet(tripId);
+  }
 }
 
 // The picker shown from an adventure's own page.
@@ -4517,8 +4774,11 @@ function wireUI() {
   };
 
   document.body.addEventListener('click', e => {
+    if (e.target.closest('[data-triprefresh]')) { void pullGroupTrips(); return; }
     const open = e.target.closest('[data-trip]');
     if (open) { openTripSheet(open.dataset.trip); return; }
+    const groupTrip = e.target.closest('[data-group-trip]');
+    if (groupTrip) { openTripSheet(groupTrip.dataset.groupTrip); return; }
     if (e.target.closest('[data-tripclose]')) { closeTripSheet(); return; }
 
     const rm = e.target.closest('[data-tripremove]');
@@ -4547,6 +4807,7 @@ function wireUI() {
     const act = e.target.closest('[data-tripact]');
     if (!act) return;
     if (act.dataset.tripact === 'save') saveOpenTrip();
+    if (act.dataset.tripact === 'group-toggle') void setTripGroupSharing(openTripId);
     if (act.dataset.tripact === 'share') shareTrip(openTripId);
     if (act.dataset.tripact === 'delete') {
       const t = trips.find(x => x.id === openTripId);
@@ -4658,10 +4919,14 @@ ${url}`);
     }
     if (b.dataset.groupact === 'view') await setProgressView(b.dataset.view);
     if (b.dataset.groupact === 'switch') {
+      if (!myGroups.some(group => group.id === b.dataset.id)) return;
       activeGroupId = b.dataset.id;
       localStorage.setItem(LS.group, activeGroupId);
+      clearGroupTripCache();
+      renderTrips();
       await loadMembers();
       await setProgressView(progressView);
+      await pullGroupTrips();
     }
     if (b.dataset.groupact === 'sharing') {
       const owner = userId, generation = authGeneration, groupId = activeGroupId;
@@ -5375,6 +5640,7 @@ function clearPrivateMemoryForAccountTransition() {
   progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
   releaseLocalPhotoUrls();
   photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
+  clearGroupTripCache();
   activeGroupId = null; who = null; progressView = 'personal'; signedUrls.clear();
   recs = []; myVotes = new Map(); recBusy = false; pushedName = null;
   blockedPeople = []; blockedPeopleOwner = null; recError = '';
@@ -5447,6 +5713,7 @@ async function handleSignedOut(message = 'Signed out. Sign in to continue.') {
       progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
       releaseLocalPhotoUrls();
       photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
+      clearGroupTripCache();
       activeGroupId = null; signedUrls.clear();
       recs = []; myVotes = new Map(); recBusy = false; pushedName = null;
       flushOutbox.requested = false; flushPhotoQueue.requested = false; flushTrips.requested = false;
@@ -5822,6 +6089,8 @@ async function enterApp({ recoveryOwnerId = passwordRecoveryMode ? passwordRecov
   if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
   await pullTrips();
   if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
+  await pullGroupTrips();
+  if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
   renderAll();
   subscribeRealtime();
   startSyncTicker();
@@ -5854,7 +6123,7 @@ function resolvePendingTripDeepLink(listComplete = false) {
     pending.owner = userId;
     pending.generation = authGeneration;
   }
-  if (trips.some(t => t.id === pending.id)) {
+  if (trips.some(t => t.id === pending.id) || sharedGroupTrips.some(t => t.id === pending.id)) {
     pendingTripDeepLink = null;
     openTripSheet(pending.id);
     return true;
@@ -5970,7 +6239,7 @@ function openDeepLink(search = location.search) {
   const a = q.get('a'), t = q.get('trip');
   if (a && ADV.some(x => x.id === +a)) openSheet(+a);
   else if (t && validAccountOwner(t)) {
-    if (trips.some(x => x.id === t)) openTripSheet(t);
+    if (trips.some(x => x.id === t) || sharedGroupTrips.some(x => x.id === t)) openTripSheet(t);
     else pendingTripDeepLink = {
       id: t, owner: userId || null, generation: userId ? authGeneration : null,
     };

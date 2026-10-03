@@ -53,7 +53,7 @@ async function groupChecks(){
     const h=harness(), calls=[];
     h.context.confirm=()=>false;
     h.context.rpc=async(name,args)=>{calls.push([name,args]);return {data:[{group_id:'g',group_name:'Fixture'}],error:null};};
-    h.run("sb={rpc}; myGroups=[{id:'g',share_completions:true}]; loadGroups=async()=>{}; setProgressView=async()=>{}; pullPhotos=async()=>{}; pullTrips=async()=>{};");
+    h.run("sb={rpc}; myGroups=[{id:'g',share_completions:true}]; loadGroups=async()=>{}; setProgressView=async()=>{}; pullPhotos=async()=>{}; pullTrips=async()=>{}; pullGroupTrips=async()=>{};");
     await h.run("joinGroup('ABCDEF12')");
     assert.equal(calls[1][0],'set_group_completion_sharing');
     assert.deepEqual(JSON.parse(JSON.stringify(calls[1][1])),{p_group_id:'g',p_enabled:false});
@@ -162,6 +162,171 @@ async function tripChecks(){
   await h.run('pullTrips()');assert.equal(h.run("trips.find(t=>t.id==='pending').name"),'Unsynced');
   console.log('PASS: durable trip deletion, retry, stale pull, keyset pagination and pending edits');
 }
+function groupTripDb() {
+  const state={projections:[],trips:[],holds:new Map(),writes:[]};
+  state.from=table=>{
+    assert(['group_trips','trips'].includes(table),`unexpected table ${table}`);
+    let operation='read',filters={},ids=null,pageSize=500;
+    const q={
+      select(){return q;},
+      eq(key,value){filters[key]=value;return q;},
+      order(){return q;},
+      limit(value){pageSize=value;return q;},
+      gt(key,value){filters[key]=value;return q;},
+      in(key,value){assert.equal(key,'id');ids=value;return q;},
+      insert(row){
+        assert.equal(table,'group_trips');state.writes.push({type:'insert',row});
+        state.projections.push({...row,shared_at:'2026-10-03T00:00:00Z'});
+        return Promise.resolve({error:null});
+      },
+      delete(){operation='delete';return q;},
+      then(resolve,reject){
+        if(operation==='delete'){
+          assert.equal(table,'group_trips');state.writes.push({type:'delete',filters:{...filters}});
+          state.projections=state.projections.filter(p=>!Object.entries(filters).every(([k,v])=>p[k]===v));
+          return Promise.resolve({error:null}).then(resolve,reject);
+        }
+        if(table==='group_trips'){
+          const hold=state.holds.get(filters.group_id);
+          if(hold)return hold.promise.then(resolve,reject);
+          const page=state.projections.filter(p=>p.group_id===filters.group_id
+            && (!filters.trip_id||p.trip_id>filters.trip_id))
+            .sort((a,b)=>a.trip_id.localeCompare(b.trip_id)).slice(0,pageSize);
+          return Promise.resolve({data:page,error:null}).then(resolve,reject);
+        }
+        const rows=state.trips.filter(t=>ids.includes(t.id));
+        return Promise.resolve({data:rows,error:null}).then(resolve,reject);
+      }
+    };
+    return q;
+  };
+  return state;
+}
+async function sharedTripChecks(){
+  const h=harness(),db=groupTripDb();
+  db.projections=[
+    {group_id:'g1',trip_id:'other',shared_by_id:'account-b'},
+    {group_id:'g1',trip_id:'forged',shared_by_id:'account-d'},
+    {group_id:'g2',trip_id:'second-group',shared_by_id:'account-c'},
+  ];
+  db.trips=[
+    {id:'other',user_id:'account-b',name:'Group itinerary',notes:'Meeting point',adventure_ids:[]},
+    {id:'forged',user_id:'account-c',name:'Wrong attribution',adventure_ids:[]},
+    {id:'second-group',user_id:'account-c',name:'Other group plan',adventure_ids:[]},
+  ];
+  h.context.mockSb=db;
+  h.run(`sb=mockSb;online=true;myGroups=[{id:'g1',name:'First'},{id:'g2',name:'Second'}];
+    activeGroupId='g1';trips=[{id:'owned',user_id:'account-a',name:'Private plan',adventure_ids:[]}];
+    saveLocalTrips();`);
+  await h.run('pullGroupTrips()');
+  assert.equal(h.run('sharedGroupTrips.length'),1,'only correctly attributed shared rows may render');
+  assert.equal(h.run('sharedGroupTrips[0].id'),'other');
+  assert.equal(h.run('trips.length'),1,'another account’s trip must not enter the editable cache');
+  assert.deepEqual(JSON.parse(h.values.get(h.run('LS.trips'))).map(t=>t.id),['owned'],
+    'another account’s trip must not enter local persistence');
+  h.run("renderTripSheet('other')");
+  const readonly=h.elements.get('#tripBody').innerHTML;
+  assert.match(readonly,/Only the trip owner can change this plan/);
+  assert.match(readonly,/Meeting point/);
+  assert.doesNotMatch(readonly,/data-tripact="(?:save|delete|group-toggle)"|<textarea/,
+    'a member must not see owner editing or group-sharing controls');
+
+  const delayed=deferred();db.holds.set('g1',delayed);
+  const oldPull=h.run('pullGroupTrips()');
+  await turns();
+  h.run("activeGroupId='g2';clearGroupTripCache()");
+  await h.run('pullGroupTrips()');
+  assert.equal(h.run('sharedGroupTrips[0].id'),'second-group');
+  delayed.resolve({data:db.projections.filter(p=>p.group_id==='g1'),error:null});
+  await oldPull;
+  assert.equal(h.run('sharedGroupTrips[0].id'),'second-group',
+    'a slow response from the prior group must not replace the new group cache');
+  db.holds.delete('g1');
+  db.projections=db.projections.filter(p=>p.group_id!=='g2');
+  await h.run('pullGroupTrips()');
+  assert.equal(h.run('sharedGroupTrips.length'),0,'unshared rows disappear on refresh');
+  assert.equal(h.run('trips[0].id'),'owned','group refresh never removes a personal trip');
+  h.run("userId='account-z';authGeneration++;activeGroupId=null;myGroups=[]");
+  await h.run('pullGroupTrips()');
+  assert.equal(h.run('sharedGroupTrips.length'),0,'account switch clears group trip details');
+  assert.equal(h.run('groupTripShares.size'),0,'account switch clears share indicators');
+  console.log('PASS: shared-trip RLS-result filtering, read-only view, personal cache isolation and stale group/account boundaries');
+}
+function tripRealtimeChecks(){
+  const h=harness(), handlers=new Map();let groupRefreshes=0;
+  h.context.mockSb={
+    getChannels:()=>[],removeChannel(){},
+    channel(topic){
+      const channel={
+        on(_kind,_filter,handler){handlers.set(topic,handler);return channel;},
+        subscribe(){return channel;},
+      };
+      return channel;
+    },
+  };
+  h.context.onGroupRefresh=async()=>{groupRefreshes++;};
+  h.run(`sb=mockSb;trips=[
+    {id:'own-deleted',user_id:'account-a',name:'Old trip'},
+    {id:'own-pending',user_id:'account-a',name:'Pending trip'},
+    {id:'own-stays',user_id:'account-a',name:'Unchanged trip'}];
+    saveLocalTrips();pullGroupTrips=onGroupRefresh;subscribeRealtime();`);
+  const tripChanged=handlers.get('trip-sync');
+  assert.equal(typeof tripChanged,'function','trip realtime handler must be registered');
+  tripChanged({eventType:'DELETE',old:{id:'own-deleted'}});
+  assert.equal(h.run("trips.some(t=>t.id==='own-deleted')"),false,
+    'a key-only owner DELETE removes the cached trip');
+  assert.equal(JSON.parse(h.values.get(h.run('LS.trips'))).some(t=>t.id==='own-deleted'),false,
+    'a key-only owner DELETE also removes the persisted trip');
+
+  h.run("writeLS(LS.tripOutbox,[{id:'own-pending',owner_id:'account-a',deleted:true}])");
+  tripChanged({eventType:'DELETE',old:{id:'own-pending'}});
+  assert.equal(h.run("trips.some(t=>t.id==='own-pending')"),true,
+    'a pending local mutation takes precedence over an old realtime DELETE');
+  h.run("writeLS(LS.tripOutbox,[]);activeGroupId='g1';myGroups=[{id:'g1',name:'Group'}]");
+  tripChanged({eventType:'UPDATE',new:{id:'other-member',user_id:'account-b',name:'Shared edit'}});
+  tripChanged({eventType:'DELETE',old:{id:'other-member'}});
+  assert.equal(h.run('trips.length'),2,'a member UPDATE or DELETE must not enter the personal cache');
+  assert.deepEqual(JSON.parse(h.values.get(h.run('LS.trips'))).map(t=>t.id).sort(),
+    ['own-pending','own-stays'],'a member event must not alter persisted personal trips');
+  assert.equal(groupRefreshes,2,'member changes should refresh the separate group view');
+  h.run("userId='account-b';authGeneration++");
+  tripChanged({eventType:'DELETE',old:{id:'own-stays'}});
+  assert.equal(h.run("trips.some(t=>t.id==='own-stays')"),true,
+    'an event bound to the previous account must be ignored after account switch');
+  console.log('PASS: key-only realtime owner deletes, pending edits, member cache isolation and stale subscriptions');
+}
+async function tripSharingChecks(){
+  const h=harness(),db=groupTripDb();
+  db.trips=[{id:'mine',user_id:'account-a',name:'My trip',adventure_ids:[]}];
+  h.context.mockSb=db;
+  h.run(`sb=mockSb;online=true;myGroups=[{id:'g1',name:'Our group'}];activeGroupId='g1';
+    trips=[{id:'mine',user_id:'account-a',name:'My trip',adventure_ids:[]}];
+    groupTripReady=true;renderTripSheet=()=>{};`);
+  await h.run("setTripGroupSharing('mine')");
+  assert.deepEqual(JSON.parse(JSON.stringify(db.writes[0])),{type:'insert',row:{
+    group_id:'g1',trip_id:'mine',shared_by_id:'account-a',
+  }},'share writes an owner-bound projection only');
+  assert.equal(h.run("groupTripShares.has('mine')"),true);
+  const failedRefresh=deferred();db.holds.set('g1',failedRefresh);
+  const waiting=h.run('pullGroupTrips()');
+  failedRefresh.resolve({data:null,error:{message:'temporary connection error'}});
+  await waiting;
+  assert.equal(h.run("groupTripShares.has('mine')"),true,
+    'a transient refresh failure must not convert a known Remove action to Add');
+  assert.match(h.run('groupTripError'),/Could not load group trips/);
+  db.holds.delete('g1');
+  await h.run('pullGroupTrips()');
+  await h.run("setTripGroupSharing('mine')");
+  assert.deepEqual(JSON.parse(JSON.stringify(db.writes[1])),{type:'delete',filters:{
+    group_id:'g1',trip_id:'mine',shared_by_id:'account-a',
+  }},'unshare must be scoped to group, trip and owner');
+  assert.equal(h.run("groupTripShares.has('mine')"),false);
+  assert.equal(h.run('trips.length'),1,'unshare leaves the personal trip intact');
+  h.run("userId='account-b';authGeneration++;trips=[];activeGroupId='g1'");
+  await h.run("setTripGroupSharing('mine')");
+  assert.equal(db.writes.length,2,'another account cannot mutate a previous owner’s trip');
+  console.log('PASS: explicit share/unshare writes a scoped projection and preserves personal ownership');
+}
 function passportChecks(){
   const h=harness();
   h.run(`ADV=[{id:1,country:'AU',continent:'Oceania'},
@@ -199,4 +364,4 @@ function tripDraftChecks(){
     'an unsaved trip draft must not cross account boundaries');
   console.log('PASS: itinerary redraw keeps the owner draft without crossing accounts');
 }
-(async()=>{await groupChecks();await tripChecks();passportChecks();tripDraftChecks();})().catch(e=>{console.error(e);process.exitCode=1;});
+(async()=>{await groupChecks();await tripChecks();await sharedTripChecks();tripRealtimeChecks();await tripSharingChecks();passportChecks();tripDraftChecks();})().catch(e=>{console.error(e);process.exitCode=1;});

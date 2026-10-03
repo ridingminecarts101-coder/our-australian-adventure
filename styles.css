@@ -491,7 +491,12 @@ input, select, textarea { font: inherit; color: inherit; }
 .trip-top b { font-size: 16px; }
 .trip-top span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .trip .minibar { margin-top: 10px; }
+.trip-share-label { margin-top: 6px; color: var(--eucalypt); font-size: 12px; font-weight: 700; }
 #newTripBtn { margin-top: 12px; }
+.group-trip-section { margin-top: 30px; }
+.group-trip-section h3 { margin-bottom: 4px; }
+.group-trip-section .muted { margin-top: 0; }
+.trip-readonly-note { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .daterow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .daterow label { font-size: 12px; font-weight: 600; color: var(--muted); display: grid; gap: 4px; }

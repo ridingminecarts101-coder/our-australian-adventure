@@ -68,8 +68,8 @@
         <td>It is the point of the app</td><td>Your device, and our database if you are online</td></tr>
     <tr><td>Photos you attach, and the date taken read from the photo</td>
         <td>To show them against the adventure</td><td>Current photos stay on the device where you add them. The production cloud photo store is empty; a separate historical Desktop backup is retained as described below.</td></tr>
-    <tr><td>Trips you plan</td><td>To group adventures together</td>
-        <td>Your device, and our database</td></tr>
+    <tr><td>Trips you plan: names, dates, selected adventures and notes</td><td>To group adventures together and optionally share a trip with a group</td>
+        <td>Your device and our database; a trip you explicitly add to a group is also visible to its members</td></tr>
     <tr><td>A display name, if you set one</td><td>So a shared list can say who ticked what</td>
         <td>Our database</td></tr>
     <tr><td>Your email address, account identifier and authentication information</td>
@@ -130,9 +130,9 @@
      photo metadata records were removed from the production Wayfinder service.
      RL Applications separately retains a Desktop backup of those historical
      originals and migration snapshots for rollback evidence pending a final
-     retention decision. It is not accessible in the app. Group membership alone
-     does not share new device-local photos. Stopping completion sharing affects
-     ticks; it does not withdraw previously shared trip plans. Another person may
+     retention decision. It is not accessible in the app. Group membership and
+     trip sharing do not share new device-local photos. Stopping completion sharing affects
+     ticks; it does not withdraw separately shared trip plans. Another person may
      retain a separate copy of information they previously saw or saved.</p>
 
   <h2>Traveller recommendations</h2>
@@ -178,6 +178,15 @@
      members' achievements into your account. Older shared lists retain their existing
      sharing choices when upgraded. Someone who has already viewed shared information
      may have kept a separate copy.</p>
+  <p>Trips are personal by default. When you explicitly choose <em>Add to group</em>
+     on a trip, that group's members can view its name, dates, selected adventures
+     and notes. Connected members receive updates as the owner changes the trip;
+     only the owner can edit or delete it. You can use <em>Remove from group</em>
+     to revoke group access without deleting your personal trip. Leaving the group
+     also removes your shared trips from that group. A member's own purchases
+     control access to protected gem place details; sharing a trip does not give
+     the group your purchases, photos, memories, ratings or shortlist. Revocation
+     cannot remove copies another person already saved or remembered.</p>
 
   <h2>Purchases</h2>
   <p>Purchases are not active in the PWA web review build. The iOS app offers optional

@@ -325,7 +325,9 @@ function harness() {
       recoveryRequestBusy: true, recoveryRequestAttempt: 0,
       accountIsAnonymous: false, progress: new Map(), personalProgress: new Map(), personalCacheReady: true,
       photos: [{}], pendingPhotos: [], trips: [], myGroups: [], members: new Map(), activeGroupId: null,
-      signedUrls: new Map(), releaseCalls: 0, releaseLocalPhotoUrls() { h.releaseCalls++; },
+      signedUrls: new Map(), releaseCalls: 0, groupTripCacheCleared: 0,
+      releaseLocalPhotoUrls() { h.releaseCalls++; },
+      clearGroupTripCache() { h.groupTripCacheCleared++; },
       flushOutbox() {}, flushPhotoQueue() {}, flushTrips() {}, showAccountLock() {},
       LS: { progress:'a',personalProgress:'b',outbox:'c',trips:'d',tripOutbox:'e',group:'f',who:'g',view:'h',owner:'i' },
       localStorage: { removeItem() {} }, sb: null, idbClear: async () => {},
@@ -335,6 +337,7 @@ function harness() {
     vm.runInContext(ownerQueueFunctions + signedOutFunction, h);
     await h.handleSignedOut();
     assert.equal(h.releaseCalls, 1, 'sign-out must revoke private local-photo URLs');
+    assert.equal(h.groupTripCacheCleared, 1, 'sign-out must clear group trip details');
     assert.equal(h.photos.length, 0);
     assert.equal(h.passwordRecoveryMode, false);
     assert.equal(h.passwordRecoveryBusy, false);
@@ -406,6 +409,7 @@ function harness() {
       progress:new Map(),personalProgress:new Map(),personalCacheReady:true,
       photos:[],pendingPhotos:[],trips:[],myGroups:[],members:new Map(),activeGroupId:null,signedUrls:new Map(),
       recs:[],myVotes:new Map(),recBusy:false,pushedName:null,releaseLocalPhotoUrls(){},
+      clearGroupTripCache(){},
       flushOutbox(){},flushPhotoQueue(){},flushTrips(){},showAccountLock(){},accountDeletionInProgress:false,
       LS:{progress:'p',personalProgress:'pp',outbox:'o',trips:'t',tripOutbox:'to',group:'g',who:'w',view:'v',owner:'owner'},
       localStorage:{getItem:key=>values.get(key)||null,removeItem:key=>values.delete(key)},
@@ -457,7 +461,7 @@ function harness() {
         return tx;
       } }),
       readLS: (_key, fallback) => fallback, writeLS() {}, nextQueueRevision: () => 1,
-      loadLocalProgress() {}, loadLocalTrips() {}, queueMicrotask };
+      loadLocalProgress() {}, loadLocalTrips() {}, clearGroupTripCache() {}, queueMicrotask };
     vm.createContext(h); vm.runInContext(bindFunction, h);
     await h.bindLocalDataToUser();
     assert.deepEqual(queued.map(x => x.owner_id), [ownerA, ownerA],
@@ -656,7 +660,7 @@ function harness() {
           const req = {}; queueMicrotask(() => { req.error = tx.error; req.onerror(); }); return req;
         } }); return tx;
       } }), readLS: (_key, fallback) => fallback, writeLS() {}, nextQueueRevision: () => 1,
-      loadLocalProgress() {}, loadLocalTrips() {}, queueMicrotask };
+      loadLocalProgress() {}, loadLocalTrips() {}, clearGroupTripCache() {}, queueMicrotask };
     vm.createContext(h); vm.runInContext(bindFunction, h);
     await assert.rejects(h.bindLocalDataToUser(), /write failed/);
     assert.equal(h.localStorage.value, ownerA,
