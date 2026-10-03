@@ -49,6 +49,7 @@ create table public.photos (
 );
 create table public.trips (
   id uuid primary key default gen_random_uuid(), user_id uuid references auth.users(id) on delete cascade,
+  name text not null default 'Trip',
   group_id uuid references public.groups(id) on delete set null,
   scope_id uuid generated always as (coalesce(group_id, user_id)) stored
 );
@@ -58,6 +59,13 @@ alter table public.trips enable row level security;
 create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
 alter table storage.objects enable row level security;
 create publication supabase_realtime;
+-- schema-group-repair.sql publishes canonical trips before the ownership
+-- migration adds the group projection to that same publication.
+-- PGlite embeds PostgreSQL 18, which requires published generated columns
+-- when REPLICA IDENTITY FULL covers the cutover's generated scope_id.
+alter publication supabase_realtime set (publish_generated_columns = stored);
+alter publication supabase_realtime add table public.trips;
+alter table public.trips replica identity full;
 grant usage on schema public, auth, storage to authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 grant select, insert, update, delete on storage.objects to authenticated;
@@ -197,6 +205,46 @@ const bobPhoto = (await asUser(bob, `insert into public.photos(adventure_id,stor
 const bobTrip = (await asUser(bob, 'insert into public.trips(user_id) values ($1) returning id', [bob])).rows[0].id;
 await asUser(bob, 'insert into public.group_photos(group_id,photo_id,shared_by_id) values ($1,$2,$3)', [group,bobPhoto,bob]);
 await asUser(bob, 'insert into public.group_trips(group_id,trip_id,shared_by_id) values ($1,$2,$3)', [group,bobTrip,bob]);
+equal('a shared trip is visible to a current group member',
+  (await asUser(alice, 'select count(*)::int n from public.trips where id=$1', [bobTrip])).rows[0].n, 1);
+equal('a shared trip is visible to every current group member',
+  (await asUser(charlie, 'select count(*)::int n from public.trips where id=$1', [bobTrip])).rows[0].n, 1);
+await asUser(bob, 'update public.trips set name=$1 where id=$2', ['Updated itinerary',bobTrip]);
+equal('an owner edit is immediately readable by another group member',
+  (await asUser(alice, 'select name from public.trips where id=$1', [bobTrip])).rows[0].name,
+  'Updated itinerary');
+equal('a stranger cannot read the shared trip',
+  (await asUser(eve, 'select count(*)::int n from public.trips where id=$1', [bobTrip])).rows[0].n, 0);
+equal('a stranger cannot enumerate group trip projections',
+  (await asUser(eve, 'select count(*)::int n from public.group_trips where trip_id=$1', [bobTrip])).rows[0].n, 0);
+equal('a group member cannot edit another person’s trip',
+  (await asUser(alice, 'update public.trips set group_id=null where id=$1 returning id', [bobTrip])).rows.length, 0);
+equal('a group member cannot delete another person’s trip',
+  (await asUser(alice, 'delete from public.trips where id=$1 returning id', [bobTrip])).rows.length, 0);
+equal('a group member cannot unshare another person’s trip',
+  (await asUser(alice,
+    'delete from public.group_trips where group_id=$1 and trip_id=$2 returning trip_id',
+    [group,bobTrip])).rows.length, 0);
+await rejected('a member cannot publish another person’s trip', () =>
+  asUser(alice, 'insert into public.group_trips(group_id,trip_id,shared_by_id) values ($1,$2,$3)',
+    [adopted,bobTrip,alice]));
+await rejected('a stranger cannot publish a trip into the group', () =>
+  asUser(eve, 'insert into public.group_trips(group_id,trip_id,shared_by_id) values ($1,$2,$3)',
+    [group,bobTrip,eve]));
+equal('trip and projection changes are both in the realtime publication',
+  (await db.query(`select count(*)::int n from pg_publication_tables
+    where pubname='supabase_realtime' and schemaname='public'
+      and tablename in ('trips','group_trips')`)).rows[0].n, 2);
+equal('trip and projection tables carry complete old rows for realtime changes',
+  (await db.query(`select count(*)::int n from pg_class
+    where oid in ('public.trips'::regclass,'public.group_trips'::regclass)
+      and relreplident='f'`)).rows[0].n, 2);
+await asUser(bob, 'delete from public.group_trips where group_id=$1 and trip_id=$2', [group,bobTrip]);
+equal('unsharing immediately revokes group trip visibility',
+  (await asUser(alice, 'select count(*)::int n from public.trips where id=$1', [bobTrip])).rows[0].n, 0);
+equal('unsharing preserves the personal trip',
+  (await asUser(bob, 'select count(*)::int n from public.trips where id=$1', [bobTrip])).rows[0].n, 1);
+await asUser(bob, 'insert into public.group_trips(group_id,trip_id,shared_by_id) values ($1,$2,$3)', [group,bobTrip,bob]);
 
 await asUser(alice, 'select public.remove_group_member($1,$2)', [group,bob]);
 equal('removed member loses membership',
@@ -220,9 +268,21 @@ await rejected('former owner immediately loses administration', () =>
   asUser(alice, 'select public.revoke_group_invite($1)', [group]));
 await rejected('current owner must transfer before leaving a multi-member group', () =>
   asUser(charlie, 'select public.leave_group($1)', [group]));
+const aliceTrip = (await asUser(alice,
+  'insert into public.trips(user_id,name) values ($1,$2) returning id',
+  [alice,'Alice personal plan'])).rows[0].id;
+await asUser(alice,
+  'insert into public.group_trips(group_id,trip_id,shared_by_id) values ($1,$2,$3)',
+  [group,aliceTrip,alice]);
+equal('another member sees the shared plan before its owner leaves',
+  (await asUser(charlie, 'select count(*)::int n from public.trips where id=$1', [aliceTrip])).rows[0].n, 1);
 await asUser(alice, 'select public.leave_group($1)', [group]);
 equal('former owner can leave without losing personal rows',
   (await db.query('select count(*)::int n from public.group_members where group_id=$1 and user_id=$2',[group,alice])).rows[0].n, 0);
+equal('leaving unshares the former member’s trip from the group',
+  (await asUser(charlie, 'select count(*)::int n from public.trips where id=$1', [aliceTrip])).rows[0].n, 0);
+equal('leaving preserves the former member’s personal trip',
+  (await asUser(alice, 'select count(*)::int n from public.trips where id=$1', [aliceTrip])).rows[0].n, 1);
 
 await asUser(charlie, `insert into public.progress(adventure_id,user_id,completed,memory)
   values (77,$1,true,'Charlie private memory')`, [charlie]);

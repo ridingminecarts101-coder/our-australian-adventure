@@ -1,28 +1,29 @@
 {
-  "prepared_on": "2026-09-15",
-  "status": "Draft for the final tested candidate; not submitted to Apple",
+  "prepared_on": "2026-10-03",
+  "status": "Version 1.1.0 (build 10) preparation; not yet uploaded or submitted to Apple",
   "app": {
     "platform": "iOS",
     "bundle_id": "app.wayfinder.mobile",
     "sku": "wayfinder-ios-001",
-    "version": "1.0.9",
-    "version_policy": "Every new iOS upload uses matching values: internal build N has marketing version 1.0.N. Version 1.0.7 (build 7) and its eight purchases remain the separate in-review App Store submission. This 1.0.9 (build 9) upload is for TestFlight and does not replace that submission. Any later upload must use 1.0.10 (build 10).",
+    "version": "1.1.0",
+    "version_policy": "The next iOS candidate is explicitly version 1.1.0 (build 10), superseding the former 1.0.N/build N convention. The signed workflow rejects a different version/build pair until a later release is prepared. Version 1.0.9 (build 9) remains the live App Store binary; preparation does not upload or submit this update.",
     "primary_locale": "en-AU",
     "name": "Wayfinder: Adventure Lists",
     "subtitle": "Real adventures worldwide",
     "primary_category": "Travel",
     "secondary_category": "Lifestyle",
-    "developer_identity_status": "Individual/sole-trader App Store Connect access verified 15 September 2026; Team ID BJ764589GP and app record 6812170174 are verified. The exact App Store seller string still requires confirmation from its Apple field. RL Applications remains the studio brand.",
+    "developer_identity_status": "The live App Store listing displays Riley Lawler as seller and RL Applications as the studio brand. Existing app record 6812170174 and bundle ID app.wayfinder.mobile remain in use.",
     "copyright": "2026 Riley Nicholas Lawler trading as RL Applications",
     "app_download_price_aud": "0.00",
-    "release_mode": "Manual release after approval",
+    "release_mode": "Verify the selected release method for the 1.1.0 submission in App Store Connect. The live 1.0.9 version is public; the last API check reported AFTER_APPROVAL, while earlier preparation recorded MANUAL.",
     "availability": null,
-    "content_rights": "Select that the app contains third-party content and the necessary rights only after the content/licence review is confirmed; see THIRD-PARTY-NOTICES.md.",
-    "apple_membership_status": "Individual App Store Connect access verified 15 September 2026. App record 6812170174 exists for Wayfinder: Adventure Lists, bundle ID app.wayfinder.mobile, SKU wayfinder-ios-001, primary locale en-AU and iOS. Paid Apps, banking and tax show Active; EU trader status is In Review.",
-    "purchase_setup_status": "All eight non-consumables have verified en-AU localization, Australian base pricing and 175 current territories with future territories enabled. All continents is AUD 14.99; the seven regional packs are AUD 2.99. Family Sharing remains off. Apple still reports MISSING_METADATA until review screenshots and remaining submission metadata are supplied.",
-    "signing_setup_status": "One active Apple Distribution certificate and one active IOS_APP_STORE profile exist for Team BJ764589GP and app.wayfinder.mobile. Their protected GitHub app-store secrets are configured. No signed workflow has been dispatched against the current source candidate."
+    "content_rights": "The owner authorised Apple's third-party-content rights declaration after the bounded licence and provenance review; see THIRD-PARTY-NOTICES.md. Recheck any new group-trip content or assets added for 1.1.0.",
+    "apple_membership_status": "The individual/sole-trader Apple membership and App Store Connect app record 6812170174 are active. Wayfinder 1.0.9 is live on the App Store; organisation conversion remains a separate future matter.",
+    "purchase_setup_status": "All eight non-consumable products were approved with the live 1.0.9 release. All continents is AUD 14.99 and the seven regional packs are AUD 2.99 in Australia; confirm purchase behavior remains intact in the 1.1.0 TestFlight build.",
+    "signing_setup_status": "Protected GitHub app-store signing and upload succeeded for the live 1.0.9 (build 9). The 1.1.0 (build 10) candidate has not yet been signed, uploaded or submitted."
   },
   "localization": {
+    "whats_new": "Plan together with optional group trips. Add a trip to your active group so members can view its dates, itinerary and notes as you update them, and remove access whenever you choose. You can now correct the date of any completed adventure, including visits you are backfilling; your date follows your account and your completion-sharing choice. We also improved trip refresh and sharing clarity.",
     "promotional_text": "Find memorable places, build your adventure list and keep your travel notes together. Explore classic experiences and optional one-time hidden-gem collections.",
     "description": "Make your next adventure one to remember.\n\nWayfinder helps you discover real places worth going, save the experiences that interest you and keep track of the ones you have completed. Browse more than 5,300 adventures around the world, with practical context about the experience, indicative costs and the best time to visit.\n\nPLAN YOUR OWN WAY\nExplore destinations by continent and country, save a shortlist and organise adventures into trips. Use Near me when you choose, or browse manually without sharing your location. Travel warnings remain visible, and destinations marked do not travel are excluded from automatic suggestions.\n\nKEEP YOUR MEMORIES\nAdd notes, ratings and photos to your completed adventures. Photos stay inside Wayfinder on the phone where you add them; Wayfinder does not automatically upload or sync them. You can manually export a password-encrypted photo backup and import it into the same Wayfinder account on another phone. Sign in to the same account to access synced progress; photos move only when you deliberately transfer and import the backup files. Previously loaded catalogue content and phone-local memories remain available offline. Keep an independent copy of anything important.\n\nDISCOVER HIDDEN GEMS\nClassic adventures are included. Optional one-time purchases unlock hidden-gem guide collections for individual geographic packs or all continents together. The All continents collection also includes Antarctica. Purchases belong to your individual Wayfinder account.\n\nWayfinder provides discovery and planning information and, for some experiences, links to third-party booking options. Wayfinder does not sell travel or process those bookings. Travel, admission, permits, accommodation and guide fees are separate. Costs and opening or access information can change, so check current information with the relevant venue or authority before travelling.\n\nAn account is required. Uninstalling the app or clearing its data can remove phone-local memories that you have not exported.\n\nDeveloped by RL Applications. Support: help.rlapplications@gmail.com",
     "keywords": "adventure,bucket list,trip planner,hidden gems,travel journal,passport,memories",
@@ -39,7 +40,7 @@
     "sign_in_required": true,
     "demo_username": null,
     "demo_password": null,
-    "notes": "Wayfinder is a travel checklist and guide. Use the private verified review-account credentials supplied in App Review Information. Purchases unlock digital guide content, not travel or admission. The Me tab includes Restore purchases, Privacy, Support, and Delete my account and all my data. New photos are stored privately on the device and do not sync with progress. Near me requests foreground location only after it is selected; manual browsing is available. Use the hidden-gem store to test each non-consumable pack; All continents covers every geographic pack and Antarctica. Group and Community functionality must match the final review build and the additional test steps supplied with it. Do not submit these notes until all referenced features have passed their final live tests."
+    "notes": "Wayfinder is a travel checklist and guide. Use the private verified review-account credentials supplied in App Review Information. Purchases unlock digital guide content, not travel or admission. The Me tab includes Restore purchases, Privacy, Support, and Delete my account and all my data. New photos are stored privately on the device and do not sync with progress. Near me requests foreground location only after it is selected; manual browsing is available. Use the hidden-gem store to test each non-consumable pack; All continents covers every geographic pack and Antarctica. For the 1.1.0 update, open a completed adventure to change its Date completed; trips can be added to an active group independently of completion sharing. Group and Community functionality must match the final review build and the additional test steps supplied with it. Do not submit these notes until all referenced features have passed their final live tests."
   },
   "submission_gates": [
     "Confirm the exact App Store seller identity shown by Apple and complete the app record's remaining metadata",
