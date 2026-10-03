@@ -18,6 +18,7 @@ from urllib.parse import unquote, urljoin, urlparse
 ROOT = Path(__file__).resolve().parent / "public"
 APP_ROOT = ROOT.parent.parent
 CONTACT = "help.rlapplications@gmail.com"
+APP_STORE_URL = "https://apps.apple.com/au/app/wayfinder-adventure-lists/id6812170174"
 ABN = "RL Applications · ABN 92 363 169 656"
 LEGAL_FOOTER = "Riley Nicholas Lawler - Sole Trader - Australia."
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36"
@@ -287,6 +288,20 @@ def local_checks() -> tuple[list[str], set[str]]:
             errors.append(f"{rel}: public support address is not visible")
         if "/cdn-cgi/l/email-protection" in text or "data-cfemail" in text:
             errors.append(f"{rel}: Cloudflare email rewriting markup present")
+        if expected_route in {"/", "/wayfinder/", "/wayfinder/invite/", "/wayfinder/support/"}:
+            if APP_STORE_URL not in doc.links:
+                errors.append(f"{rel}: verified App Store download link missing")
+        if expected_route == "/wayfinder/":
+            if not re.search(
+                r'<a\s+class="button"\s+href="' + re.escape(APP_STORE_URL) + r'"', text
+            ):
+                errors.append(f"{rel}: primary App Store download button missing")
+            if 'class="button unavailable"' in text:
+                errors.append(f"{rel}: inactive App Store download notice remains")
+        for stale in ("App Store listing is not live", "not publicly on sale",
+                      "App Store download coming soon"):
+            if stale.lower() in text.lower():
+                errors.append(f"{rel}: obsolete App Store availability claim: {stale}")
         for image in doc.images:
             if "alt" not in image:
                 errors.append(f"{rel}: image lacks alt attribute")
@@ -384,6 +399,10 @@ def local_checks() -> tuple[list[str], set[str]]:
     for relative, expected_mailtos in APP_EXPECTED_MAILTOS.items():
         app_policy_text = (APP_ROOT / relative).read_text(encoding="utf-8")
         app_policy = parse_document(app_policy_text)
+        if relative == "support.html" and APP_STORE_URL not in app_policy.links:
+            errors.append("support.html: verified App Store download link missing")
+        if "not yet publicly on sale" in app_policy_text.lower():
+            errors.append(f"{relative}: obsolete iOS purchase availability claim")
         mailto_links = {
             link for link in app_policy.links if urlparse(link).scheme == "mailto"
         }
