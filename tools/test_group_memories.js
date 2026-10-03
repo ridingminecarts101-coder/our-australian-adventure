@@ -37,11 +37,25 @@ function harness() {
     ADV=[
       {id:17,title:'Shared walk',place:'Track',country:'AU',category:'Hiking'},
       {id:18,title:'Unwritten walk',place:'Ridge',country:'AU',category:'Hiking'},
-      {id:19,title:'Photo walk',place:'Creek',country:'AU',category:'Hiking'}
+      {id:19,title:'Photo walk',place:'Creek',country:'AU',category:'Hiking'},
+      {id:20,title:'Earlier group walk',place:'Gully',country:'AU',category:'Hiking'}
     ];
     progress=new Map([
       [17,{adventure_id:17,completed:true,completed_by_id:'bob',completed_at:'2026-10-01T00:00:00Z'}],
-      [18,{adventure_id:18,completed:true,completed_by_id:'charlie'}]
+      [18,{adventure_id:18,completed:true,completed_by_id:'charlie'}],
+      [20,{adventure_id:20,completed:true,completed_by_id:'charlie'}]
+    ]);
+    groupCompletions=indexGroupCompletions([
+      {adventure_id:17,completed:true,completed_by_id:'bob',completed_on:'2026-09-20',
+        source_is_personal:true,source_user_id:'bob',shared_by_id:'bob'},
+      {adventure_id:17,completed:true,completed_by_id:'charlie',completed_on:'2026-10-01',
+        source_is_personal:true,source_user_id:'charlie',shared_by_id:'charlie'},
+      {adventure_id:18,completed:true,completed_by_id:'bob',
+        source_is_personal:true,source_user_id:'bob',shared_by_id:'bob'}
+    ]);
+    groupLegacyCompletions=indexLegacyGroupCompletions([
+      {adventure_id:20,completed:true,completed_by_id:'charlie',
+        source_is_personal:false,source_user_id:'bob',shared_by_id:'bob'}
     ]);
     personalProgress=new Map([[17,{adventure_id:17,completed:false,rating:5,memory:'Alice private note'}]]);
     groupFeedback=indexGroupFeedback([
@@ -50,6 +64,7 @@ function harness() {
       {adventure_id:18,completed_by_id:'bob',rating:5,memory:null}
     ]);
     groupFeedbackScope={ownerId:userId,groupId:activeGroupId};
+    groupFeedbackAvailable=true;
     hydrateThumbs=()=>{}; photoSrc=()=>'';`);
   return { run, html, heading };
 }
@@ -59,15 +74,18 @@ h.run('renderMemories()');
 let card = h.html();
 assert.equal(h.heading(), 'Group memories');
 assert.match(card, /Shared walk/, 'a group completion appears even if the viewer has not completed it');
-assert.match(card, /Completed in this group/, 'a merged group tick does not credit only one member');
-assert.doesNotMatch(card, /Ticked by Bob/, 'the aggregate is not presented as a single-member tick');
-assert.match(card, /Bob.*aria-label="4 stars".*Climbed &lt;together&gt; &amp; laughed/);
-assert.match(card, /Charlie.*aria-label="3 stars".*Great views/);
+assert.match(card, /Completed in this group/, 'the card represents shared group completion');
+assert.match(card, /Bob.*completed 20 Sep 2026.*aria-label="4 stars".*Climbed &lt;together&gt; &amp; laughed/);
+assert.match(card, /Charlie.*completed 1 Oct 2026.*aria-label="3 stars".*Great views/);
 assert.ok(card.indexOf('Bob') < card.indexOf('Charlie'), 'members are listed by name');
 assert.doesNotMatch(card, /Alice private note/, 'the private personal note is absent in Group view');
 assert.match(card, /Unwritten walk/);
 assert.match(card, /aria-label="5 stars"/);
 assert.match(card, /No memory written yet/, 'a rating without any written note retains the empty text');
+assert.match(card, /Earlier group walk/);
+assert.match(card, /earlier group completion without verified member attribution/);
+assert.doesNotMatch(card, /Earlier group walk[\s\S]*Charlie.*completed/,
+  'a historical group row cannot be credited to a different member');
 h.run(`members.set('bob','<Bob & team>'); renderMemories()`);
 assert.match(h.html(), /&lt;Bob &amp; team&gt;/, 'member names are escaped like their notes');
 assert.doesNotMatch(h.html(), /<Bob & team>/);
@@ -90,6 +108,11 @@ assert.doesNotMatch(h.html(), /Group A secret/, 'cached group feedback is hidden
 
 h.run(`online=true; activeGroupId='group-b';
   progress=new Map([[17,{adventure_id:17,completed:true,completed_by_id:'charlie'}]]);
+  groupCompletions=indexGroupCompletions([
+    {adventure_id:17,completed:true,completed_by_id:'charlie',
+      source_is_personal:true,source_user_id:'charlie',shared_by_id:'charlie'}
+  ]);
+  groupLegacyCompletions=new Map();
   groupFeedback=indexGroupFeedback([
     {adventure_id:17,completed_by_id:'charlie',rating:2,memory:'Group B memory'}
   ]);
@@ -130,4 +153,20 @@ assert.doesNotMatch(h.html(), /Group B memory/, 'photo grouping does not imply s
 h.run(`photos=[]; renderMemories()`);
 assert.match(h.html(), /No photos on this device yet/);
 
-console.log('PASS: Group Memories multi-member feedback, empty notes, scope, and device photos');
+const edit = harness();
+edit.run(`personalCacheReady=true; renderAll=()=>{}; flushOutbox=()=>{}; toast=()=>{};
+  applyPatch(17,{memory:'Alice draft in group view'})`);
+assert.equal(edit.run('progress.get(17).completed_by_id'), 'bob',
+  'a personal note edit must not replace another member\'s shared completion');
+assert.equal(edit.run('progress.get(17).completed'), true);
+assert.equal(edit.run('personalProgress.get(17).memory'), 'Alice draft in group view');
+edit.run('renderMemories()');
+assert.match(edit.html(), /Shared walk/, 'the group card survives a private note edit');
+
+const unavailable = harness();
+unavailable.run('groupFeedbackAvailable=false; renderMemories()');
+assert.match(unavailable.html(), /ratings and memories are temporarily unavailable/);
+assert.doesNotMatch(unavailable.html(), /No memory written yet/,
+  'a failed feedback refresh must not look like an empty memory');
+
+console.log('PASS: Group Memories member ticks/dates, feedback, empty notes, scope, and device photos');

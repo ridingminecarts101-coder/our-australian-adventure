@@ -108,6 +108,24 @@ async function main() {
     'editable memory must come from the signed-in owner');
   assert.doesNotMatch(sheet, /<textarea[^>]*>A &lt;private&gt;/,
     'another member memory must never enter the editable field');
+  h.run(`groupCompletions=indexGroupCompletions([
+    {adventure_id:17,completed:true,completed_by_id:'bob',completed_on:'2026-10-01',
+      source_is_personal:true,source_user_id:'bob',shared_by_id:'bob'}
+  ]);
+  groupLegacyCompletions=indexLegacyGroupCompletions([
+    {adventure_id:17,completed:true,completed_by_id:'charlie',
+      source_is_personal:false,source_user_id:'bob',shared_by_id:'bob'}
+  ]);
+  progress=new Map([[17,{adventure_id:17,completed:true,completed_by_id:'charlie'}]]);
+  renderSheet(17);`);
+  const attributedSheet = h.elements.get('#sheetBody').innerHTML;
+  assert.match(attributedSheet, /Ticked off by Bob on 1 Oct 2026/);
+  assert.match(attributedSheet, /earlier group completion without verified member attribution/);
+  assert.doesNotMatch(attributedSheet, /Ticked off by Charlie/,
+    'a legacy aggregate cannot credit the wrong member in the detail sheet');
+  assert.equal(h.run('completionCountsByPerson().get("bob")'), 1);
+  assert.equal(h.run('completionCountsByPerson().has("charlie")'), false,
+    'group Me stats count only verified personal completions');
 
   let foregroundRedraws = 0;
   h.context.recordForegroundRedraw = () => { foregroundRedraws++; };
@@ -135,7 +153,8 @@ async function main() {
 
   h.context.groupRpc = (name) => {
     if (name === 'group_completion_feed') return query({ data: [
-      { adventure_id: 17, completed: true, completed_by_id: 'bob', completed_by: 'Bob' },
+      { adventure_id: 17, completed: true, completed_by_id: 'bob', completed_by: 'Bob',
+        source_is_personal:true,source_user_id:'bob',shared_by_id:'bob' },
     ], error: null });
     if (name === 'group_completion_feedback_feed') return query({ data: [
       { adventure_id: 17, completed_by_id: 'bob', rating: 4, memory: 'Bob shared note' },
@@ -155,8 +174,49 @@ async function main() {
     'remote written memories must not be saved in the progress cache');
   assert.equal(Object.hasOwn(cached[0], 'rating'), false,
     'remote ratings must not be saved in the progress cache');
+  assert.equal(h.run('groupCompletions.get(17).has("bob")'), true,
+    'the member tick remains available separately from the aggregate');
   await h.run("setProgressView('personal')");
   assert.equal(h.run('groupFeedback.size'), 0, 'switching to personal view discards remote feedback');
+  assert.equal(h.run('groupCompletions.size'), 0,
+    'switching to personal view discards remote member ticks');
+
+  const pendingOwn = harness();
+  pendingOwn.context.groupRpc = name => query({ data: name === 'group_completion_feed'
+    ? [{ adventure_id:17, completed:true, completed_by_id:'bob', completed_on:'2026-10-01',
+      source_is_personal:true,source_user_id:'bob',shared_by_id:'bob' }]
+    : [], error:null });
+  pendingOwn.context.personalQuery = h.context.personalQuery;
+  pendingOwn.run(`sb={rpc:groupRpc,from:personalQuery};
+    writeLS(LS.outbox,[{adventure_id:17,owner_id:'alice',completed:false,
+      memory:'My private draft',queue_rev:1}]);`);
+  await pendingOwn.run('pullProgress()');
+  assert.equal(pendingOwn.run('progress.get(17).completed_by_id'), 'bob',
+    'a pending personal edit cannot hide another member\'s shared tick');
+  assert.equal(pendingOwn.run('groupCompletions.get(17).has("bob")'), true);
+  pendingOwn.context.groupRpc = () => query({ data:[], error:null });
+  pendingOwn.run(`sb.rpc=groupRpc; writeLS(LS.outbox,[{adventure_id:17,owner_id:'alice',completed:true,
+    queue_rev:2}]);`);
+  await pendingOwn.run('pullProgress()');
+  assert.equal(pendingOwn.run('progress.has(17)'), false,
+    'an unsynced private tick cannot appear as a shared group completion');
+
+  const failedFeed = harness(), notices = [];
+  failedFeed.context.groupRpc = name => query(name === 'group_completion_feed'
+    ? { data:[{adventure_id:17,completed:true,completed_by_id:'bob',
+      source_is_personal:true,source_user_id:'bob',shared_by_id:'bob'}], error:null }
+    : { data:null,error:{message:'temporarily unavailable'} });
+  failedFeed.context.personalQuery = h.context.personalQuery;
+  failedFeed.context.recordNotice = message => notices.push(message);
+  failedFeed.run(`sb={rpc:groupRpc,from:personalQuery}; toast=recordNotice;
+    loadGroups=async()=>{}; pullPhotos=async()=>{}; pullTrips=async()=>{};
+    pullGroupTrips=async()=>{};`);
+  assert.equal(await failedFeed.run('syncNow({loud:true})'), false,
+    'a failed group feedback read cannot report the full group view up to date');
+  assert.equal(failedFeed.run('groupFeedbackAvailable'), false);
+  assert.equal(failedFeed.run('groupCompletions.get(17).has("bob")'), true,
+    'completion ticks remain available when the separate feedback feed fails');
+  assert.match(notices.at(-1), /group ratings and memories are unavailable/);
 
   const stale = harness(), gate = deferred();
   stale.context.groupRpc = name => name === 'group_completion_feed'

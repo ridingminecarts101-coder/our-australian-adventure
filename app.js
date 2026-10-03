@@ -63,7 +63,10 @@ let ADV = [];                  // all 500 adventures
 let progress = new Map();      // adventure_id -> row
 let personalProgress = new Map(); // canonical rows used when editing a group aggregate
 let groupFeedback = new Map(); // adventure_id -> consented member feedback, memory only
+let groupCompletions = new Map(); // adventure_id -> current group members' shared ticks
+let groupLegacyCompletions = new Map(); // older group-only rows without safe member attribution
 let groupFeedbackScope = null; // owner and group that supplied the in-memory feed
+let groupFeedbackAvailable = false; // distinguish an empty feed from a failed refresh
 let progressPullEpoch = 0; // a later pull or revocation makes earlier responses stale
 let groupProgressRefreshTimer = null;
 const GROUP_PROGRESS_REFRESH_DELAY = 150;
@@ -296,7 +299,10 @@ function clearGroupFeedback() {
   }
   progressPullEpoch++;
   groupFeedback = new Map();
+  groupCompletions = new Map();
+  groupLegacyCompletions = new Map();
   groupFeedbackScope = null;
+  groupFeedbackAvailable = false;
 }
 function clearGroupFeedbackForForeground() {
   if (progressView !== 'group') return;
@@ -308,8 +314,11 @@ function queueGroupProgressRefresh(payload) {
   if (progressView !== 'group' || !activeGroupId) return;
   const changed = payload?.new || payload?.old;
   if (changed?.group_id && changed.group_id !== activeGroupId) return;
-  const hadFeedback = groupFeedback.size > 0;
+  const hadFeedback = groupFeedback.size > 0 || groupCompletions.size > 0
+    || groupLegacyCompletions.size > 0 || progress.size > 0;
   clearGroupFeedback();
+  progress = new Map();
+  saveLocalProgress();
   if (hadFeedback) renderAll();
   const owner = userId, generation = authGeneration, groupId = activeGroupId;
   groupProgressRefreshTimer = setTimeout(() => {
@@ -410,7 +419,9 @@ function applyPatch(id, patch) {
   const merged = { ...base, ...patch, adventure_id: id, owner_id: userId,
     queue_rev: nextQueueRevision(),
     updated_by: who, updated_at: new Date().toISOString() };
-  progress.set(id, merged);
+  // A personal edit cannot replace a group aggregate. The group feed will
+  // include this tick only after the server has applied that group's consent.
+  if (progressView !== 'group') progress.set(id, merged);
   personalProgress.set(id, merged);
   personalCacheReady = true;
   saveLocalProgress();
@@ -555,6 +566,53 @@ function indexGroupFeedback(rows) {
   return byAdventure;
 }
 
+function isCanonicalGroupCompletion(row) {
+  return Number.isInteger(row.adventure_id) && row.completed && row.completed_by_id
+    && row.source_is_personal === true
+    && row.source_user_id === row.shared_by_id
+    && row.completed_by_id === row.source_user_id;
+}
+
+function indexGroupCompletions(rows) {
+  const byAdventure = new Map();
+  for (const row of rows || []) {
+    if (!isCanonicalGroupCompletion(row)) continue;
+    if (!byAdventure.has(row.adventure_id)) byAdventure.set(row.adventure_id, new Map());
+    const members = byAdventure.get(row.adventure_id);
+    const prior = members.get(row.completed_by_id);
+    if (!prior || (row.updated_at || '') > (prior.updated_at || '')) {
+      members.set(row.completed_by_id, row);
+    }
+  }
+  return byAdventure;
+}
+
+function indexLegacyGroupCompletions(rows) {
+  const byAdventure = new Map();
+  for (const row of rows || []) {
+    if (!Number.isInteger(row.adventure_id) || !row.completed
+        || !Object.hasOwn(row, 'source_is_personal')
+        || isCanonicalGroupCompletion(row)) continue;
+    if (!byAdventure.has(row.adventure_id)) byAdventure.set(row.adventure_id, []);
+    byAdventure.get(row.adventure_id).push(row);
+  }
+  return byAdventure;
+}
+
+function currentGroupFeedReady() {
+  return progressView === 'group' && userId && activeGroupId && online
+    && groupFeedbackScope?.ownerId === userId
+    && groupFeedbackScope?.groupId === activeGroupId;
+}
+
+function groupMemberTicks(id) {
+  if (!currentGroupFeedReady()) return [];
+  return [...(groupCompletions.get(id)?.values() || [])]
+    .sort((a, b) => nameOf(a.completed_by_id, a.completed_by)
+      .localeCompare(nameOf(b.completed_by_id, b.completed_by))
+      || a.completed_by_id.localeCompare(b.completed_by_id));
+}
+
 function canonicalPersonalProgress(rows) {
   const best = new Map();
   for (const row of rows || []) {
@@ -580,7 +638,7 @@ async function pullProgress() {
   const stillCurrent = () => runEpoch === progressPullEpoch
     && runGeneration === authGeneration && runOwner === userId
     && runView === progressView && runGroup === activeGroupId;
-  let data, error, feedbackRows = [];
+  let data, error, feedbackRows = [], feedbackAvailable = false;
   if (runView === 'group' && runGroup) {
     ({ data, error } = await fetchAllGroupCompletions(runGroup));
     if (!stillCurrent()) return;
@@ -588,7 +646,7 @@ async function pullProgress() {
       const feedback = await fetchAllGroupFeedback(runGroup);
       if (!stillCurrent()) return;
       if (feedback.error) console.warn('group feedback', feedback.error.message);
-      else feedbackRows = feedback.data;
+      else { feedbackRows = feedback.data; feedbackAvailable = true; }
     }
     const own = await fetchAllPersonalProgress(runOwner);
     if (!stillCurrent()) return;
@@ -606,13 +664,19 @@ async function pullProgress() {
   if (!stillCurrent()) return;
   if (error) {
     console.warn('pull failed', error.message);
-    if (runView === 'group') { clearGroupFeedback(); renderAll(); }
+    if (runView === 'group') {
+      clearGroupFeedback();
+      progress = new Map();
+      saveLocalProgress();
+      renderAll();
+    }
     return;
   }
   if (runView === 'personal') data = [...canonicalPersonalProgress(data).values()];
 
   // Anything sitting in the outbox is newer than the server — don't stomp it.
-  const pendingRows = readLS(LS.outbox, []).filter(o => o.owner_id === runOwner);
+  const pendingRows = runView === 'personal'
+    ? readLS(LS.outbox, []).filter(o => o.owner_id === runOwner) : [];
   const pendingIds = new Set(pendingRows.map(o => o.adventure_id));
   // A group can contain one canonical row per person for the same adventure.
   // Completed wins, then the latest edit supplies the attribution/details.
@@ -632,8 +696,11 @@ async function pullProgress() {
     personalProgress = new Map(best);
     personalCacheReady = true;
   } else {
+    groupCompletions = indexGroupCompletions(data);
+    groupLegacyCompletions = indexLegacyGroupCompletions(data);
     groupFeedback = indexGroupFeedback(feedbackRows);
     groupFeedbackScope = { ownerId: runOwner, groupId: runGroup };
+    groupFeedbackAvailable = feedbackAvailable;
   }
   saveLocalProgress();
   renderAll();
@@ -728,9 +795,14 @@ function subscribeRealtime() {
   // Someone renaming themselves has to reach the other phones straight away,
   // or "ticked by" goes stale again in a different way.
   sb.channel('member-sync')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, async () => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, async payload => {
       if (!subscriptionCurrent()) return;
       clearGroupFeedback();
+      const changedGroup = payload?.new?.group_id || payload?.old?.group_id;
+      if (progressView === 'group' && (!changedGroup || changedGroup === activeGroupId)) {
+        progress = new Map();
+        saveLocalProgress();
+      }
       renderAll();
       await loadGroups();
       if (!subscriptionCurrent()) return;
@@ -831,6 +903,13 @@ async function syncNow({ loud = false } = {}) {
       await pullRecommendations();
     }
     renderAll();
+    if (progressView === 'group' && activeGroupId
+        && (groupFeedbackScope?.ownerId !== userId
+          || groupFeedbackScope?.groupId !== activeGroupId
+          || !groupFeedbackAvailable)) {
+      if (loud) toast('Progress updated; group ratings and memories are unavailable');
+      return false;
+    }
     if (loud) toast('Up to date');
     return true;
   } catch (e) {
@@ -3978,15 +4057,7 @@ function renderMemories() {
     ? 'Group memories' : 'Your memories';
   const ownRow = id => groupView
     ? (personalProgress.get(id) || { completed: false }) : row(id);
-  const groupFeedbackReady = groupView && userId && activeGroupId && online
-    && groupFeedbackScope?.ownerId === userId
-    && groupFeedbackScope?.groupId === activeGroupId;
-  const memberFeedback = id => groupFeedbackReady
-    ? [...(groupFeedback.get(id)?.values() || [])]
-      .filter(entry => entry.rating || entry.memory?.trim())
-      .sort((a, b) => nameOf(a.completed_by_id).localeCompare(nameOf(b.completed_by_id))
-        || a.completed_by_id.localeCompare(b.completed_by_id))
-    : [];
+  const groupFeedbackReady = groupView && currentGroupFeedReady();
 
   if (memoryGrouping === 'adventure') {
     // Group Adventure cards contain only group completions and consented text
@@ -3994,15 +4065,29 @@ function renderMemories() {
     const withPhotos = groupView ? new Set()
       : new Set(photos.concat(pendingPhotos).map(p => p.adventure_id));
     const list = ADV
-      .filter(a => (groupView ? row(a.id) : ownRow(a.id)).completed || withPhotos.has(a.id))
+      .filter(a => (groupView
+        ? (groupFeedbackReady
+          ? (groupCompletions.has(a.id) || groupLegacyCompletions.has(a.id))
+          : row(a.id).completed)
+        : ownRow(a.id).completed || withPhotos.has(a.id)))
       .sort((x, y) => new Date((groupView ? row(y.id) : ownRow(y.id)).completed_at || 0)
         - new Date((groupView ? row(x.id) : ownRow(x.id)).completed_at || 0));
 
     el.innerHTML = list.length ? list.map(a => {
       const r = groupView ? row(a.id) : ownRow(a.id);
       const ph = groupView ? [] : photosFor(a.id);
-      const feedback = groupView ? memberFeedback(a.id) : [];
-      const sharedNotes = feedback.filter(entry => entry.memory?.trim());
+      const ticks = groupView ? groupMemberTicks(a.id) : [];
+      const legacyCount = groupView && groupFeedbackReady
+        ? (groupLegacyCompletions.get(a.id)?.length || 0) : 0;
+      const sharedNotes = ticks.filter(tick => groupFeedbackAvailable
+        && groupFeedback.get(a.id)?.get(tick.completed_by_id)?.memory?.trim());
+      const groupEntries = ticks.map(tick => {
+        const entry = groupFeedbackAvailable
+          ? groupFeedback.get(a.id)?.get(tick.completed_by_id) : null;
+        const date = tick.completed_on || tick.completed_at
+          ? ` · completed ${esc(fmtCompletionDate(tick))}` : ' · completed';
+        return `<span class="memory-note"><strong>${esc(nameOf(tick.completed_by_id, tick.completed_by))}</strong>${date}${entry?.rating ? ` <span class="badge star" aria-label="${entry.rating} stars">${'★'.repeat(entry.rating)}</span>` : ''}${entry?.memory?.trim() ? ` — ${esc(entry.memory)}` : ''}</span>`;
+      });
       return `<div class="memory">
         <button type="button" class="memory-open" data-open="${a.id}" aria-label="Open ${esc(safeTitle(a))}">
           <b>${esc(safeTitle(a))}</b>
@@ -4010,18 +4095,23 @@ function renderMemories() {
           <span class="badges">
             ${groupView ? '<span class="badge">Completed in this group</span>'
               : r.completed_by || r.completed_by_id ? `<span class="badge">Ticked by ${esc(nameOf(r.completed_by_id, r.completed_by))}</span>` : ''}
-            ${r.completed_at ? `<span class="badge">${fmtCompletionDate(r)}</span>` : ''}
+            ${!groupView && r.completed_at ? `<span class="badge">${fmtCompletionDate(r)}</span>` : ''}
             ${!groupView && r.rating ? `<span class="badge star">${'★'.repeat(r.rating)}</span>` : ''}
             ${ph.length ? `<span class="badge">📷 ${ph.length} on this device</span>` : ''}
           </span>
           ${groupView
-            ? `${feedback.map(entry => `<span class="memory-note"><strong>${esc(nameOf(entry.completed_by_id))}</strong>${entry.rating ? ` <span class="badge star" aria-label="${entry.rating} stars">${'★'.repeat(entry.rating)}</span>` : ''}${entry.memory?.trim() ? ` — ${esc(entry.memory)}` : ''}</span>`).join('')}
-              ${sharedNotes.length ? '' : '<span class="memory-note nomemory">No memory written yet</span>'}`
+            ? `${groupEntries.join('')}
+              ${legacyCount ? `<span class="memory-note nomemory">${legacyCount} earlier group completion${legacyCount === 1 ? '' : 's'} without verified member attribution</span>` : ''}
+              ${!groupFeedbackReady ? '<span class="memory-note nomemory">Reconnect to view group members.</span>'
+                : !groupFeedbackAvailable ? '<span class="memory-note nomemory">Group ratings and memories are temporarily unavailable.</span>'
+                  : sharedNotes.length ? '' : '<span class="memory-note nomemory">No memory written yet</span>'}`
             : `<span class="memory-note ${r.memory ? '' : 'nomemory'}">${esc(r.memory || 'No memory written yet — tap to add one.')}</span>`}
         </button>
         ${ph.length ? `<div class="strip" data-group-key="adv-${a.id}">${ph.map(p => thumbHTML(p)).join('')}</div>` : ''}
       </div>`;
-    }).join('') : `<div class="empty">${groupView ? 'No group adventures ticked off yet.' : 'No adventures ticked off yet.'}<br>Go and make some. ❤️</div>`;
+    }).join('') : `<div class="empty">${groupView && !groupFeedbackReady
+      ? (online ? 'Group memories are loading or temporarily unavailable.' : 'Reconnect to view group memories.')
+      : groupView ? 'No group adventures ticked off yet.' : 'No adventures ticked off yet.'}<br>${groupFeedbackReady || !groupView ? 'Go and make some. ❤️' : 'Try syncing again.'}</div>`;
     hydrateThumbs();
     return;
   }
@@ -4352,6 +4442,23 @@ function achievementData(owned = progress) {
   return d;
 }
 
+function completionCountsByPerson() {
+  // Group counts use only server-verified personal rows. Legacy group rows
+  // retain their aggregate tick but cannot safely be attributed to a member.
+  // Personal-view historical rows retain the old display-name fallback.
+  const byPerson = new Map();
+  const attributableRows = progressView === 'group'
+    ? (currentGroupFeedReady()
+      ? [...groupCompletions.values()].flatMap(members => [...members.values()]) : [])
+    : [...progress.values()];
+  for (const r of attributableRows) {
+    if (!r.completed) continue;
+    const key = r.completed_by_id || ('name:' + (r.completed_by || who || 'You'));
+    byPerson.set(key, (byPerson.get(key) || 0) + 1);
+  }
+  return byPerson;
+}
+
 function renderMe() {
   const d = achievementData();
   const passportAchievements = progressView === 'group'
@@ -4359,22 +4466,7 @@ function renderMe() {
   const rated = ADV.map(a => row(a.id).rating).filter(Boolean);
   const avg = rated.length ? (rated.reduce((s, n) => s + n, 0) / rated.length).toFixed(1) : '—';
   const shortlisted = [...progress.values()].filter(r => r.shortlisted && !r.completed).length;
-  // Whoever has actually ticked things, rather than two hardcoded names.
-  /* Counted by account id, never by name.
-   *
-   * This used to key on the display name, so renaming yourself produced two
-   * people: you, and a ghost holding everything you had ticked under the old
-   * name. Rows from before completed_by_id existed have no id at all - those
-   * are grouped under whatever name was frozen onto them, which is the only
-   * honest thing left to do with them, but they can no longer split a person
-   * who does have an id in two.
-   */
-  const byPerson = new Map();
-  for (const r of progress.values()) {
-    if (!r.completed) continue;
-    const key = r.completed_by_id || ('name:' + (r.completed_by || who || 'You'));
-    byPerson.set(key, (byPerson.get(key) || 0) + 1);
-  }
+  const byPerson = completionCountsByPerson();
   const people = [...byPerson.entries()]
     .map(([key, n]) => [key.startsWith('name:') ? key.slice(5) : nameOf(key), n])
     .sort((a, b) => b[1] - a[1]).slice(0, 4);
@@ -4461,6 +4553,16 @@ function groupFeedbackHTML(id) {
   </section>`;
 }
 
+function groupCompletionNotesHTML(id) {
+  if (progressView !== 'group') return '';
+  if (!currentGroupFeedReady()) return row(id).completed
+    ? '<div class="donenote">Group completion details are loading or temporarily unavailable.</div>' : '';
+  const others = groupMemberTicks(id).filter(tick => tick.completed_by_id !== userId);
+  const legacyCount = groupLegacyCompletions.get(id)?.length || 0;
+  return `${others.map(tick => `<div class="donenote">Ticked off by ${esc(nameOf(tick.completed_by_id, tick.completed_by))}${tick.completed_on || tick.completed_at ? ' on ' + esc(fmtCompletionDate(tick)) : ''}.</div>`).join('')}
+    ${legacyCount ? `<div class="donenote">${legacyCount} earlier group completion${legacyCount === 1 ? '' : 's'} without verified member attribution.</div>` : ''}`;
+}
+
 function renderSheet(id) {
   const a = ADV.find(x => x.id === id);
   if (!a) return;
@@ -4511,6 +4613,7 @@ function renderSheet(id) {
       <span class="badge">Listing paused</span>
       ${availabilityPanelHTML(a)}
       ${advisoryPanelHTML(a.country)}
+      ${groupCompletionNotesHTML(id)}
       ${sharedFeedback}
       ${hasHistory ? `
         ${personal.completed ? `<div class="donenote">Your past completion is preserved${personal.completed_at ? ' from ' + fmtCompletionDate(personal) : ''}.</div>
@@ -4580,8 +4683,7 @@ function renderSheet(id) {
     </div>
 
     ${personal.completed ? `<div class="donenote">Your completion${personal.completed_at ? ': ' + fmtCompletionDate(personal) : ''}.</div>` : ''}
-    ${progressView === 'group' && r.completed && r.completed_by_id !== userId
-      ? `<div class="donenote">${personal.completed ? 'Also ticked' : 'Ticked'} off by ${esc(nameOf(r.completed_by_id, r.completed_by))}${r.completed_at ? ' on ' + fmtCompletionDate(r) : ''}.</div>` : ''}
+    ${groupCompletionNotesHTML(id)}
     ${sharedFeedback}
 
     <div class="sheet-actions">
