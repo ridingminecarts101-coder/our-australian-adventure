@@ -301,6 +301,7 @@ function clearGroupFeedback() {
 function clearGroupFeedbackForForeground() {
   if (progressView !== 'group') return;
   clearGroupFeedback();
+  renderMemories();
   if (openId !== null) renderSheet(openId);
 }
 function queueGroupProgressRefresh(payload) {
@@ -3971,34 +3972,56 @@ function thumbHTML(p) {
 
 function renderMemories() {
   const el = $('#memList');
-  const ownRow = id => progressView === 'group'
+  const groupView = progressView === 'group';
+  const heading = $('#tab-memories h2');
+  if (heading) heading.textContent = groupView && memoryGrouping === 'adventure'
+    ? 'Group memories' : 'Your memories';
+  const ownRow = id => groupView
     ? (personalProgress.get(id) || { completed: false }) : row(id);
+  const groupFeedbackReady = groupView && userId && activeGroupId && online
+    && groupFeedbackScope?.ownerId === userId
+    && groupFeedbackScope?.groupId === activeGroupId;
+  const memberFeedback = id => groupFeedbackReady
+    ? [...(groupFeedback.get(id)?.values() || [])]
+      .filter(entry => entry.rating || entry.memory?.trim())
+      .sort((a, b) => nameOf(a.completed_by_id).localeCompare(nameOf(b.completed_by_id))
+        || a.completed_by_id.localeCompare(b.completed_by_id))
+    : [];
 
   if (memoryGrouping === 'adventure') {
-    // Anything ticked off, plus anything that has photos on it.
-    const withPhotos = new Set(photos.concat(pendingPhotos).map(p => p.adventure_id));
+    // Group Adventure cards contain only group completions and consented text
+    // feedback. Device photos belong in Personal and the photo-led groupings.
+    const withPhotos = groupView ? new Set()
+      : new Set(photos.concat(pendingPhotos).map(p => p.adventure_id));
     const list = ADV
-      .filter(a => ownRow(a.id).completed || withPhotos.has(a.id))
-      .sort((x, y) => new Date(ownRow(y.id).completed_at || 0) - new Date(ownRow(x.id).completed_at || 0));
+      .filter(a => (groupView ? row(a.id) : ownRow(a.id)).completed || withPhotos.has(a.id))
+      .sort((x, y) => new Date((groupView ? row(y.id) : ownRow(y.id)).completed_at || 0)
+        - new Date((groupView ? row(x.id) : ownRow(x.id)).completed_at || 0));
 
     el.innerHTML = list.length ? list.map(a => {
-      const r = ownRow(a.id);
-      const ph = photosFor(a.id);
+      const r = groupView ? row(a.id) : ownRow(a.id);
+      const ph = groupView ? [] : photosFor(a.id);
+      const feedback = groupView ? memberFeedback(a.id) : [];
+      const sharedNotes = feedback.filter(entry => entry.memory?.trim());
       return `<div class="memory">
         <button type="button" class="memory-open" data-open="${a.id}" aria-label="Open ${esc(safeTitle(a))}">
           <b>${esc(safeTitle(a))}</b>
           <span class="card-meta">${esc(a.place)} · ${esc(regionName(a))}</span>
           <span class="badges">
-            ${r.completed_by || r.completed_by_id ? `<span class="badge">Ticked by ${esc(nameOf(r.completed_by_id, r.completed_by))}</span>` : ''}
+            ${groupView ? '<span class="badge">Completed in this group</span>'
+              : r.completed_by || r.completed_by_id ? `<span class="badge">Ticked by ${esc(nameOf(r.completed_by_id, r.completed_by))}</span>` : ''}
             ${r.completed_at ? `<span class="badge">${fmtCompletionDate(r)}</span>` : ''}
-            ${r.rating ? `<span class="badge star">${'★'.repeat(r.rating)}</span>` : ''}
-            ${ph.length ? `<span class="badge">📷 ${ph.length}</span>` : ''}
+            ${!groupView && r.rating ? `<span class="badge star">${'★'.repeat(r.rating)}</span>` : ''}
+            ${ph.length ? `<span class="badge">📷 ${ph.length} on this device</span>` : ''}
           </span>
-          <span class="memory-note ${r.memory ? '' : 'nomemory'}">${esc(r.memory || 'No memory written yet — tap to add one.')}</span>
+          ${groupView
+            ? `${feedback.map(entry => `<span class="memory-note"><strong>${esc(nameOf(entry.completed_by_id))}</strong>${entry.rating ? ` <span class="badge star" aria-label="${entry.rating} stars">${'★'.repeat(entry.rating)}</span>` : ''}${entry.memory?.trim() ? ` — ${esc(entry.memory)}` : ''}</span>`).join('')}
+              ${sharedNotes.length ? '' : '<span class="memory-note nomemory">No memory written yet</span>'}`
+            : `<span class="memory-note ${r.memory ? '' : 'nomemory'}">${esc(r.memory || 'No memory written yet — tap to add one.')}</span>`}
         </button>
         ${ph.length ? `<div class="strip" data-group-key="adv-${a.id}">${ph.map(p => thumbHTML(p)).join('')}</div>` : ''}
       </div>`;
-    }).join('') : `<div class="empty">No adventures ticked off yet.<br>Go and make some. ❤️</div>`;
+    }).join('') : `<div class="empty">${groupView ? 'No group adventures ticked off yet.' : 'No adventures ticked off yet.'}<br>Go and make some. ❤️</div>`;
     hydrateThumbs();
     return;
   }
@@ -4009,7 +4032,7 @@ function renderMemories() {
     ...pendingPhotos.map(p => ({ ...p, pending: true, objectUrl: objectUrlFor(p) })),
   ];
   if (!all.length) {
-    el.innerHTML = `<div class="empty">No photos yet.<br>Open an adventure and add some under <b>Your memory</b>.</div>`;
+    el.innerHTML = `<div class="empty">No photos on this device yet.<br>Open an adventure and add some under <b>Your memory</b>.</div>`;
     return;
   }
 
@@ -4043,7 +4066,7 @@ function renderMemories() {
     return Math.max(...groups.get(b).map(sortVal)) - Math.max(...groups.get(a).map(sortVal));
   });
 
-  el.innerHTML = keys.map(k => {
+  el.innerHTML = `<p class="muted">Photos on this device</p>` + keys.map(k => {
     const items = groups.get(k).sort((a, b) => sortVal(b) - sortVal(a));
     return `<section class="photogroup">
       <div class="photogroup-head">
@@ -5181,6 +5204,7 @@ ${url}`);
       const changed = await setCompletionSharing(groupId, enabled);
       if (changed === null || owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
       if (!changed) return toast('Could not change sharing');
+      renderAll();
       await pullProgress();
       if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
       renderAll();
@@ -5195,6 +5219,7 @@ ${url}`);
       const changed = await setFeedbackSharing(groupId, enabled);
       if (changed === null || owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
       if (!changed) return toast('Could not change rating and memory sharing');
+      renderAll();
       await pullProgress();
       if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
       renderAll();

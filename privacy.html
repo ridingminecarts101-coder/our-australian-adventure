@@ -65,7 +65,7 @@
   <table>
     <tr><th>Data</th><th>Why</th><th>Where</th></tr>
     <tr><td>Which adventures you have ticked, shortlisted, rated or written a note on</td>
-        <td>It is the point of the app</td><td>Your device, and our database if you are online; ratings and written memories saved in your personal list for completed adventures are shown to a group only after a separate sharing choice</td></tr>
+        <td>It is the point of the app</td><td>Your device, and our database if you are online; personal completion ticks and dates, ratings and written memories can appear in each group where you make the relevant sharing choices</td></tr>
     <tr><td>Photos you attach, and the date taken read from the photo</td>
         <td>To show them against the adventure</td><td>Current photos stay on the device where you add them. The production cloud photo store is empty; a separate historical Desktop backup is retained as described below.</td></tr>
     <tr><td>Trips you plan: names, dates, selected adventures and notes</td><td>To group adventures together and optionally share a trip with a group</td>
@@ -111,7 +111,7 @@
      image or its related photo record to the RL Applications backend or GitHub.
      Wayfinder's in-app photo copies do not sync with your account, so signing in on another device will not show them.
      The production backend now blocks client photo-record and cloud-file uploads.</p>
-  <p>On supported iPhone and iPad versions, <strong>Me → Settings → Save photos to camera roll</strong> lets you copy all photos stored locally for the signed-in Wayfinder account to the device's Photos library. Wayfinder shows the number of photos for confirmation and asks for permission to add to Photos when needed. Its in-app copies remain. This is a choice you make; attaching a photo does not save it to Photos automatically. The web app and Android build cannot use this control to save to Photos. Copies in Photos are outside Wayfinder's account filter and are managed by Apple and your device settings. If iCloud Photos is enabled, they may sync to iCloud and your other devices. RL Applications does not receive the exported images. Deleting your Wayfinder account or app does not delete copies saved to Photos.</p>
+  <p>On supported iPhone and iPad versions, <strong>Me → Settings → Save photos to camera roll</strong> lets you copy all photos stored locally for the signed-in Wayfinder account to that device's Photos library. Wayfinder shows the number of photos for confirmation and asks for permission to add to Photos when needed. Its in-app copies remain. This is a choice you make; attaching a photo does not save it to Photos automatically. Photos are never shared through a group, so another member cannot download them from your group. The web app and Android build cannot use this control to save to Photos. Copies in Photos are outside Wayfinder's account filter and are managed by Apple and your device settings. If iCloud Photos is enabled, they may sync to iCloud and your other devices. RL Applications does not receive the exported images. Deleting your Wayfinder account or app does not delete copies saved to Photos.</p>
   <p>Signing out keeps new device-local photos for the same account and hides them
      from other signed-in accounts. Uninstalling the native app, clearing its app
      data, or clearing the PWA's browser/site storage can permanently remove them.
@@ -169,17 +169,24 @@
 
   <h2>Personal progress and groups</h2>
   <p>Your progress belongs to your account. Groups are optional, and joining uses an
-     invitation code. You choose whether to share completed adventures. If enabled,
-     the group can see past and future completion ticks, completion dates and your
-     display name. Completion sharing alone does not show ratings, written memories,
+     invitation code. You choose whether to share completed adventures separately for
+     each group. In every group where you enable that choice, current and future
+     members can see your past and future personal completion ticks, completion dates
+     and display name. Changing one group's choice does not change another group's.
+     Completion sharing alone does not show ratings, written memories,
      shortlist, new photos or trip plans.</p>
   <p>A separate <em>Share my ratings and memories</em> choice under
      <em>Me → Sharing</em> starts off. If you turn it on while sharing completions,
-     current and future members of that group can see ratings and written memories
-     saved in your personal list for completed adventures, including earlier entries
-     there. Older ratings or notes saved only in an earlier group list may still appear in your
+     current and future members of that group can see star ratings and written reviews
+     or comments saved as memories in your personal list for completed adventures, including earlier entries
+     there. The same personal rating or memory appears in each group where you enable
+     both sharing choices. In the group's Memories view, shared ratings are shown for
+     each member and written memories are labeled with that member's display name;
+     an adventure with no shared written memory says <em>No memory written yet</em>.
+     Older ratings or notes saved only in an earlier group list may still appear in your
      editor but stay private. Ratings and memories for unfinished adventures remain
-     private. Turning off this choice or completion sharing stops that in-app access;
+     private. Turning off this choice or completion sharing for one group stops that
+     group's in-app access without changing your choices in other groups;
      it does not delete your personal entries.
      Photos and shortlist are never included in this choice.</p>
   <p>You can change these sharing choices under <em>Me → Sharing</em> and switch between
