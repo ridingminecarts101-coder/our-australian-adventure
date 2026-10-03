@@ -4307,10 +4307,15 @@ function renderSheet(id) {
     ? (personalProgress.get(id) || { completed: false, shortlisted: false, rating: null, memory: null }) : r;
   const ph = photosFor(id);
   const maps = mapsUrl(a);
-  const photoHint = nativePhotoFiles()
-    ? (ph.length
-      ? 'Tap a photo to see it full size. New photos stay inside Wayfinder on this phone unless you choose Save photos to camera roll in Me.'
-      : 'Photos are resized and saved inside Wayfinder on this phone. To copy them to Photos, choose Save photos to camera roll in Me.')
+  const nativePhotos = nativePhotoFiles();
+  const photoHint = nativePhotos
+    ? (nativePhotos.canSaveToGallery()
+      ? (ph.length
+        ? 'Tap a photo to see it full size. New photos stay inside Wayfinder on this phone unless you choose Save photos to camera roll in Me.'
+        : 'Photos are resized and saved inside Wayfinder on this phone. To copy them to Photos, choose Save photos to camera roll in Me.')
+      : (ph.length
+        ? 'Tap a photo to see it full size. New photos stay inside Wayfinder on this phone. Use Export photos from this device in Me to move them to another phone.'
+        : 'Photos are resized and saved inside Wayfinder on this phone. Use Export photos from this device in Me to move them to another phone.'))
     : (ph.length
       ? 'Tap a photo to see it full size. New photos use this browser’s site storage on this device; browser retention is best effort.'
       : 'Photos are resized and saved in this browser’s site storage on this device. Browser retention is best effort, and clearing site data removes them. They are not synced to other devices.');
