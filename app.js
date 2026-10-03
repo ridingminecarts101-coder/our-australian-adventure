@@ -62,6 +62,8 @@ let sb = null;                 // supabase client
 let ADV = [];                  // all 500 adventures
 let progress = new Map();      // adventure_id -> row
 let personalProgress = new Map(); // canonical rows used when editing a group aggregate
+let groupFeedback = new Map(); // adventure_id -> consented member feedback, memory only
+let groupFeedbackScope = null; // owner and group that supplied the in-memory feed
 let personalCacheReady = false;
 let who = localStorage.getItem(LS.who) || null;
 let online = navigator.onLine;
@@ -284,6 +286,10 @@ function saveLocalProgress() {
   writeLS(LS.progress, [...progress.values()]);
   if (personalCacheReady) writeLS(LS.personalProgress, [...personalProgress.values()]);
 }
+function clearGroupFeedback() {
+  groupFeedback = new Map();
+  groupFeedbackScope = null;
+}
 
 async function bindLocalDataToUser() {
   if (!userId) return;
@@ -293,6 +299,7 @@ async function bindLocalDataToUser() {
   if (previous && previous !== userId) {
     for (const key of privateKeys) localStorage.removeItem(key);
     progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
+    clearGroupFeedback();
     trips = []; who = null; activeGroupId = null; progressView = 'personal';
     clearGroupTripCache();
     // Keep queued photos for their account across a direct A -> B session
@@ -480,6 +487,34 @@ async function fetchAllGroupCompletions(groupId) {
   }
 }
 
+async function fetchAllGroupFeedback(groupId) {
+  const rows = [];
+  for (let from = 0; ; from += PROGRESS_PAGE_SIZE) {
+    const { data, error } = await sb.rpc('group_completion_feedback_feed', { p_group_id: groupId })
+      .order('adventure_id').order('completed_by_id').range(from, from + PROGRESS_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < PROGRESS_PAGE_SIZE) return { data: rows, error: null };
+  }
+}
+
+function indexGroupFeedback(rows) {
+  const byAdventure = new Map();
+  for (const row of rows || []) {
+    if (!Number.isInteger(row.adventure_id) || !row.completed_by_id) continue;
+    const rating = Number.isInteger(row.rating) && row.rating >= 1 && row.rating <= 5
+      ? row.rating : null;
+    const memory = typeof row.memory === 'string' ? row.memory : null;
+    if (!rating && !memory) continue;
+    if (!byAdventure.has(row.adventure_id)) byAdventure.set(row.adventure_id, new Map());
+    byAdventure.get(row.adventure_id).set(row.completed_by_id, {
+      completed_by_id: row.completed_by_id, rating, memory,
+    });
+  }
+  return byAdventure;
+}
+
 function canonicalPersonalProgress(rows) {
   const best = new Map();
   for (const row of rows || []) {
@@ -503,10 +538,16 @@ async function pullProgress() {
   const runView = progressView, runGroup = activeGroupId;
   const stillCurrent = () => runGeneration === authGeneration && runOwner === userId
     && runView === progressView && runGroup === activeGroupId;
-  let data, error;
+  let data, error, feedbackRows = [];
   if (runView === 'group' && runGroup) {
     ({ data, error } = await fetchAllGroupCompletions(runGroup));
     if (!stillCurrent()) return;
+    if (!error) {
+      const feedback = await fetchAllGroupFeedback(runGroup);
+      if (!stillCurrent()) return;
+      if (feedback.error) console.warn('group feedback', feedback.error.message);
+      else feedbackRows = feedback.data;
+    }
     const own = await fetchAllPersonalProgress(runOwner);
     if (!stillCurrent()) return;
     if (!own.error) {
@@ -521,7 +562,11 @@ async function pullProgress() {
     ({ data, error } = await fetchAllPersonalProgress(runOwner));
   }
   if (!stillCurrent()) return;
-  if (error) { console.warn('pull failed', error.message); return; }
+  if (error) {
+    console.warn('pull failed', error.message);
+    if (runView === 'group') { clearGroupFeedback(); renderAll(); }
+    return;
+  }
   if (runView === 'personal') data = [...canonicalPersonalProgress(data).values()];
 
   // Anything sitting in the outbox is newer than the server — don't stomp it.
@@ -541,8 +586,12 @@ async function pullProgress() {
   if (!stillCurrent()) return;
   progress = best;
   if (progressView === 'personal') {
+    clearGroupFeedback();
     personalProgress = new Map(best);
     personalCacheReady = true;
+  } else {
+    groupFeedback = indexGroupFeedback(feedbackRows);
+    groupFeedbackScope = { ownerId: runOwner, groupId: runGroup };
   }
   saveLocalProgress();
   renderAll();
@@ -616,7 +665,11 @@ function subscribeRealtime() {
   sb.channel('group-progress-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'group_progress' }, () => {
       if (!subscriptionCurrent()) return;
-      if (progressView === 'group') pullProgress();
+      if (progressView === 'group') {
+        clearGroupFeedback();
+        renderAll();
+        pullProgress();
+      }
     })
     .subscribe();
 
@@ -639,7 +692,11 @@ function subscribeRealtime() {
   sb.channel('member-sync')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members' }, async () => {
       if (!subscriptionCurrent()) return;
+      clearGroupFeedback();
+      renderAll();
       await loadGroups();
+      if (!subscriptionCurrent()) return;
+      if (progressView === 'group') await pullProgress();
       if (!subscriptionCurrent()) return;
       await pullGroupTrips();
       if (!subscriptionCurrent()) return;
@@ -1947,7 +2004,7 @@ async function loadGroups() {
   const previousGroupId = activeGroupId;
   const { data, error } = await sb
     .from('group_members')
-    .select('group_id, display_name, share_completions, groups(id, name, join_code, owner_id, invite_enabled)')
+    .select('group_id, display_name, share_completions, share_feedback, groups(id, name, join_code, owner_id, invite_enabled)')
     .eq('user_id', owner);
   if (owner !== userId || generation !== authGeneration) return;
   if (error) {
@@ -1956,6 +2013,7 @@ async function loadGroups() {
     groupSchemaReady = false;
     myGroups = [];
     activeGroupId = null;
+    clearGroupFeedback();
     clearGroupTripCache();
     members = new Map();
     localStorage.removeItem(LS.group);
@@ -1972,16 +2030,26 @@ async function loadGroups() {
   }
   groupSchemaReady = true;
   myGroups = (data || []).map(r => r.groups
-    ? { ...r.groups, share_completions: !!r.share_completions }
+    ? { ...r.groups, share_completions: !!r.share_completions,
+        share_feedback: !!r.share_feedback }
     : null).filter(Boolean);
   const saved = localStorage.getItem(LS.group);
   activeGroupId = myGroups.some(g => g.id === saved) ? saved
                 : (myGroups[0] ? myGroups[0].id : null);
-  if (activeGroupId !== previousGroupId) clearGroupTripCache();
+  if (activeGroupId !== previousGroupId) {
+    clearGroupTripCache();
+    clearGroupFeedback();
+    if (progressView === 'group') {
+      progress = new Map();
+      saveLocalProgress();
+    }
+  }
   if (activeGroupId) localStorage.setItem(LS.group, activeGroupId);
   else if (progressView === 'group') {
     progressView = 'personal';
     localStorage.setItem(LS.view, progressView);
+    progress = personalCacheReady ? new Map(personalProgress) : new Map();
+    saveLocalProgress();
   }
   await loadMembers();
 }
@@ -2061,7 +2129,26 @@ async function setCompletionSharing(groupId, enabled) {
   if (owner !== userId || generation !== authGeneration) return null;
   if (error) { console.warn('completion sharing', error.message); return false; }
   const group = myGroups.find(g => g.id === groupId);
-  if (group) group.share_completions = !!enabled;
+  if (group) {
+    group.share_completions = !!enabled;
+    if (!enabled) group.share_feedback = false;
+  }
+  clearGroupFeedback();
+  return true;
+}
+
+async function setFeedbackSharing(groupId, enabled) {
+  if (!sb || !userId || !groupId) return false;
+  const group = myGroups.find(g => g.id === groupId);
+  if (enabled && !group?.share_completions) return false;
+  const owner = userId, generation = authGeneration;
+  const { error } = await sb.rpc('set_group_feedback_sharing', {
+    p_group_id: groupId, p_enabled: !!enabled,
+  });
+  if (owner !== userId || generation !== authGeneration) return null;
+  if (error) { console.warn('feedback sharing', error.message); return false; }
+  if (group) group.share_feedback = !!enabled;
+  clearGroupFeedback();
   return true;
 }
 
@@ -2071,14 +2158,20 @@ async function setProgressView(view) {
   if (!online && next !== progressView) {
     if (next !== 'personal' || !personalCacheReady) return toast('Reconnect to change progress view');
     progressView = 'personal';
+    clearGroupFeedback();
     progress = new Map(personalProgress);
     localStorage.setItem(LS.view, progressView);
     saveLocalProgress();
     renderAll();
     return;
   }
+  clearGroupFeedback();
   progressView = next;
+  progress = next === 'personal'
+    ? (personalCacheReady ? new Map(personalProgress) : new Map()) : new Map();
   localStorage.setItem(LS.view, progressView);
+  saveLocalProgress();
+  renderAll();
   await pullProgress();
   if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
   renderAll();
@@ -2093,7 +2186,7 @@ async function createGroup(name) {
   const current = () => owner === userId && generation === authGeneration;
   if (!await requireName('You are about to share a list.')) return;
   if (!current()) return;
-  const sharePast = confirm('Share your past and future completion ticks with this group?\n\nNotes, ratings and shortlist stay private. Choose Cancel to join privately and share later. Your personal list stays yours either way.');
+  const sharePast = confirm('Share your past and future completion ticks with this group?\n\nRatings and written memories stay private unless you separately choose to share them. Photos and shortlist stay private. Choose Cancel to join privately and share later. Your personal list stays yours either way.');
   const result = await sb.rpc('create_group', { p_name: name, p_display_name: who });
   if (!current()) return;
   const data = rpcRow(result.data);
@@ -2130,7 +2223,7 @@ async function joinGroup(code) {
   if (!current()) return;
   const clean = code.trim().toUpperCase();
   if (!/^[A-Z0-9]{6,32}$/.test(clean)) return toast('That join code is not valid');
-  const sharePast = confirm('Share your past and future completion ticks with this group?\n\nNotes, ratings and shortlist stay private. Choose Cancel to join privately and share later.');
+  const sharePast = confirm('Share your past and future completion ticks with this group?\n\nRatings and written memories stay private unless you separately choose to share them. Photos and shortlist stay private. Choose Cancel to join privately and share later.');
   const result = await sb.rpc('join_group_by_code', {
     p_join_code: clean, p_display_name: who,
   });
@@ -2442,10 +2535,16 @@ function renderMe_groups() {
         <button class="btn-ghost${progressView === 'group' ? ' on' : ''}" data-groupact="view" data-view="group">Group progress</button>
       </div>
       <p class="fineprint">${active.share_completions
-        ? 'Your existing and future completion ticks are visible to this group. Notes, ratings and shortlist stay private.'
+        ? 'Your existing and future completion ticks and dates are visible to this group.'
         : 'Your personal completions are private from this group.'}</p>
       <button class="btn-ghost" data-groupact="sharing" data-enabled="${active.share_completions ? 'false' : 'true'}">
         ${active.share_completions ? 'Stop sharing my completion ticks' : 'Share my completion ticks'}
+      </button>
+      <p class="fineprint">${active.share_feedback && active.share_completions
+        ? 'Your past and future ratings and written memories for completed adventures are visible to this group. Photos and shortlist stay private.'
+        : 'Your ratings and written memories stay private. Photos and shortlist stay private.'}</p>
+      <button class="btn-ghost" data-groupact="feedback-sharing" data-enabled="${active.share_feedback ? 'false' : 'true'}" ${!active.share_completions ? 'disabled' : ''}>
+        ${active.share_feedback ? 'Stop sharing my ratings and memories' : 'Share my ratings and memories'}
       </button>
       ${active.invite_enabled ? `
         <p class="fineprint">Join code <code class="joincode">${esc(active.join_code)}</code> — read it
@@ -4284,6 +4383,24 @@ function renderAll() {
 // ══════════════════════════════════════════════════════════════════════
 //  Detail sheet
 // ══════════════════════════════════════════════════════════════════════
+function groupFeedbackHTML(id) {
+  if (progressView !== 'group' || !userId || !activeGroupId || !online
+      || groupFeedbackScope?.ownerId !== userId
+      || groupFeedbackScope?.groupId !== activeGroupId) return '';
+  const entries = [...(groupFeedback.get(id)?.values() || [])]
+    .filter(entry => entry.completed_by_id !== userId && (entry.rating || entry.memory))
+    .sort((a, b) => nameOf(a.completed_by_id).localeCompare(nameOf(b.completed_by_id)));
+  if (!entries.length) return '';
+  return `<section aria-label="Group ratings and memories">
+    <h3>From your group</h3>
+    ${entries.map(entry => `<div class="donenote">
+      <strong>${esc(nameOf(entry.completed_by_id))}</strong>
+      ${entry.rating ? `<span class="badge star" aria-label="${entry.rating} stars">${'★'.repeat(entry.rating)}</span>` : ''}
+      ${entry.memory ? `<p class="trip-readonly-note">${esc(entry.memory)}</p>` : ''}
+    </div>`).join('')}
+  </section>`;
+}
+
 function renderSheet(id) {
   const a = ADV.find(x => x.id === id);
   if (!a) return;
@@ -4305,6 +4422,7 @@ function renderSheet(id) {
   const r = row(id);
   const personal = progressView === 'group'
     ? (personalProgress.get(id) || { completed: false, shortlisted: false, rating: null, memory: null }) : r;
+  const sharedFeedback = groupFeedbackHTML(id);
   const ph = photosFor(id);
   const maps = mapsUrl(a);
   const nativePhotos = nativePhotoFiles();
@@ -4333,6 +4451,7 @@ function renderSheet(id) {
       <span class="badge">Listing paused</span>
       ${availabilityPanelHTML(a)}
       ${advisoryPanelHTML(a.country)}
+      ${sharedFeedback}
       ${hasHistory ? `
         ${personal.completed ? `<div class="donenote">Your past completion is preserved${personal.completed_at ? ' from ' + fmtCompletionDate(personal) : ''}.</div>
         ${completionDateEditor(personal)}
@@ -4403,6 +4522,7 @@ function renderSheet(id) {
     ${personal.completed ? `<div class="donenote">Your completion${personal.completed_at ? ': ' + fmtCompletionDate(personal) : ''}.</div>` : ''}
     ${progressView === 'group' && r.completed && r.completed_by_id !== userId
       ? `<div class="donenote">${personal.completed ? 'Also ticked' : 'Ticked'} off by ${esc(nameOf(r.completed_by_id, r.completed_by))}${r.completed_at ? ' on ' + fmtCompletionDate(r) : ''}.</div>` : ''}
+    ${sharedFeedback}
 
     <div class="sheet-actions">
       <button class="btn-primary ${personal.completed ? 'doneState' : ''}" data-act="toggle">
@@ -5006,9 +5126,14 @@ ${url}`);
     if (b.dataset.groupact === 'switch') {
       if (!myGroups.some(group => group.id === b.dataset.id)) return;
       activeGroupId = b.dataset.id;
+      clearGroupFeedback();
+      if (progressView === 'group') {
+        progress = new Map();
+        saveLocalProgress();
+      }
       localStorage.setItem(LS.group, activeGroupId);
       clearGroupTripCache();
-      renderTrips();
+      renderAll();
       await loadMembers();
       await setProgressView(progressView);
       await pullGroupTrips();
@@ -5023,6 +5148,20 @@ ${url}`);
       if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
       renderAll();
       toast(enabled ? 'Your progress is shared with this group' : 'Your progress is private again');
+    }
+    if (b.dataset.groupact === 'feedback-sharing') {
+      const owner = userId, generation = authGeneration, groupId = activeGroupId;
+      const group = myGroups.find(g => g.id === groupId);
+      const enabled = b.dataset.enabled === 'true';
+      if (enabled && !group?.share_completions) return toast('Share completion ticks first');
+      if (enabled && !confirm(`Share your past and future ratings and written memories for completed adventures with everyone in ${group.name}?\n\nPhotos, shortlist and purchases stay private. You can stop sharing these ratings and memories later.`)) return;
+      const changed = await setFeedbackSharing(groupId, enabled);
+      if (changed === null || owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
+      if (!changed) return toast('Could not change rating and memory sharing');
+      await pullProgress();
+      if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
+      renderAll();
+      toast(enabled ? 'Your ratings and memories are shared with this group' : 'Your ratings and memories are private again');
     }
     if (b.dataset.groupact === 'rotate-invite') await rotateGroupInvite(activeGroupId);
     if (b.dataset.groupact === 'revoke-invite') await revokeGroupInvite(activeGroupId);
@@ -5054,7 +5193,11 @@ ${url}`);
     syncNow();
     if (!realtimeOk) resubscribeRealtime();
   });
-  addEventListener('offline', () => { online = false; refreshSyncBar(); });
+  addEventListener('offline', () => {
+    online = false;
+    clearGroupFeedback();
+    renderAll();
+  });
   addEventListener('visibilitychange', () => {
     if (document.hidden) return;
     const billingOwner = userId, billingGeneration = authGeneration;
@@ -5723,6 +5866,7 @@ function hideAndClearPrivateOverlays() {
 
 function clearPrivateMemoryForAccountTransition() {
   progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
+  clearGroupFeedback();
   releaseLocalPhotoUrls();
   photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
   clearGroupTripCache();
@@ -5796,6 +5940,7 @@ async function handleSignedOut(message = 'Signed out. Sign in to continue.') {
       pendingPasswordRecovery = null;
       localStorage.removeItem(PENDING_GROUP_INVITE_KEY);
       progress = new Map(); personalProgress = new Map(); personalCacheReady = false;
+      clearGroupFeedback();
       releaseLocalPhotoUrls();
       photos = []; pendingPhotos = []; trips = []; myGroups = []; members = new Map();
       clearGroupTripCache();
