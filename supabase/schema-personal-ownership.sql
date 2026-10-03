@@ -33,6 +33,7 @@ $guard$;
 
 -- A projection is explicit consent to show one personal record to one group.
 -- Composite foreign keys prove that shared_by_id owns the source record.
+alter table public.progress add column if not exists completed_on date;
 create unique index if not exists progress_id_owner_key
   on public.progress (id, user_id);
 create unique index if not exists photos_id_owner_key
@@ -45,10 +46,12 @@ create table if not exists public.group_progress (
   progress_id   uuid        not null,
   shared_by_id  uuid        not null references auth.users(id) on delete cascade,
   shared_at     timestamptz not null default now(),
+  refreshed_at  timestamptz not null default now(),
   primary key (group_id, progress_id),
   foreign key (progress_id, shared_by_id)
     references public.progress(id, user_id) on delete cascade
 );
+alter table public.group_progress add column if not exists refreshed_at timestamptz not null default now();
 
 create table if not exists public.group_photos (
   group_id      uuid        not null references public.groups(id) on delete cascade,
@@ -740,12 +743,19 @@ security definer
 set search_path = pg_catalog, public
 as $$
 begin
+  if tg_op = 'UPDATE'
+     and old.completed is not distinct from new.completed
+     and old.completed_at is not distinct from new.completed_at
+     and old.completed_on is not distinct from new.completed_on then
+    return new;
+  end if;
   if new.completed then
     insert into public.group_progress (group_id, progress_id, shared_by_id)
     select gm.group_id, new.id, new.user_id
       from public.group_members gm
      where gm.user_id = new.user_id and gm.share_completions
-    on conflict (group_id, progress_id) do nothing;
+    on conflict (group_id, progress_id)
+      do update set refreshed_at = now();
   else
     delete from public.group_progress
      where progress_id = new.id and shared_by_id = new.user_id;
@@ -756,7 +766,7 @@ $$;
 
 drop trigger if exists progress_sync_completion_projections on public.progress;
 create trigger progress_sync_completion_projections
-after insert or update of completed on public.progress
+after insert or update of completed, completed_at, completed_on on public.progress
 for each row execute function public.sync_completion_projections();
 
 create or replace function public.set_group_completion_sharing(
@@ -796,6 +806,7 @@ returns table (
   adventure_id integer,
   completed boolean,
   completed_at timestamptz,
+  completed_on date,
   completed_by_id uuid,
   completed_by text,
   updated_at timestamptz
@@ -805,7 +816,7 @@ security definer
 stable
 set search_path = pg_catalog, public
 as $$
-  select p.adventure_id, p.completed, p.completed_at,
+  select p.adventure_id, p.completed, p.completed_at, p.completed_on,
          p.completed_by_id, p.completed_by, p.updated_at
     from public.group_progress gp
     join public.progress p on p.id = gp.progress_id

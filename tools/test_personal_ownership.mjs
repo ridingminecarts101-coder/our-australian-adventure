@@ -67,6 +67,8 @@ await db.exec(fixture);
 await db.query('insert into auth.users(id) values ($1),($2),($3)', [alice, bob, outsider]);
 const migration = await readFile(new URL('../supabase/schema-personal-ownership.sql', import.meta.url), 'utf8');
 await db.exec(migration);
+const completionDateMigration = await readFile(new URL('../supabase/schema-completion-dates.sql', import.meta.url), 'utf8');
+await db.exec(completionDateMigration);
 
 async function asUser(id, sql, params = []) {
   await db.exec(`set role authenticated; set "request.jwt.claim.sub" = '${id}'`);
@@ -159,6 +161,39 @@ equal('completion feed exposes the expected adventure', feed.rows[0].adventure_i
 equal('completion feed schema excludes memory', Object.hasOwn(feed.rows[0], 'memory'), false);
 equal('completion feed schema excludes rating', Object.hasOwn(feed.rows[0], 'rating'), false);
 equal('completion feed schema excludes shortlist', Object.hasOwn(feed.rows[0], 'shortlisted'), false);
+await db.query(`update public.group_progress set refreshed_at='2000-01-01T00:00:00Z'
+  where group_id=$1`, [groupId]);
+await asUser(bob, `update public.progress
+  set completed_at='1900-01-01T12:00:00Z', completed_on='1900-01-01'
+  where adventure_id=42`);
+const dateRefresh = (await db.query(`select refreshed_at from public.group_progress
+  where group_id=$1`, [groupId])).rows[0].refreshed_at;
+equal('date correction emits a group projection update', dateRefresh > new Date('2000-01-01'), true);
+await asUser(bob, `update public.progress set memory='Still private', completed_on=null,
+  completed_at='2026-10-03T06:00:00Z'
+  where adventure_id=42`);
+equal('older client note upsert cannot erase the backfilled date',
+  (await asUser(bob, 'select completed_on from public.progress where adventure_id=42')).rows[0]
+    .completed_on.toISOString().slice(0, 10), '1900-01-01');
+equal('older stale timestamp cannot erase the backfilled date',
+  (await asUser(bob, 'select completed_at from public.progress where adventure_id=42')).rows[0]
+    .completed_at.toISOString(), '1900-01-01T12:00:00.000Z');
+equal('private memory edit does not emit a group projection update',
+  (await db.query('select refreshed_at from public.group_progress where group_id=$1', [groupId])).rows[0]
+    .refreshed_at.getTime(), dateRefresh.getTime());
+const correctedFeed = (await asUser(alice,
+  'select * from public.group_completion_feed($1)', [groupId])).rows[0];
+equal('consented group sees a corrected calendar date',
+  correctedFeed.completed_on.toISOString().slice(0, 10), '1900-01-01');
+equal('correction does not expose private memory', Object.hasOwn(correctedFeed, 'memory'), false);
+equal('correction preserves the original owner', correctedFeed.completed_by_id, bob);
+equal('other member cannot change the owner date',
+  (await asUser(alice, `update public.progress set completed_on='2100-12-31'
+    where adventure_id=42 returning id`)).rows.length, 0);
+await rejected('server rejects a completion date before 1900', () =>
+  asUser(bob, `update public.progress set completed_on='1899-12-31' where adventure_id=42`));
+await rejected('server rejects a completion date after 2100', () =>
+  asUser(bob, `update public.progress set completed_on='2101-01-01' where adventure_id=42`));
 
 await asUser(bob, 'select public.set_group_completion_sharing($1,false)', [groupId]);
 equal('revocation removes the projection',
@@ -173,6 +208,8 @@ await rejected('stale device cannot insert a projection after revocation', () =>
 
 await asUser(bob, 'select public.set_group_completion_sharing($1,true)', [groupId]);
 await asUser(bob, 'update public.progress set completed=false where adventure_id=42');
+equal('unticking clears an edited calendar date even for an older client',
+  (await asUser(bob, 'select completed_on from public.progress where adventure_id=42')).rows[0].completed_on, null);
 equal('unticking removes future group visibility',
   (await asUser(alice, 'select count(*)::int as n from public.group_completion_feed($1)', [groupId])).rows[0].n, 0);
 await asUser(bob, 'update public.progress set completed=true where adventure_id=42');
@@ -212,6 +249,7 @@ await asUser(alice, `insert into public.progress
   (adventure_id,user_id,group_id,completed,completed_at)
   values (99,$1,$2,true,now())`, [alice, groupId]);
 await db.exec(migration);
+await db.exec(completionDateMigration);
 equal('migration replay does not recreate revoked/left projections',
   (await db.query('select count(*)::int as n from public.group_progress')).rows[0].n, 0);
 

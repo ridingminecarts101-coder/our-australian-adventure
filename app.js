@@ -139,6 +139,43 @@ function fmtDate(iso) {
   const d = new Date(iso);
   return isNaN(d) ? '' : d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
+const COMPLETION_MIN_DAY = '1900-01-01';
+const COMPLETION_MAX_DAY = '2100-12-31';
+function validCompletionDay(day) {
+  if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)
+      || day < COMPLETION_MIN_DAY || day > COMPLETION_MAX_DAY) return false;
+  const [year, month, date] = day.split('-').map(Number);
+  const actual = new Date(Date.UTC(year, month - 1, date));
+  return actual.getUTCFullYear() === year && actual.getUTCMonth() === month - 1
+    && actual.getUTCDate() === date;
+}
+function completionDay(r) {
+  if (validCompletionDay(r?.completed_on)) return r.completed_on;
+  const d = new Date(r?.completed_at || '');
+  if (isNaN(d)) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function fmtCompletionDate(r) {
+  if (validCompletionDay(r?.completed_on)) {
+    const [year, month, date] = r.completed_on.split('-').map(Number);
+    return `${date} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month - 1]} ${year}`;
+  }
+  return fmtDate(r?.completed_at);
+}
+function completionDateEditor(r) {
+  if (!r.completed) return '';
+  const day = completionDay(r);
+  return `<div class="completion-editor">
+    <label for="completedOnInput">Date completed</label>
+    <div class="completion-editor-row">
+      <input id="completedOnInput" type="date" min="${COMPLETION_MIN_DAY}" max="${COMPLETION_MAX_DAY}"
+        value="${esc(day)}" aria-label="Your completion date">
+      <button class="btn-ghost" data-act="saveCompletedDate">Save date</button>
+    </div>
+    <p class="fineprint">Backfill a visit from 1900 to 2100. Your date follows your account.</p>
+  </div>`;
+}
 function row(id) {
   return progress.get(id) || { adventure_id: id, completed: false, shortlisted: false, rating: null, memory: null };
 }
@@ -369,6 +406,7 @@ async function flushOutbox() {
         adventure_id: item.adventure_id,
         completed:    !!item.completed,
         completed_at: item.completed ? (item.completed_at || new Date().toISOString()) : null,
+        completed_on: item.completed && validCompletionDay(item.completed_on) ? item.completed_on : null,
         completed_by: item.completed ? who : null,
         completed_by_id: item.completed ? runOwner : null,
         shortlisted:  !!item.shortlisted,
@@ -3186,17 +3224,21 @@ function renderPassport() {
     t.total++;
     if (!personalDone(a)) continue;
     t.done++;
-    const when = personalRow(a.id).completed_at;
+    const own = personalRow(a.id);
+    const when = own.completed_at;
     if (!when) continue;
     const d = new Date(when);
-    if (!isNaN(d) && (!t.first || d < t.first)) t.first = d;
+    if (!isNaN(d) && (!t.first || d < t.first.at)) {
+      t.first = { at: d, completed_on: validCompletionDay(own.completed_on) ? own.completed_on : null };
+    }
   }
 
   const rows = [...tally.entries()].map(([code, t]) => ({
     code,
     total: t.total,
     done: t.done,
-    stampedAt: t.first,
+    stampedAt: t.first?.at || null,
+    stampedOn: t.first?.completed_on || null,
     // Completed the country outright - a real passport would not mark this,
     // but it is the thing people actually want to see.
     complete: t.total > 0 && t.done === t.total,
@@ -3210,8 +3252,14 @@ function renderPassport() {
   // Fixed three-letter months rather than the locale's, which gives "Sept"
   // and "July" and makes the stamps different widths.
   const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const stampDate = d =>
-    `${String(d.getDate()).padStart(2, '0')} ${MON[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
+  const stampDate = r => {
+    if (r.stampedOn) {
+      const [year, month, date] = r.stampedOn.split('-').map(Number);
+      return `${String(date).padStart(2, '0')} ${MON[month - 1]} ${year}`;
+    }
+    const d = r.stampedAt;
+    return `${String(d.getDate()).padStart(2, '0')} ${MON[d.getMonth()]} ${d.getFullYear()}`;
+  };
   const stampTime = d => d.toLocaleTimeString('en-AU',
     { hour: '2-digit', minute: '2-digit', hour12: false });
 
@@ -3226,8 +3274,8 @@ function renderPassport() {
       <span class="stamp-name">${esc(countryName(r.code))}</span>
       <span class="stamp-count">${r.done} / ${r.total}</span>
       ${r.stampedAt
-        ? `<span class="stamp-date">${stampDate(r.stampedAt)}</span>
-           <span class="stamp-time">${stampTime(r.stampedAt)}</span>`
+        ? `<span class="stamp-date">${stampDate(r)}</span>
+           ${r.stampedOn ? '' : `<span class="stamp-time">${stampTime(r.stampedAt)}</span>`}`
         : '<span class="stamp-blank">Not stamped</span>'}
       ${r.complete ? '<span class="stamp-seal">✓</span>' : ''}
     </button>`;
@@ -3780,16 +3828,18 @@ function thumbHTML(p) {
 
 function renderMemories() {
   const el = $('#memList');
+  const ownRow = id => progressView === 'group'
+    ? (personalProgress.get(id) || { completed: false }) : row(id);
 
   if (memoryGrouping === 'adventure') {
     // Anything ticked off, plus anything that has photos on it.
     const withPhotos = new Set(photos.concat(pendingPhotos).map(p => p.adventure_id));
     const list = ADV
-      .filter(a => isDone(a.id) || withPhotos.has(a.id))
-      .sort((x, y) => new Date(row(y.id).completed_at || 0) - new Date(row(x.id).completed_at || 0));
+      .filter(a => ownRow(a.id).completed || withPhotos.has(a.id))
+      .sort((x, y) => new Date(ownRow(y.id).completed_at || 0) - new Date(ownRow(x.id).completed_at || 0));
 
     el.innerHTML = list.length ? list.map(a => {
-      const r = row(a.id);
+      const r = ownRow(a.id);
       const ph = photosFor(a.id);
       return `<div class="memory">
         <button type="button" class="memory-open" data-open="${a.id}" aria-label="Open ${esc(safeTitle(a))}">
@@ -3797,7 +3847,7 @@ function renderMemories() {
           <span class="card-meta">${esc(a.place)} · ${esc(regionName(a))}</span>
           <span class="badges">
             ${r.completed_by || r.completed_by_id ? `<span class="badge">Ticked by ${esc(nameOf(r.completed_by_id, r.completed_by))}</span>` : ''}
-            ${r.completed_at ? `<span class="badge">${fmtDate(r.completed_at)}</span>` : ''}
+            ${r.completed_at ? `<span class="badge">${fmtCompletionDate(r)}</span>` : ''}
             ${r.rating ? `<span class="badge star">${'★'.repeat(r.rating)}</span>` : ''}
             ${ph.length ? `<span class="badge">📷 ${ph.length}</span>` : ''}
           </span>
@@ -4246,6 +4296,8 @@ function renderSheet(id) {
     if (selection.every(Number.isInteger)) box.setSelectionRange(...selection);
   };
   const r = row(id);
+  const personal = progressView === 'group'
+    ? (personalProgress.get(id) || { completed: false, shortlisted: false, rating: null, memory: null }) : r;
   const ph = photosFor(id);
   const maps = mapsUrl(a);
   const photoHint = nativePhotoFiles()
@@ -4262,8 +4314,6 @@ function renderSheet(id) {
   // memory or photo never disappears. The current status appears before any
   // purchase gate, and stale operational/booking actions are not offered.
   if (isUnavailable(a)) {
-    const personal = progressView === 'group'
-      ? (personalProgress.get(id) || { completed: false }) : r;
     const hasHistory = !!(personal.completed || personal.rating || personal.memory || memoryDraft || ph.length);
     $('#sheetBody').innerHTML = `
       <h2>${esc(a.title)}</h2>
@@ -4272,7 +4322,8 @@ function renderSheet(id) {
       ${availabilityPanelHTML(a)}
       ${advisoryPanelHTML(a.country)}
       ${hasHistory ? `
-        ${personal.completed ? `<div class="donenote">Your past completion is preserved${personal.completed_at ? ' from ' + fmtDate(personal.completed_at) : ''}.</div>
+        ${personal.completed ? `<div class="donenote">Your past completion is preserved${personal.completed_at ? ' from ' + fmtCompletionDate(personal) : ''}.</div>
+        ${completionDateEditor(personal)}
         <div class="sheet-actions"><button class="btn-ghost" data-act="toggle">Remove mistaken completion tick</button></div>` : ''}
         <h3>Your rating</h3>
         <div class="stars">
@@ -4337,14 +4388,17 @@ function renderSheet(id) {
       <div class="fact"><b>Dogs</b><span>${esc(DOG_LABEL[a.dog_friendly])}</span></div>
     </div>
 
-    ${r.completed && (r.completed_by || r.completed_by_id) ? `<div class="donenote">Ticked off by ${esc(nameOf(r.completed_by_id, r.completed_by))}${r.completed_at ? ' on ' + fmtDate(r.completed_at) : ''}.</div>` : ''}
+    ${personal.completed ? `<div class="donenote">Your completion${personal.completed_at ? ': ' + fmtCompletionDate(personal) : ''}.</div>` : ''}
+    ${progressView === 'group' && r.completed && r.completed_by_id !== userId
+      ? `<div class="donenote">${personal.completed ? 'Also ticked' : 'Ticked'} off by ${esc(nameOf(r.completed_by_id, r.completed_by))}${r.completed_at ? ' on ' + fmtCompletionDate(r) : ''}.</div>` : ''}
 
     <div class="sheet-actions">
-      <button class="btn-primary ${r.completed ? 'doneState' : ''}" data-act="toggle">
-        ${r.completed ? '✓ Completed — tap to undo' : 'Mark as completed'}
+      <button class="btn-primary ${personal.completed ? 'doneState' : ''}" data-act="toggle">
+        ${personal.completed ? '✓ Completed — tap to undo' : 'Mark as completed'}
       </button>
+      ${completionDateEditor(personal)}
       <div class="rowbtns">
-        <button class="btn-ghost" data-act="short">${r.shortlisted ? '⭐ On shortlist' : '☆ Add to shortlist'}</button>
+        <button class="btn-ghost" data-act="short">${personal.shortlisted ? '⭐ On shortlist' : '☆ Add to shortlist'}</button>
         <a class="btn-ghost" href="${maps}" target="_blank" rel="noopener">📍 ${IS_IOS ? 'Apple Maps' : 'Open in Maps'}</a>
       </div>
       ${book ? `<a class="btn-ghost booking" href="${esc(book.url)}" target="_blank" rel="noopener noreferrer nofollow sponsored">
@@ -4362,11 +4416,11 @@ function renderSheet(id) {
 
     <h3>Your rating</h3>
     <div class="stars">
-      ${[1, 2, 3, 4, 5].map(n => `<button data-rate="${n}" aria-label="${n} star${n > 1 ? 's' : ''}">${n <= (r.rating || 0) ? '★' : '☆'}</button>`).join('')}
+      ${[1, 2, 3, 4, 5].map(n => `<button data-rate="${n}" aria-label="${n} star${n > 1 ? 's' : ''}">${n <= (personal.rating || 0) ? '★' : '☆'}</button>`).join('')}
     </div>
 
     <h3>Your memory</h3>
-    <textarea id="memoryBox" data-owner-id="${esc(String(userId || ''))}" data-adventure-id="${id}" placeholder="What actually happened…">${esc(memoryDraft ?? r.memory ?? '')}</textarea>
+    <textarea id="memoryBox" data-owner-id="${esc(String(userId || ''))}" data-adventure-id="${id}" placeholder="What actually happened…">${esc(memoryDraft ?? personal.memory ?? '')}</textarea>
     <div class="sheet-actions"><button class="btn-primary" data-act="saveMemory">Save memory</button></div>
 
     <h3>Photos${ph.length ? ` <span class="count">${ph.length}</span>` : ''}</h3>
@@ -4413,12 +4467,29 @@ function toggleDone(id) {
   if (applyPatch(id, {
     completed: nowDone,
     completed_at: nowDone ? new Date().toISOString() : null,
+    completed_on: null,
     completed_by: nowDone ? who : null,
     completed_by_id: nowDone ? userId : null,
   }) === false) return;
   if (nowDone) {
     toast(`✓ ${adventure ? safeTitle(adventure) : 'Done'}`);
   }
+}
+function saveCompletedDate(id) {
+  const input = $('#completedOnInput');
+  const day = input?.value || '';
+  if (!validCompletionDay(day)) {
+    toast('Choose a real date from 1 Jan 1900 to 31 Dec 2100');
+    input?.focus();
+    return;
+  }
+  const own = progressView === 'group' ? personalProgress.get(id) : row(id);
+  if (!own?.completed) return toast('Mark this adventure completed first');
+  if (own.completed_on === day) return toast('Completion date is already saved');
+  // completed_on is the calendar date across devices. Noon UTC in completed_at
+  // preserves legacy sorting without pretending a backfilled time is known.
+  if (applyPatch(id, { completed_at: `${day}T12:00:00.000Z`, completed_on: day }) === false) return;
+  toast('Completion date saved');
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -4836,7 +4907,9 @@ function wireUI() {
     const act = e.target.closest('[data-act]');
     if (!act) return;
     if (act.dataset.act === 'toggle') toggleDone(openId);
-    if (act.dataset.act === 'short')  applyPatch(openId, { shortlisted: !row(openId).shortlisted });
+    if (act.dataset.act === 'saveCompletedDate') saveCompletedDate(openId);
+    if (act.dataset.act === 'short')  applyPatch(openId, { shortlisted: !(progressView === 'group'
+      ? personalProgress.get(openId)?.shortlisted : row(openId).shortlisted) });
     if (act.dataset.act === 'saveMemory') {
       const box = $('#memoryBox');
       const memory = box.value.trim() || null;

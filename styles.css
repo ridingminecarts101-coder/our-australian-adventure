@@ -330,6 +330,21 @@ input, select, textarea { font: inherit; color: inherit; }
   background: var(--card); border-left: 3px solid var(--eucalypt);
   border-radius: 8px; padding: 9px 12px; font-size: 13.5px; color: var(--ink-2); margin: 12px 0;
 }
+.completion-editor {
+  display: grid; gap: 8px; padding: 12px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+}
+.completion-editor label { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.completion-editor-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.completion-editor input {
+  min-width: 0; padding: 9px; font: inherit; color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: 10px; background: var(--sand);
+}
+.completion-editor .btn-ghost { padding: 9px 12px; }
+.completion-editor .fineprint { margin: 0; }
+@media (max-width: 350px) {
+  .completion-editor-row { grid-template-columns: 1fr; }
+}
 
 /* ── Memories ────────────────────────────────────────────────────── */
 .memory {

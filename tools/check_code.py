@@ -63,7 +63,7 @@ def main():
     wanted = set(re.findall(r"""[$(]\s*['"]#([A-Za-z][\w-]*)['"]""", js))
     wanted |= set(re.findall(r"""getElementById\(\s*['"]([\w-]+)['"]""", js))
     # Ids the app creates at runtime rather than declaring in index.html
-    RUNTIME_IDS = {'memoryBox', 'tripStart', 'tripEnd', 'tripNotes', 'sql',
+    RUNTIME_IDS = {'memoryBox', 'completedOnInput', 'tripStart', 'tripEnd', 'tripNotes', 'sql',
                'recTitle', 'recPlace', 'recAdmin', 'recCountry',
                'recCategory', 'recDesc', 'recSource', 'recReviewConsent'}
     missing = sorted(wanted - html_ids - RUNTIME_IDS)

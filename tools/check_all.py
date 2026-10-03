@@ -46,6 +46,7 @@ CHECKS = [
     ('photo transfer', 'test_photo_transfer.js', 'non-overwriting import, rollback and account-switch boundaries'),
     ('photo import adapter', 'test_photo_import_adapter.js', 'actual import persistence, decoder and orphan-file recovery'),
     ('sync races',     'test_sync_races.js', 'deferred responses cannot cross edits or accounts'),
+    ('completion dates', 'test_completion_dates.js', '1900-2100 date edits, group ownership and offline sync'),
     ('group and trips', 'test_group_trip_boundaries.js', 'consent, offline deletion and personal Passport boundaries'),
     ('group invites', 'test_group_invite.mjs', 'branded invite links and consent-preserving cold/warm sign-in routing'),
     ('group administration client', 'test_group_administration.js', 'owner controls, stale responses and lifecycle locks'),
