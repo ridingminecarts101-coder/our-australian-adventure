@@ -44,6 +44,7 @@ CHECKS = [
     ('native photos',  'test_photo_files.js', 'private native filesystem paths and image integrity'),
     ('photo backup',   'test_photo_backup.js', 'encrypted account-bound numbered archives and tamper/size validation'),
     ('photo transfer', 'test_photo_transfer.js', 'non-overwriting import, rollback and account-switch boundaries'),
+    ('photo gallery',  'test_photo_gallery.js', 'explicit iOS Photos copies, permission, partial result and account boundaries'),
     ('photo import adapter', 'test_photo_import_adapter.js', 'actual import persistence, decoder and orphan-file recovery'),
     ('sync races',     'test_sync_races.js', 'deferred responses cannot cross edits or accounts'),
     ('completion dates', 'test_completion_dates.js', '1900-2100 date edits, group ownership and offline sync'),

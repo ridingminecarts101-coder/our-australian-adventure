@@ -230,6 +230,8 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")" = app.wayfinder.mobile
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PATH/Info.plist")" = "$RELEASE_BUILD_NUMBER"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PATH/Info.plist")" = "$RELEASE_MARKETING_VERSION"
+          PHOTO_ADD_PURPOSE="$(/usr/libexec/PlistBuddy -c 'Print :NSPhotoLibraryAddUsageDescription' "$APP_PATH/Info.plist")"
+          test -n "$PHOTO_ADD_PURPOSE"
           grep -Fq "ios: '$REVENUECAT_IOS_PUBLIC_SDK_KEY'" "$APP_PATH/public/config.js"
           test -s notices.html
           test -s "$APP_PATH/public/notices.html"

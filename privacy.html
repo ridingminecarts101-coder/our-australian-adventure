@@ -105,12 +105,13 @@
 
   <h2>Photos</h2>
   <p>Photos are read only when you choose them. In the current device-local build,
-     a new photo is resized and kept only on the device where you add it. In the native app it is stored in Wayfinder's
-     private app files, not copied to the phone's photo gallery. In the PWA it is
+     a new photo is resized and its in-app copy stays on the device where you add it. In the native app it is stored in Wayfinder's
+     private app files; attaching it does not automatically copy it to the phone's Photos library. In the PWA it is
      stored in that browser's IndexedDB storage. Wayfinder does not upload the new
      image or its related photo record to the RL Applications backend or GitHub.
-     New photos do not sync, so signing in on another device will not show them.
+     Wayfinder's in-app photo copies do not sync with your account, so signing in on another device will not show them.
      The production backend now blocks client photo-record and cloud-file uploads.</p>
+  <p>On supported iPhone and iPad versions, <strong>Me → Settings → Save photos to camera roll</strong> lets you copy all photos stored locally for the signed-in Wayfinder account to the device's Photos library. Wayfinder shows the number of photos for confirmation and asks for permission to add to Photos when needed. Its in-app copies remain. This is a choice you make; attaching a photo does not save it to Photos automatically. The web app and Android build cannot use this control to save to Photos. Copies in Photos are outside Wayfinder's account filter and are managed by Apple and your device settings. If iCloud Photos is enabled, they may sync to iCloud and your other devices. RL Applications does not receive the exported images. Deleting your Wayfinder account or app does not delete copies saved to Photos.</p>
   <p>Signing out keeps new device-local photos for the same account and hides them
      from other signed-in accounts. Uninstalling the native app, clearing its app
      data, or clearing the PWA's browser/site storage can permanently remove them.
@@ -228,8 +229,9 @@
      erase local photos on another device or browser profile. Clear that app's data,
      clear the PWA's browser/site storage, or uninstall the native app to remove any
      remaining local copies. Exported <code>.wfpbackup</code> files remain wherever
-     you saved or transferred them; delete those files separately. Signing out alone
-     preserves device-local photos.</p>
+     you saved or transferred them; delete those files separately. Photos you chose to
+     save to the device's Photos library also remain there and must be managed in Photos.
+     Signing out alone preserves device-local photos.</p>
 
   <h2>Who runs it</h2>
   <p>Wayfinder is developed and operated by Riley Lawler, a sole trader

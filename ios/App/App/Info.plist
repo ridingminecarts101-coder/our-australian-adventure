@@ -51,6 +51,8 @@
 	<string>To take a photo of an adventure you have just finished. You can always pick one from your library instead.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>To attach your own photos to the places you have been.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>When you choose Save photos to camera roll, Wayfinder copies your photos into this device's Photos library. They may sync with iCloud Photos if you use it.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>When you choose Near me, your coordinates and IP address go to BigDataCloud to find your region and improve its location service using anonymous pairings. Your location is not saved in your Wayfinder account. You can browse countries without location access.</string>
 	<!-- Required by Capacitor Geolocation's native dependency. Wayfinder only

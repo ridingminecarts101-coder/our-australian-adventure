@@ -139,11 +139,11 @@
 
   <details>
     <summary>Where is an attached photo stored?</summary>
-    <p>In the current device-local build, new photos stay only inside Wayfinder on the device where you add them. The
-       native app uses private app files and does not copy the Wayfinder version to
-       your gallery; the PWA uses that browser's IndexedDB storage. Wayfinder does
+    <p>When you add photos, Wayfinder keeps resized in-app copies on the device where you add them. The
+       native app uses private app files and does not automatically copy the Wayfinder version to
+       your Photos library; the PWA uses that browser's IndexedDB storage. Wayfinder does
        not upload the new image or its related photo record to the RL Applications
-       backend or GitHub, and it does not sync to another device. The production
+       backend or GitHub, and its in-app copies do not sync to another Wayfinder installation. The production
        backend now blocks client photo-record and cloud-file uploads. Signing out preserves them for the same account, while
        uninstalling, clearing app data, or clearing browser/site storage can remove
        them permanently. Me → Settings offers manual export and import of
@@ -157,6 +157,11 @@
        store is empty. RL Applications retains a separate Desktop backup of 15
        historical originals and migration snapshots pending a final retention
        decision; those copies are not available through Wayfinder.</p>
+  </details>
+
+  <details>
+    <summary>How do I save my Wayfinder photos to my iPhone's Photos app?</summary>
+    <p>In a supported iPhone or iPad version, open <strong>Me → Settings → Save photos to camera roll</strong>. Wayfinder shows how many photos are stored locally for your signed-in account; confirm to copy all of them to the device's Photos library and allow add-only Photos access if asked. The Wayfinder copies stay in the app. This is separate from the encrypted backup files and does not move photos to another Wayfinder sign-in. You can use Photos to view, share or remove the new copies. They remain visible in Photos if you switch Wayfinder accounts; saving again creates another set of copies. Your iCloud Photos settings may sync them to iCloud and other devices. RL Applications does not receive them, and removing your Wayfinder account or app will not remove the Photos copies. The web app and Android build cannot use this control to save to Photos.</p>
   </details>
 
   <details>
@@ -284,7 +289,9 @@
      another phone or browser profile. Clear its app data or browser/site storage, or
      uninstall the native app, to remove those copies. Exported
      <code>.wfpbackup</code> files remain wherever you saved or transferred them and
-     must be deleted separately. Signing out alone preserves device-local photos.</p>
+     must be deleted separately. Copies you chose to save to the device's Photos library
+     remain there too; manage those copies in Photos. Signing out alone preserves
+     device-local photos.</p>
 
   <details>
     <summary>Why does a country say “do not travel”?</summary>

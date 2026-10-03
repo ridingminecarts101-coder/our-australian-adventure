@@ -144,17 +144,27 @@ android_broad_photo = any(p in manifest for p in (
 ))
 ios_photo_copy = bool(plist.get('NSPhotoLibraryUsageDescription'))
 ios_photo_add_copy = bool(plist.get('NSPhotoLibraryAddUsageDescription'))
+ios_gallery_flow = all(token in read(name) for name, token in (
+    ('ios/App/App/WayfinderPhotoBackupPlugin.swift', 'PHAssetCreationRequest.forAsset()'),
+    ('photo-files.js', 'saveToGallery'),
+    ('photo-transfer.js', 'savePhotosToCameraRoll'),
+    ('index.html', 'id="savePhotosBtn"'),
+))
 print('  %-26s %-22s %-22s %s' % (
     'photo picker',
     'BROAD PERMISSION' if android_broad_photo else 'system picker',
     'declared' if ios_photo_copy else 'MISSING COPY',
-    'ok' if not android_broad_photo and ios_photo_copy and not ios_photo_add_copy else 'CHECK'))
+    'ok' if not android_broad_photo and ios_photo_copy else 'CHECK'))
+print('  %-26s %-22s %-22s %s' % (
+    'save to photo library', 'not available',
+    'add-only' if ios_photo_add_copy else 'not declared',
+    'ok' if ios_photo_add_copy == ios_gallery_flow else 'CHECK'))
 if android_broad_photo:
     problems.append('Android photo picker declares broad media/storage access')
 if not ios_photo_copy:
     problems.append('iOS photo chooser has no usage description')
-if ios_photo_add_copy:
-    problems.append('iOS declares photo-library write access but the app has no save-to-library flow')
+if ios_photo_add_copy != ios_gallery_flow:
+    problems.append('iOS Photos add-only purpose and save-to-library flow must appear together')
 
 # Notifications come from the plugin's own manifest on Android and need no
 # plist string on iOS, so there is nothing to compare - but the JS has to be

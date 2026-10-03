@@ -829,7 +829,8 @@ function wirePullToRefresh() {
 //    1. read the real "date taken" out of the file's EXIF before we touch it
 //    2. resize to something sane for the phone's app-private storage
 //    3. persist the blob and metadata in IndexedDB under the signed-in account
-//  New photos never leave this device. Existing cloud photos remain readable.
+//  New photos stay device-local unless the user explicitly exports copies.
+//  Existing cloud photos remain readable.
 
 const BUCKET = 'memories';
 const MAX_EDGE = 1600;
@@ -1104,6 +1105,12 @@ function setupPhotoTransfer() {
   transfer.mount({
     session: () => ({ owner: userId, generation: authGeneration, deleting: accountDeletionInProgress || passwordRecoveryMode }),
     list: listTransferPhotos,
+    saveToGallery: (owner, record) => {
+      if (record.owner_id !== owner || !record.native_path) {
+        throw new Error('A local photo is still being saved. Wait a moment and try again.');
+      }
+      return nativePhotoFiles().saveToGallery(owner, record.native_path, record.taken_at);
+    },
     read: async (record, owner) => {
       if (record.owner_id !== owner) throw new Error('Photo belongs to a different account.');
       if (record.blob) return record.blob;
@@ -4302,8 +4309,8 @@ function renderSheet(id) {
   const maps = mapsUrl(a);
   const photoHint = nativePhotoFiles()
     ? (ph.length
-      ? 'Tap a photo to see it full size. New photos stay inside Wayfinder on this phone.'
-      : 'Photos are resized and saved inside Wayfinder on this phone. They are not copied to your Photos gallery or synced to other devices.')
+      ? 'Tap a photo to see it full size. New photos stay inside Wayfinder on this phone unless you choose Save photos to camera roll in Me.'
+      : 'Photos are resized and saved inside Wayfinder on this phone. To copy them to Photos, choose Save photos to camera roll in Me.')
     : (ph.length
       ? 'Tap a photo to see it full size. New photos use this browser’s site storage on this device; browser retention is best effort.'
       : 'Photos are resized and saved in this browser’s site storage on this device. Browser retention is best effort, and clearing site data removes them. They are not synced to other devices.');
