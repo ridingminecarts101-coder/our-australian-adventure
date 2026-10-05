@@ -329,6 +329,10 @@ const retiring = await row(eve, 'select * from public.create_group_with_sharing(
   ['Account deletion shell', 'Eve', false]);
 await asUser(eve, `insert into public.progress(adventure_id,user_id,group_id,completed,memory)
   values (54,$1,$2,true,'Removed with the account')`, [eve, retiring.group_id]);
+await db.query(`insert into public.photos (adventure_id,user_id,group_id,storage_path)
+  values (54,$1,$2,'old/account/photo')`, [eve, retiring.group_id]);
+await db.query(`insert into public.trips (user_id,group_id,name)
+  values ($1,$2,'Old account trip')`, [eve, retiring.group_id]);
 await asUser(eve, 'select public.leave_group($1)', [retiring.group_id]);
 assert.equal((await db.query('select count(*)::int n from public.groups where id=$1',
   [retiring.group_id])).rows[0].n, 1);
@@ -337,6 +341,10 @@ assert.equal((await db.query('select count(*)::int n from auth.users where id=$1
 assert.deepEqual((await db.query(`select app_user_id,state from public.revenuecat_deletion_jobs
   where app_user_id=$1`, [eve])).rows, [{app_user_id: eve, state: 'pending'}]);
 assert.equal((await db.query('select count(*)::int n from public.progress where user_id=$1',
+  [eve])).rows[0].n, 0);
+assert.equal((await db.query('select count(*)::int n from public.photos where user_id=$1',
+  [eve])).rows[0].n, 0);
+assert.equal((await db.query('select count(*)::int n from public.trips where user_id=$1',
   [eve])).rows[0].n, 0);
 assert.equal((await db.query('select count(*)::int n from public.groups where id=$1',
   [retiring.group_id])).rows[0].n, 0);
@@ -352,12 +360,15 @@ assert.equal((await flags(old.group_id, bob)).share_feedback, true);
 assert.deepEqual((await db.query('select id,join_code from public.groups where id=any($1::uuid[])',
   [shellIds])).rows, shellCodes);
 for (const shellId of shellIds) {
-  const shell = (await db.query('select owner_id,invite_enabled from public.groups where id=$1',
+  const shell = (await db.query(`select owner_id,invite_enabled,
+    retired_at is not null as retired from public.groups where id=$1`,
     [shellId])).rows[0];
-  assert.deepEqual(shell, { owner_id: null, invite_enabled: false });
+  assert.deepEqual(shell, { owner_id: null, invite_enabled: false, retired: true });
   assert.equal((await db.query('select count(*)::int n from public.group_members where group_id=$1',
     [shellId])).rows[0].n, 0);
   assert.equal((await db.query('select count(*)::int n from public.group_progress where group_id=$1',
+    [shellId])).rows[0].n, 0);
+  assert.equal((await db.query('select count(*)::int n from public.group_legacy_invites where group_id=$1',
     [shellId])).rows[0].n, 0);
 }
 for (const signature of [
