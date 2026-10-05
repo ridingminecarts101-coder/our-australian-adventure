@@ -62,6 +62,7 @@ CHECKS = [
     ('postgres RLS',   'test_personal_ownership.mjs', 'ownership, outsiders, consent, leave and deletion in PGlite'),
     ('group feedback RLS', 'test_group_feedback.mjs', 'separate rating and memory consent, revocation and group boundaries'),
     ('group administration RLS', 'test_group_administration.mjs', 'owner transfer, invite rotation and group disposal in PGlite'),
+    ('group join choice RLS', 'test_group_join_choice.mjs', 'one group-entry sharing choice, six-character invite codes, historical privacy and leave boundaries'),
     ('photo boundary', 'test_device_local_photo_policy.mjs', 'old clients cannot upload while legacy read and deletion remain'),
     ('community RLS',  'test_community_security.mjs', 'post authorship, votes, reports and moderation in PGlite'),
     ('community premoderation RLS', 'test_community_premoderation.mjs', 'operator approval, author requeue, report holds and replay in PGlite'),
