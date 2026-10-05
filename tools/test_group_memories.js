@@ -85,8 +85,10 @@ assert.match(card, /aria-label="5 stars"/);
 assert.match(card, /No memory written yet/, 'a rating without any written note retains the empty text');
 assert.match(card, /Earlier group walk/);
 assert.match(card, /older group tick without a confirmed owner/);
-assert.match(card, /switch to Me and open this adventure to check for a sharing confirmation/,
-  'the ambiguous historical tick explains the owner review path');
+assert.match(card, /data-review-memory="20">Check my entry<\/button>/,
+  'an unnamed group tick has a direct route to the owner review');
+assert.doesNotMatch(card, /data-review-memory="17"/,
+  'verified member ticks do not offer the older-entry review');
 assert.doesNotMatch(card, /Earlier group walk[\s\S]*Charlie.*completed/,
   'a historical group row cannot be credited to a different member');
 h.run(`members.set('bob','<Bob & team>'); renderMemories()`);
@@ -324,7 +326,58 @@ async function testPersonalConfirmation() {
   assert.equal(switchedDuringRpc.run('toastMessages.length'), 0);
 }
 
-testPersonalConfirmation().then(() => {
+async function testDirectOlderEntryReview() {
+  const review = harness();
+  review.run(`personalProgress.set(20,{id:'older-alice-20',adventure_id:20,
+    user_id:'alice',completed:true,memory:'My older note'});
+    renderAll=()=>{}; steps=[]; messages=[]; confirmed=false;
+    pullProgress=async()=>{
+      steps.push('personal progress loaded');
+      unconfirmedPersonalScope=userId;
+      unconfirmedPersonalProgress=new Set(['older-alice-20']);
+    };
+    openSheet=id=>steps.push('opened '+id);
+    confirmPersonalProgress=()=>{confirmed=true};
+    toast=message=>messages.push(message);`);
+  await review.run('reviewOlderGroupMemory(20)');
+  assert.equal(review.run('progressView'), 'personal');
+  assert.equal(review.run('JSON.stringify(steps)'),
+    '["personal progress loaded","opened 20"]',
+    'the same adventure opens after the personal confirmation list loads');
+  assert.match(review.run('personalConfirmationHTML(personalProgress.get(20))'),
+    /data-act="confirmPersonal"/,
+    'the owner sees the existing explicit confirmation control');
+  assert.equal(review.run('confirmed'), false,
+    'opening the personal adventure never confirms or attributes it automatically');
+
+  const unrelated = harness();
+  unrelated.run(`renderAll=()=>{}; openSheet=id=>{opened=id};`);
+  await unrelated.run('reviewOlderGroupMemory(17)');
+  assert.equal(unrelated.run('progressView'), 'group',
+    'a verified adventure cannot take the historical review route');
+  assert.equal(unrelated.run('typeof opened'), 'undefined');
+
+  const switched = harness();
+  switched.run(`renderAll=()=>{}; openSheet=id=>{opened=id};
+    pullProgress=()=>new Promise(resolve=>{finishPull=resolve});`);
+  const pending = switched.run('reviewOlderGroupMemory(20)');
+  switched.run(`userId='other-account'; authGeneration++; finishPull()`);
+  await pending;
+  assert.equal(switched.run('typeof opened'), 'undefined',
+    'an account switch while loading cannot open the prior owner memory');
+
+  const failed = harness();
+  failed.run(`renderAll=()=>{}; messages=[];
+    toast=message=>messages.push(message);
+    openSheet=id=>{opened=id};
+    pullProgress=async()=>{throw Error('network failed')};`);
+  await failed.run('reviewOlderGroupMemory(20)');
+  assert.equal(failed.run('typeof opened'), 'undefined',
+    'a failed personal refresh cannot open a sheet with missing confirmation state');
+  assert.match(failed.run('messages.join(" ")'), /Could not check your older entry/);
+}
+
+testDirectOlderEntryReview().then(testPersonalConfirmation).then(() => {
   console.log('PASS: Group Memories and owner-scoped older personal progress confirmation');
 }).catch(error => {
   console.error(error);

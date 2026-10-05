@@ -409,6 +409,7 @@ input, select, textarea { font: inherit; color: inherit; }
   outline: 3px solid var(--ochre); outline-offset: 3px; border-radius: 4px;
 }
 .memory .nomemory { color: var(--muted); font-style: italic; }
+.memory-review { min-height: 44px; max-width: 100%; margin-top: 10px; }
 
 /* ── World map + place navigation ────────────────────────────────── */
 .btn-ghost.wide { width: 100%; margin-bottom: 14px; }

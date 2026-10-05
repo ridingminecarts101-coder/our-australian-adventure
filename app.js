@@ -4098,7 +4098,7 @@ function renderMemories() {
       const legacyCount = groupView && groupFeedbackReady
         ? (groupLegacyCompletions.get(a.id)?.length || 0) : 0;
       const legacyHint = legacyCount
-        ? `${legacyCount} older group tick${legacyCount === 1 ? '' : 's'} without a confirmed owner. If one is yours, switch to Me and open this adventure to check for a sharing confirmation.` : '';
+        ? `${legacyCount} older group tick${legacyCount === 1 ? '' : 's'} without a confirmed owner. If you have a personal entry for this adventure, check whether it needs confirmation.` : '';
       const sharedNotes = ticks.filter(tick => groupFeedbackAvailable
         && groupFeedback.get(a.id)?.get(tick.completed_by_id)?.memory?.trim());
       const groupEntries = ticks.map(tick => {
@@ -4127,6 +4127,7 @@ function renderMemories() {
                   : sharedNotes.length ? '' : '<span class="memory-note nomemory">No memory written yet</span>'}`
             : `<span class="memory-note ${r.memory ? '' : 'nomemory'}">${esc(r.memory || 'No memory written yet — tap to add one.')}</span>`}
         </button>
+        ${legacyCount ? `<button type="button" class="btn-ghost memory-review" data-review-memory="${a.id}">Check my entry</button>` : ''}
         ${ph.length ? `<div class="strip" role="region" aria-label="Photos for ${esc(safeTitle(a))} on this device" tabindex="0" data-group-key="adv-${a.id}">${ph.map(p => thumbHTML(p)).join('')}</div>` : ''}
       </div>`;
     }).join('') : `<div class="empty">${groupView && !groupFeedbackReady
@@ -4189,6 +4190,35 @@ function renderMemories() {
     </section>`;
   }).join('');
   hydrateThumbs();
+}
+
+async function reviewOlderGroupMemory(id) {
+  if (!Number.isInteger(id) || progressView !== 'group' || !currentGroupFeedReady()
+      || !groupLegacyCompletions.get(id)?.length) return;
+  const owner = userId, generation = authGeneration, groupId = activeGroupId;
+  try {
+    await setProgressView('personal');
+  } catch (error) {
+    if (owner === userId && generation === authGeneration) {
+      console.warn('older memory review', error?.message || error);
+      toast('Could not check your older entry right now. Try again when syncing is ready.');
+    }
+    return;
+  }
+  if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId
+      || progressView !== 'personal') return;
+  const personal = personalProgress.get(id);
+  if (unconfirmedPersonalScope !== owner) {
+    toast('Could not check your older entry right now. Try again when syncing is ready.');
+  } else if (!personal?.completed) {
+    toast('No personal completion for this adventure was found on your account.');
+  } else if (personal.id && !unconfirmedPersonalProgress.has(personal.id)) {
+    toast('This personal entry does not need confirmation. The older group tick may belong to someone else.');
+  }
+  // The Group card is replaced by the Personal view; keep a visible focus
+  // return target for the detail dialog when the person closes it.
+  $('#progressViewBtn')?.focus?.({ preventScroll: true });
+  openSheet(id);
 }
 
 // Thumbnails render straight away using whatever signed links we already hold,
@@ -5312,6 +5342,8 @@ function wireUI() {
 
     const tick = e.target.closest('[data-toggle]');
     if (tick) { toggleDone(+tick.dataset.toggle); return; }
+    const reviewMemory = e.target.closest('[data-review-memory]');
+    if (reviewMemory) { void reviewOlderGroupMemory(+reviewMemory.dataset.reviewMemory); return; }
     const open = e.target.closest('[data-open]');
     if (open) { openSheet(+open.dataset.open); return; }
     if (e.target.closest('[data-close]')) { closeSheet(); return; }
