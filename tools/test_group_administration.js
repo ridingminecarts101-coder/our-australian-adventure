@@ -51,6 +51,9 @@ function uiChecks() {
     myGroups=[{id:'group-1',name:'Friends',join_code:'ABCD12',owner_id:'account-a',invite_enabled:true,share_completions:true,share_feedback:true,sharing_choice_made_at:'2026-10-05'}];
     members=new Map([['account-a','Alex'],['account-b','Blair']]); renderMe_groups();`);
   let html = h.elements.get('#groupPanel').innerHTML;
+  assert.match(html, /Join or create another group/);
+  assert.match(html, /data-groupact="create"/);
+  assert.match(html, /data-groupact="join"/);
   assert.match(html, /Send an invite link/);
   assert.doesNotMatch(html, /Stop sharing my|Share my completion ticks|Share my ratings/);
   assert.match(html, /Rotate invite code/);

@@ -2660,6 +2660,8 @@ function renderMe_groups() {
   const active = myGroups.find(g => g.id === activeGroupId);
   const isOwner = !!active && active.owner_id === userId;
   const otherMembers = [...members.entries()].filter(([id]) => id !== userId);
+  const previousAdmin = el.querySelector?.('details.group-admin');
+  const adminOpen = previousAdmin?.dataset?.groupId === activeGroupId && previousAdmin.open;
   el.innerHTML = `
     ${active ? `
       <p>Group: <strong>${esc(active.name)}</strong>.</p>
@@ -2679,6 +2681,9 @@ function renderMe_groups() {
         <button class="btn-ghost" data-groupact="invite">↗ Send an invite link</button>
       ` : '<p class="fineprint">Invitations are paused. Existing members can still use the group.</p>'}
       ${isOwner ? `
+        <details class="me-fold group-admin" data-group-id="${esc(active.id)}" ${adminOpen ? 'open' : ''}>
+        <summary>Manage group · ${otherMembers.length + 1} member${otherMembers.length ? 's' : ''}</summary>
+        <div class="settings">
         <p class="fineprint"><strong>You manage this group.</strong> A new invite immediately invalidates every earlier link.</p>
         <button class="btn-ghost" data-groupact="rotate-invite">${active.invite_enabled ? 'Rotate invite code' : 'Create a new invite'}</button>
         ${active.invite_enabled ? '<button class="btn-ghost" data-groupact="revoke-invite">Pause invitations</button>' : ''}
@@ -2691,12 +2696,15 @@ function renderMe_groups() {
           ? '<p class="fineprint">Transfer ownership before leaving this group.</p>'
           : `<button class="btn-ghost danger" data-groupact="leave" data-id="${esc(active.id)}">Leave and dispose of this group</button>`}
         <button class="btn-ghost danger" data-groupact="delete-group">Delete this group</button>
+        </div></details>
       ` : `<button class="btn-ghost danger" data-groupact="leave" data-id="${esc(active.id)}">Leave this group</button>`}
     ` : `
       <p class="muted">This list is yours alone at the moment.</p>
+    `}
+    ${active ? '<details class="me-fold"><summary>Join or create another group</summary><div class="settings">' : ''}
       <button class="btn-ghost" data-groupact="create">Create a group</button>
       <button class="btn-ghost" data-groupact="join">Join with a code</button>
-    `}
+    ${active ? '</div></details>' : ''}
     ${myGroups.length > 1 ? `<div class="group-list"><p class="fineprint">Switch group:</p>${myGroups
       .map(g => `<button class="btn-ghost${g.id === activeGroupId ? ' on' : ''}" data-groupact="switch" data-id="${esc(g.id)}">${esc(g.name)}</button>`).join('')}</div>` : ''}`;
 }
