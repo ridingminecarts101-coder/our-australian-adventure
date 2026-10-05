@@ -26,6 +26,29 @@ $guard$;
 alter table public.group_members
   add column if not exists sharing_choice_made_at timestamptz;
 
+-- Released clients still use separate completion and feedback RPCs. If one
+-- changes either flag after a combined answer, clear the marker so the new
+-- client accurately shows the older split setting and asks again. The new
+-- one-choice RPCs set a fresh marker in the same UPDATE and retain it.
+create or replace function public.reset_group_sharing_choice_after_legacy_update()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public
+as $$
+begin
+  if new.sharing_choice_made_at is not distinct from old.sharing_choice_made_at
+     and (new.share_completions is distinct from old.share_completions
+       or new.share_feedback is distinct from old.share_feedback) then
+    new.sharing_choice_made_at := null;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists group_members_reset_join_choice on public.group_members;
+create trigger group_members_reset_join_choice
+before update of share_completions, share_feedback on public.group_members
+for each row execute function public.reset_group_sharing_choice_after_legacy_update();
+
 -- Crockford's 32-symbol alphabet avoids the easily confused I, L, O and U.
 -- Six symbols contain 30 bits of entropy. UUID v4 supplies random bytes;
 -- 256 divides evenly by 32, so each symbol is uniformly distributed.
@@ -365,6 +388,25 @@ begin
 end;
 $$;
 
+-- The earliest group model wrote canonical progress, photo and trip rows with
+-- a group_id. Deleting their parent group would fire ON DELETE SET NULL. The
+-- identity guard correctly refuses that rewrite for an authenticated caller;
+-- a same-adventure personal row could also collide on the generated scope ID.
+-- Keep an empty group shell in those cases so source rows retain provenance.
+-- With no members, no owner and no active invite, the shell is invisible to
+-- clients and cannot grant access to anyone.
+create or replace function public.has_group_scoped_source(p_group_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = pg_catalog, public
+as $$
+  select exists (select 1 from public.progress where group_id = p_group_id)
+      or exists (select 1 from public.photos where group_id = p_group_id)
+      or exists (select 1 from public.trips where group_id = p_group_id)
+$$;
+
 create or replace function public.stabilize_group_after_member_delete()
 returns trigger
 language plpgsql
@@ -382,7 +424,12 @@ begin
    where gm.group_id = old.group_id
    order by gm.joined_at, gm.user_id limit 1;
   if successor is null then
-    delete from public.groups where id = old.group_id;
+    if public.has_group_scoped_source(old.group_id) then
+      update public.groups set owner_id = null where id = old.group_id;
+      perform public.assign_group_join_code(old.group_id, false);
+    else
+      delete from public.groups where id = old.group_id;
+    end if;
   elsif current_owner is null or not exists (
     select 1 from public.group_members gm
      where gm.group_id = old.group_id and gm.user_id = current_owner
@@ -394,9 +441,44 @@ begin
 end;
 $$;
 
+create or replace function public.delete_group(p_group_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare caller uuid := auth.uid(); current_owner uuid;
+begin
+  if caller is null then raise exception 'not signed in'; end if;
+  select g.owner_id into current_owner
+    from public.groups g where g.id = p_group_id for update;
+  if not found or current_owner is distinct from caller then
+    raise exception 'only the group owner can delete this group';
+  end if;
+
+  if public.has_group_scoped_source(p_group_id) then
+    -- Clear every access projection and membership, but preserve the source
+    -- records under their respective owners. The member-delete trigger parks
+    -- the group on its final row; the final update also covers an older empty
+    -- group that somehow still had an owner.
+    delete from public.group_progress where group_id = p_group_id;
+    delete from public.group_photos where group_id = p_group_id;
+    delete from public.group_trips where group_id = p_group_id;
+    delete from public.group_members where group_id = p_group_id;
+    update public.groups set owner_id = null where id = p_group_id;
+    perform public.assign_group_join_code(p_group_id, false);
+  else
+    delete from public.groups where id = p_group_id;
+  end if;
+end;
+$$;
+
 revoke all on function public.new_group_join_code() from PUBLIC, anon, authenticated;
+revoke all on function public.reset_group_sharing_choice_after_legacy_update()
+  from PUBLIC, anon, authenticated;
 revoke all on function public.expire_legacy_group_invite() from PUBLIC, anon, authenticated;
 revoke all on function public.assign_group_join_code(uuid, boolean) from PUBLIC, anon, authenticated;
+revoke all on function public.has_group_scoped_source(uuid) from PUBLIC, anon, authenticated;
 revoke all on function public.join_group_by_code(text, text) from PUBLIC, anon, authenticated;
 revoke all on function public.choose_group_sharing(uuid, boolean) from PUBLIC, anon, authenticated;
 revoke all on function public.create_group_with_sharing(text, text, boolean) from PUBLIC, anon, authenticated;

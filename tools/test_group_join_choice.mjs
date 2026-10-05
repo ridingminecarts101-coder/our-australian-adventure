@@ -167,6 +167,21 @@ assert.equal((await feedback(alice, old.group_id))[0].memory,
   'Shared only after a new choice');
 console.log('PASS: repeated invite applies its fresh explicit answer atomically');
 
+await asUser(bob, 'select public.set_group_feedback_sharing($1,false)', [old.group_id]);
+assert.equal((await flags(old.group_id, bob)).sharing_choice_made_at, null);
+assert.equal((await feedback(alice, old.group_id)).length, 0);
+await asUser(bob, 'select public.choose_group_sharing($1,true)', [old.group_id]);
+assert.equal((await flags(old.group_id, bob)).sharing_choice_made_at instanceof Date, true);
+await asUser(bob, 'select public.set_group_completion_sharing($1,false)', [old.group_id]);
+assert.equal((await flags(old.group_id, bob)).sharing_choice_made_at, null);
+assert.equal((await groupFeed(alice, old.group_id)).filter(r => r.adventure_id === 42).length, 0);
+await asUser(bob, 'select public.set_group_completion_sharing($1,true)', [old.group_id]);
+assert.equal((await flags(old.group_id, bob)).share_feedback, false);
+await asUser(bob, 'select public.choose_group_sharing($1,true)', [old.group_id]);
+assert.equal((await feedback(alice, old.group_id))[0].memory,
+  'Shared only after a new choice');
+console.log('PASS: released split-consent RPCs reset the new choice marker');
+
 // A new group and a second group both receive the same owner's eligible
 // personal adventure, with its name and feedback under that adventure.
 const second = await row(bob, 'select * from public.create_group_with_sharing($1,$2,$3)',
@@ -238,6 +253,38 @@ assert.equal((await asUser(eve, 'select * from public.join_group_by_code($1,$2)'
 assert.equal((await asUser(dave, 'select * from public.join_group_by_code($1,$2)',
   [fresh.join_code, 'Dave'])).rows.length, 1);
 console.log('PASS: repeated guesses are limited per account without locking out others');
+
+const historical = await row(bob, 'select * from public.create_group_with_sharing($1,$2,$3)',
+  ['Old personal duplicate', 'Bob', false]);
+await asUser(bob, `insert into public.progress(adventure_id,user_id,completed,memory)
+  values (52,$1,true,'Personal copy')`, [bob]);
+await asUser(bob, `insert into public.progress(adventure_id,user_id,group_id,completed,memory)
+  values (52,$1,$2,true,'Old group copy')`, [bob, historical.group_id]);
+await asUser(bob, 'select public.leave_group($1)', [historical.group_id]);
+assert.equal((await row(bob, 'select count(*)::int n from public.progress where adventure_id=52')).n, 2);
+assert.equal((await row(bob, 'select count(*)::int n from public.groups where id=$1',
+  [historical.group_id])).n, 0);
+assert.deepEqual((await db.query('select owner_id,invite_enabled from public.groups where id=$1',
+  [historical.group_id])).rows[0], { owner_id: null, invite_enabled: false });
+console.log('PASS: leaving a sole-member group preserves duplicate historical progress');
+
+const oldShared = await row(bob, 'select * from public.create_group_with_sharing($1,$2,$3)',
+  ['Old shared duplicate', 'Bob', true]);
+await asUser(charlie, 'select * from public.join_group_with_sharing($1,$2,$3)',
+  [oldShared.join_code, 'Charlie', false]);
+await asUser(bob, `insert into public.progress(adventure_id,user_id,completed,memory)
+  values (53,$1,true,'Personal before delete')`, [bob]);
+await asUser(bob, `insert into public.progress(adventure_id,user_id,group_id,completed,memory)
+  values (53,$1,$2,true,'Group-only before delete')`, [bob, oldShared.group_id]);
+await asUser(bob, 'select public.delete_group($1)', [oldShared.group_id]);
+assert.equal((await db.query('select count(*)::int n from public.group_members where group_id=$1',
+  [oldShared.group_id])).rows[0].n, 0);
+assert.equal((await db.query('select count(*)::int n from public.group_progress where group_id=$1',
+  [oldShared.group_id])).rows[0].n, 0);
+assert.equal((await row(bob, 'select count(*)::int n from public.progress where adventure_id=53')).n, 2);
+assert.equal((await row(charlie, 'select count(*)::int n from public.groups where id=$1',
+  [oldShared.group_id])).n, 0);
+console.log('PASS: deleting a legacy group removes all access while retaining owner records');
 
 await migration('schema-group-join-choice.sql');
 assert.equal((await db.query('select join_code from public.groups where id=$1',
