@@ -4089,6 +4089,8 @@ function renderMemories() {
       const ticks = groupView ? groupMemberTicks(a.id) : [];
       const legacyCount = groupView && groupFeedbackReady
         ? (groupLegacyCompletions.get(a.id)?.length || 0) : 0;
+      const legacyHint = legacyCount
+        ? `${legacyCount} older group tick${legacyCount === 1 ? '' : 's'} without a confirmed owner. If one is yours, switch to Me and open this adventure to check for a sharing confirmation.` : '';
       const sharedNotes = ticks.filter(tick => groupFeedbackAvailable
         && groupFeedback.get(a.id)?.get(tick.completed_by_id)?.memory?.trim());
       const groupEntries = ticks.map(tick => {
@@ -4111,13 +4113,13 @@ function renderMemories() {
           </span>
           ${groupView
             ? `${groupEntries.join('')}
-              ${legacyCount ? `<span class="memory-note nomemory">${legacyCount} earlier shared completion${legacyCount === 1 ? '' : 's'} without verified personal attribution</span>` : ''}
+              ${legacyCount ? `<span class="memory-note nomemory">${legacyHint}</span>` : ''}
               ${!groupFeedbackReady ? '<span class="memory-note nomemory">Reconnect to view group members.</span>'
                 : !groupFeedbackAvailable ? '<span class="memory-note nomemory">Group ratings and memories are temporarily unavailable.</span>'
                   : sharedNotes.length ? '' : '<span class="memory-note nomemory">No memory written yet</span>'}`
             : `<span class="memory-note ${r.memory ? '' : 'nomemory'}">${esc(r.memory || 'No memory written yet — tap to add one.')}</span>`}
         </button>
-        ${ph.length ? `<div class="strip" data-group-key="adv-${a.id}">${ph.map(p => thumbHTML(p)).join('')}</div>` : ''}
+        ${ph.length ? `<div class="strip" role="region" aria-label="Photos for ${esc(safeTitle(a))} on this device" tabindex="0" data-group-key="adv-${a.id}">${ph.map(p => thumbHTML(p)).join('')}</div>` : ''}
       </div>`;
     }).join('') : `<div class="empty">${groupView && !groupFeedbackReady
       ? (online ? 'Group memories are loading or temporarily unavailable.' : 'Reconnect to view group memories.')

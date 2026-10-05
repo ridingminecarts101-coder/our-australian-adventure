@@ -84,7 +84,9 @@ assert.match(card, /Unwritten walk/);
 assert.match(card, /aria-label="5 stars"/);
 assert.match(card, /No memory written yet/, 'a rating without any written note retains the empty text');
 assert.match(card, /Earlier group walk/);
-assert.match(card, /earlier shared completion without verified personal attribution/);
+assert.match(card, /older group tick without a confirmed owner/);
+assert.match(card, /switch to Me and open this adventure to check for a sharing confirmation/,
+  'the ambiguous historical tick explains the owner review path');
 assert.doesNotMatch(card, /Earlier group walk[\s\S]*Charlie.*completed/,
   'a historical group row cannot be credited to a different member');
 h.run(`members.set('bob','<Bob & team>'); renderMemories()`);
@@ -143,6 +145,21 @@ h.run(`progressView='personal'; progress=new Map(personalProgress); renderMemori
 assert.match(h.html(), /Photo walk/, 'the viewer still sees a photo-only adventure in Personal view');
 assert.match(h.html(), /1 on this device/);
 assert.match(h.html(), /class="strip"/);
+assert.match(h.html(), /role="region" aria-label="Photos for Shared walk on this device" tabindex="0"/,
+  'a long photo rail remains an accessible scroll region within its adventure');
+const manyPhotos = harness();
+manyPhotos.run(`progressView='personal';
+  personalProgress.set(17,{adventure_id:17,completed:true,memory:'One adventure'});
+  progress=new Map(personalProgress);
+  photos=Array.from({length:12},(_,i)=>({id:'photo-'+i,adventure_id:17,
+    taken_at:'2026-10-01T00:00:00Z',local:true}));
+  renderMemories()`);
+assert.equal((manyPhotos.html().match(/class="memory"/g) || []).length, 1,
+  'many photos of one adventure stay in one card');
+assert.equal((manyPhotos.html().match(/data-photo="photo-\d+"/g) || []).length, 12,
+  'every local photo remains available in that card');
+assert.equal((manyPhotos.html().match(/class="strip"/g) || []).length, 1,
+  'the adventure has one scrollable photo rail');
 h.run(`progressView='group'; renderMemories()`);
 assert.doesNotMatch(h.html(), /class="strip"/);
 h.run(`memoryGrouping='month'; renderMemories()`);

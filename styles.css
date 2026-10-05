@@ -347,15 +347,19 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 
 /* ── Memories ────────────────────────────────────────────────────── */
+/* A long thumbnail rail must not set the grid track's minimum page width. */
+#memList { grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .memory {
+  min-width: 0;
   background: var(--card); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 13px; box-shadow: var(--shadow);
 }
 .memory b { font-size: 15px; }
 .memory .card-meta { margin-bottom: 6px; }
 .memory-open {
-  display: block; width: 100%; padding: 0; border: 0; background: transparent;
+  display: block; width: 100%; min-width: 0; padding: 0; border: 0; background: transparent;
   color: inherit; font: inherit; text-align: left;
+  overflow-wrap: anywhere;
 }
 .memory-open .card-meta, .memory-note { display: block; }
 .memory-note { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
@@ -553,10 +557,12 @@ input, select, textarea { font: inherit; color: inherit; }
 .photostatus.show { display: block; margin: 8px 2px 4px; }
 
 .strip {
-  display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px;
+  display: flex; gap: 8px; width: 100%; max-width: 100%; min-width: 0;
+  overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 0 4px;
   scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
 .strip::-webkit-scrollbar { display: none; }
+.strip:focus-visible { outline: 3px solid var(--ochre); outline-offset: 2px; }
 .memory .strip { margin-top: 10px; }
 .sheet-strip { margin-bottom: 4px; }
 
