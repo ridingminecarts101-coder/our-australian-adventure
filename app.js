@@ -2787,14 +2787,16 @@ function renderMe_groups() {
     ${myGroups.length > 1 ? `<div class="group-list"><p class="fineprint">Switch group:</p>${myGroups
       .map(g => `<button class="btn-ghost${g.id === activeGroupId ? ' on' : ''}" data-groupact="switch" data-id="${esc(g.id)}">${esc(g.name)}</button>`).join('')}</div>` : ''}
     ${retainedGroupHistoryOwner === userId && retainedGroupHistory.length ? `
-      <div class="group-list" aria-label="Shared history in groups you left">
-        <p><strong>Shared history in groups you left</strong></p>
+      <details class="me-fold retained-history">
+        <summary>Shared history in groups you left · ${retainedGroupHistory.length}</summary>
+        <div class="settings">
         <p class="fineprint">Your previously shared name, ticks, dates, ratings and written memories remain visible to those groups. Your personal list stays with you.</p>
-        ${retainedGroupHistory.map(entry => `<div class="group-member">
+        ${retainedGroupHistory.map(entry => `<div class="retained-history-row">
           <span>${esc(entry.group_name || 'Former group')} · ${Number(entry.retained_count)} shared adventure${Number(entry.retained_count) === 1 ? '' : 's'}</span>
           <button class="btn-ghost danger" data-groupact="erase-history" data-id="${esc(entry.group_id)}" aria-label="Remove my shared group history from ${esc(entry.group_name || 'former group')}">Remove my shared group history</button>
         </div>`).join('')}
-      </div>` : ''}`;
+        </div>
+      </details>` : ''}`;
 }
 
 function renderAccountPanel() {

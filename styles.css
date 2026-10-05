@@ -283,6 +283,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .view-switch .on, .group-list .on {
   border-color: var(--eucalypt); color: var(--eucalypt); background: rgba(45, 104, 89, .08);
 }
+.retained-history { width: 100%; }
+.retained-history-row { width: 100%; display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+.retained-history-row .btn-ghost { justify-self: start; max-width: 100%; min-height: 44px; white-space: normal; text-align: left; }
 .account-panel input {
   width: 100%; padding: 11px 12px; font-size: 16px;
   border: 1px solid var(--line); border-radius: 10px; background: var(--sand-2);
