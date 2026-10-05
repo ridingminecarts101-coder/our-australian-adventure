@@ -56,6 +56,15 @@ function uiChecks() {
   assert.match(html, /data-groupact="join"/);
   assert.match(html, /Send an invite link/);
   assert.doesNotMatch(html, /Stop sharing my|Share my completion ticks|Share my ratings/);
+  assert.match(html, /<details class="me-fold group-admin" data-group-id="group-1"\s*>/,
+    'owner controls start folded below the active group');
+  assert.match(html, /<details class="me-fold"><summary>Join or create another group<\/summary>/,
+    'extra group actions stay available in their own compact section');
+  h.elements.get('#groupPanel').querySelector = () => ({ dataset: { groupId: 'group-1' }, open: true });
+  h.run('renderMe_groups()');
+  html = h.elements.get('#groupPanel').innerHTML;
+  assert.match(html, /<details class="me-fold group-admin" data-group-id="group-1" open>/,
+    'an expanded management section stays open when the group redraws');
   assert.match(html, /Rotate invite code/);
   assert.match(html, /data-groupact="transfer-owner" data-member="account-b"/);
   assert.match(html, /data-groupact="remove-member" data-member="account-b"/);
