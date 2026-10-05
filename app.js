@@ -2093,6 +2093,7 @@ let members = new Map();       // user_id -> display name, for everyone in the g
 let pushedName = null;         // the display name last written to the server
 let groupSchemaReady = true;
 let groupLifecycleBusy = null;
+const promptedLegacySharing = new Set(); // account/group pairs asked in this session
 let progressView = localStorage.getItem(LS.view) === 'group' ? 'group' : 'personal';
 
 /* Names used to be frozen into completed_by at the moment of ticking, so
@@ -2169,6 +2170,8 @@ async function loadGroups() {
         share_feedback: !!r.share_feedback,
         sharing_choice_made_at: r.sharing_choice_made_at }
     : null).filter(Boolean);
+  for (const group of myGroups) if (group.sharing_choice_made_at)
+    promptedLegacySharing.delete(`${userId}:${group.id}`);
   const saved = localStorage.getItem(LS.group);
   activeGroupId = myGroups.some(g => g.id === saved) ? saved
                 : (myGroups[0] ? myGroups[0].id : null);
@@ -2274,6 +2277,7 @@ async function chooseLegacyGroupSharing(groupId) {
   });
   if (owner !== userId || generation !== authGeneration) return;
   if (error) {
+    promptedLegacySharing.delete(`${owner}:${groupId}`);
     console.warn('group sharing choice', error.message);
     toast('Could not save your choice. Try again when connected.');
     return;
@@ -2311,6 +2315,13 @@ async function setProgressView(view) {
   await pullProgress();
   if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
   renderAll();
+  const active = myGroups.find(group => group.id === groupId);
+  const key = `${owner}:${groupId}`;
+  if (next === 'group' && online && active && !active.sharing_choice_made_at
+      && !promptedLegacySharing.has(key)) {
+    promptedLegacySharing.add(key);
+    await chooseLegacyGroupSharing(groupId);
+  }
 }
 
 async function createGroup(name) {

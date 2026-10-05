@@ -89,6 +89,17 @@ function uiChecks() {
 
 async function operationChecks() {
   {
+    const h = harness();
+    h.run(`sb={}; activeGroupId='group-1'; progressView='personal';
+      myGroups=[{id:'group-1',sharing_choice_made_at:null}];
+      pullProgress=async()=>{}; chooseLegacyGroupSharing=async()=>{window.legacyPrompts++};
+      window.legacyPrompts=0;`);
+    await h.run("setProgressView('group')");
+    await h.run("setProgressView('group')");
+    assert.equal(h.context.legacyPrompts, 1,
+      'an existing member receives one combined choice on entering Group view');
+  }
+  {
     const h = harness(), calls = [];
     h.context.rpc = async (name, args) => {
       calls.push([name, args]);
