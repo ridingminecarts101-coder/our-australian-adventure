@@ -36,6 +36,7 @@ CHECKS = [
     ('auth upgrade',    'test_auth_upgrade.js', 'verified-email sequencing and safe schema fallback'),
     ('startup',        'test_startup.js', 'visible failures, retry controls and preserved offline data'),
     ('accessibility',  'test_accessibility.js', 'keyboard cards, selection state and dialog focus lifecycle'),
+    ('guided tour',    'test_tour.js', 'account-scoped opt-in, live section targets and replayable help'),
     ('navigation',     'test_navigation.js', 'country depth, history, Back and deep-link routing'),
     ('offline cache',  'test_service_worker.js', 'service worker network and update regressions'),
     ('photo failures', 'test_photo_failures.js', 'failed deletion preserves metadata and legacy files stay aligned'),

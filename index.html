@@ -82,6 +82,13 @@
 
     <!-- Level 0: the world -->
     <div id="worldView">
+      <div id="tourInvite" class="tour-invite hidden">
+        <div><strong>Want a quick tour?</strong><span>See what each section does and where to get help.</span></div>
+        <div class="tour-invite-actions">
+          <button id="tourInviteStart" type="button" class="btn-ghost">Show me around</button>
+          <button id="tourInviteDismiss" type="button" class="text-button">No thanks</button>
+        </div>
+      </div>
       <div class="mapwrap"><canvas id="worldMap" aria-label="World map — tap a continent"></canvas></div>
       <p class="maphint">Tap a continent on the map, or pick one below.</p>
       <button id="hereBtn" class="btn-ghost wide">📍 Near me</button>
@@ -183,8 +190,15 @@
        <a href="support.html">Support information</a>.</p>
   </section>
 
-  <!-- Us -->
+  <!-- Me -->
   <section id="tab-me" class="panel hidden">
+    <h2>Me</h2>
+    <div class="me-quick-actions" aria-label="Help and information">
+      <button id="tourReplayBtn" type="button" class="btn-ghost">Show me around</button>
+      <button id="supportBtn" type="button" class="btn-ghost">Support &amp; help</button>
+      <button id="privacyBtn" type="button" class="btn-ghost">Privacy policy</button>
+    </div>
+
     <h2>Trips</h2>
     <p class="muted">Bundle adventures into a plan. Add anything from its page, or from your shortlist.</p>
     <div id="tripList" class="list"></div>
@@ -195,57 +209,74 @@
       <div id="groupTripList" class="list"></div>
     </section>
 
-    <h2>Our numbers</h2>
-    <div id="usStats" class="usstats"></div>
-    <h2>Paid collections</h2>
-    <p class="muted">Unlock hidden gems by continent, or choose All continents for
-       every gem and the exclusive Antarctica collection.</p>
-    <div id="storePanel" class="storelist"></div>
-    <button id="continentPacksBtn" class="btn-ghost wide" aria-haspopup="dialog" aria-controls="continentPacksSheet">Continent-specific collections</button>
-    <p id="storeFinePrint" class="fineprint"></p>
-    <button id="restoreBtn" class="btn-ghost">Restore purchases</button>
-    <p id="storeStatus" class="muted" role="status" aria-live="polite"></p>
-    <div id="previewRow" class="settings hidden">
-      <button id="previewBtn" class="btn-ghost">Preview paid adventures</button>
-      <p class="fineprint">Unlocks the paid entries on this device so you can read
-         them. Not a purchase, and it disappears once the app is on a store.</p>
-    </div>
+    <details class="me-fold">
+      <summary>Your numbers</summary>
+      <div id="usStats" class="usstats"></div>
+    </details>
 
-    <h2>Sharing</h2>
-    <p class="muted">Your list always belongs to you. A group can see only the progress you choose to share.</p>
+    <details class="me-fold">
+      <summary>Paid collections</summary>
+      <div class="settings">
+        <p class="muted">Unlock hidden gems by continent, or choose All continents for every gem and the exclusive Antarctica collection.</p>
+        <div id="storePanel" class="storelist"></div>
+        <button id="continentPacksBtn" class="btn-ghost wide" aria-haspopup="dialog" aria-controls="continentPacksSheet">Continent-specific collections</button>
+        <p id="storeFinePrint" class="fineprint"></p>
+        <button id="restoreBtn" class="btn-ghost">Restore purchases</button>
+        <p id="storeStatus" class="muted" role="status" aria-live="polite"></p>
+        <div id="previewRow" class="settings hidden">
+          <button id="previewBtn" class="btn-ghost">Preview paid adventures</button>
+          <p class="fineprint">Unlocks the paid entries on this device so you can read them. Not a purchase, and it disappears once the app is on a store.</p>
+        </div>
+      </div>
+    </details>
+
+    <h2>Groups &amp; sharing</h2>
+    <p class="muted">Your personal list belongs to you. Choose what the group can see when you join.</p>
     <div id="groupPanel" class="settings"></div>
 
     <h2>Settings</h2>
-    <div class="settings">
-      <div id="accountPanel" class="account-panel"></div>
-      <p>Ticks you make are shown as <strong id="whoLabel">You</strong>.
-         <button id="switchWho" class="btn-ghost">Change name</button></p>
-      <p id="connState" class="muted"></p>
-      <button id="notifyBtn" class="btn-ghost">Turn on seasonal reminders</button>
-      <button id="previewNotifyBtn" class="btn-ghost">Show me what a reminder looks like</button>
-      <p class="fineprint">Reminders fire at most once a week, and only for shortlisted
-         adventures that are in season this month.</p>
-      <p id="realtimeState" class="muted"></p>
-      <button id="refreshBtn" class="btn-ghost">Force refresh from server</button>
-      <button id="exportPhotosBtn" class="btn-ghost">Export photos from this device</button>
-      <button id="importPhotosBtn" class="btn-ghost">Import a photo backup</button>
-      <p class="fineprint">Move your photos to the same Wayfinder account on another phone with a password-encrypted backup. You choose where to save or share the file; Wayfinder does not upload it. Save every numbered part before replacing your phone.</p>
-      <button id="savePhotosBtn" class="btn-ghost">Save photos to camera roll</button>
-      <p id="savePhotosStatus" class="muted" role="status" aria-live="polite"></p>
-      <p class="fineprint">Copies photos stored in this Wayfinder account on this device into Photos. Your Photos or iCloud settings then control those copies. Available in the iPhone and iPad app.</p>
-      <button id="signOutBtn" class="btn-ghost">Sign out this phone</button>
-      <button id="deleteAccountBtn" class="btn-ghost danger">Delete my account and all my data</button>
-      <p class="fineprint">Access, opening hours, seasonal closures, permits and Traditional Owner
-         requirements change. Always check before you travel.</p>
-    </div>
-
-    <h2>About</h2>
-    <div class="settings">
-      <button id="privacyBtn" class="btn-ghost">Privacy policy</button>
-      <button id="supportBtn" class="btn-ghost">Support &amp; help</button>
-      <p class="fineprint">Viator buttons are paid links. RL Applications may earn a commission if you book. Viator and the experience provider handle bookings, payments and cancellations; these are separate from Wayfinder gem purchases.</p>
-      <p class="fineprint">Wayfinder is an independent app. Questions go to a person.</p>
-    </div>
+    <details class="me-fold">
+      <summary>Account &amp; display name</summary>
+      <div class="settings">
+        <div id="accountPanel" class="account-panel"></div>
+        <p>Ticks you make are shown as <strong id="whoLabel">You</strong>.
+           <button id="switchWho" class="btn-ghost">Change name</button></p>
+        <button id="signOutBtn" class="btn-ghost">Sign out this phone</button>
+        <button id="deleteAccountBtn" class="btn-ghost danger">Delete my account and all my data</button>
+      </div>
+    </details>
+    <details class="me-fold">
+      <summary>Photos &amp; backups</summary>
+      <div class="settings">
+        <button id="exportPhotosBtn" class="btn-ghost">Export photos from this device</button>
+        <button id="importPhotosBtn" class="btn-ghost">Import a photo backup</button>
+        <p class="fineprint">Move your photos to the same Wayfinder account on another phone with a password-encrypted backup. You choose where to save or share the file; Wayfinder does not upload it. Save every numbered part before replacing your phone.</p>
+        <div id="cameraRollActions" class="settings hidden">
+          <button id="savePhotosBtn" class="btn-ghost">Save photos to camera roll</button>
+          <p id="savePhotosStatus" class="muted" role="status" aria-live="polite"></p>
+          <p class="fineprint">Copies photos stored in this Wayfinder account on this device into Photos. Your Photos or iCloud settings then control those copies.</p>
+        </div>
+      </div>
+    </details>
+    <details class="me-fold">
+      <summary>Reminders &amp; syncing</summary>
+      <div class="settings">
+        <p id="connState" class="muted"></p>
+        <button id="notifyBtn" class="btn-ghost">Turn on seasonal reminders</button>
+        <button id="previewNotifyBtn" class="btn-ghost">Show me what a reminder looks like</button>
+        <p class="fineprint">Reminders fire at most once a week, and only for shortlisted adventures that are in season this month.</p>
+        <p id="realtimeState" class="muted"></p>
+        <button id="refreshBtn" class="btn-ghost">Force refresh from server</button>
+      </div>
+    </details>
+    <details class="me-fold">
+      <summary>About Wayfinder</summary>
+      <div class="settings">
+        <p class="fineprint">Viator buttons are paid links. RL Applications may earn a commission if you book. Viator and the experience provider handle bookings, payments and cancellations; these are separate from Wayfinder gem purchases.</p>
+        <p class="fineprint">Access, opening hours, seasonal closures, permits and Traditional Owner requirements change. Always check before you travel.</p>
+        <p class="fineprint">Wayfinder is an independent app. Questions go to a person.</p>
+      </div>
+    </details>
   </section>
 
   <nav class="tabbar">
@@ -255,6 +286,22 @@
     <button class="tab" data-tab="tab-community" aria-current="false"><span>🗺️</span>Community</button>
     <button class="tab" data-tab="tab-me" aria-current="false"><span>❤️</span>Me</button>
   </nav>
+</div>
+
+<!-- The optional tour points to the live navigation, with a way to leave on every step. -->
+<div id="tourDialog" class="tour hidden" role="dialog" aria-modal="true" aria-labelledby="tourTitle" aria-describedby="tourDescription" tabindex="-1">
+  <div class="tour-shade"></div>
+  <div id="tourTarget" class="tour-target" aria-hidden="true"></div>
+  <div id="tourCard" class="tour-card">
+    <p id="tourStepCount" class="fineprint"></p>
+    <h2 id="tourTitle" tabindex="-1"></h2>
+    <p id="tourDescription"></p>
+    <div class="tour-actions">
+      <button id="tourBack" type="button" class="btn-ghost">Back</button>
+      <button id="tourSkip" type="button" class="btn-ghost">Skip tour</button>
+      <button id="tourNext" type="button" class="btn-primary">Next</button>
+    </div>
+  </div>
 </div>
 
 <!-- Continent packs stay available without crowding the main Me screen. -->

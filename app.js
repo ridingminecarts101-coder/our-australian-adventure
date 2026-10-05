@@ -4297,6 +4297,7 @@ function handleDialogKeydown(event) {
   if (event.key === 'Escape') {
     event.preventDefault();
     if (dialog.id === 'lightbox') closeLightbox();
+    else if (dialog.id === 'tourDialog') closeTour();
     else if (dialog.id === 'photoBackupSheet') window.WayfinderPhotoTransfer.close();
     else if (dialog.id === 'continentPacksSheet') hideManagedDialog('#continentPacksSheet');
     else if (dialog.id === 'recSheet') closeRecSheet();
@@ -4510,6 +4511,9 @@ function renderMe() {
   renderStore();
   renderAccountPanel();
   $('#whoLabel').textContent = who || 'You';
+  const cameraRollActions = $('#cameraRollActions');
+  if (cameraRollActions) cameraRollActions.classList.toggle('hidden',
+    !(window.WayfinderPhotoFiles?.canSaveToGallery?.()));
   const nb = $('#notifyBtn');
   if (nb) {
     nb.textContent = readLS(LS.notify, false) && notificationsSupported()
@@ -4539,6 +4543,7 @@ function renderAll() {
   renderTrips();
   renderMemories();
   renderMe();
+  updateTourInvite();
   if (openId !== null) renderSheet(openId);
   renderPhotoStatus();
   refreshSyncBar();
@@ -5004,6 +5009,113 @@ function activateAppTab(b) {
   if (b.dataset.tab === 'tab-community') pullRecommendations();
 }
 
+// A short, optional tour. The prompt is remembered on this device per account;
+// it never changes travel, group or photo data and can be replayed from Me.
+const TOUR_STEPS = [
+  { tab: 'tab-list', target: '.tab[data-tab="tab-list"]', title: 'Adventures',
+    description: 'Browse the map or search for a place. Open an adventure to shortlist it, tick it off, add a rating or save a memory.' },
+  { tab: 'tab-passport', target: '.tab[data-tab="tab-passport"]', title: 'Passport',
+    description: 'See your progress, country stamps and achievements in one place.' },
+  { tab: 'tab-memories', target: '.tab[data-tab="tab-memories"]', title: 'Memories',
+    description: 'Return to completed adventures, notes and photos. Photos stay on the phone where you added them. Use the top view switch to see group memories when you belong to a group.' },
+  { tab: 'tab-community', target: '.tab[data-tab="tab-community"]', title: 'Community',
+    description: 'Read reviewed recommendations from other travellers, or suggest a place yourself.' },
+  { tab: 'tab-me', target: '.tab[data-tab="tab-me"]', title: 'Me',
+    description: 'Plan trips, manage groups, find paid collections and open account or photo settings here.' },
+  { tab: 'tab-me', target: '#supportBtn', title: 'Help & support',
+    description: 'Need a hand? Open Support & help here. Privacy information is beside it, and you can replay this tour any time.' },
+];
+let tourStepIndex = -1;
+
+function tourSeenKey() {
+  return userId ? `oaa.tour.v1.${userId}` : null;
+}
+
+function updateTourInvite() {
+  const invite = $('#tourInvite');
+  if (!invite) return;
+  const key = tourSeenKey();
+  invite.classList.toggle('hidden', !key || !!readLS(key, false) || tourStepIndex >= 0);
+}
+
+function dismissTourInvite() {
+  const key = tourSeenKey();
+  if (key) writeLS(key, true);
+  updateTourInvite();
+}
+
+function positionTour() {
+  if (tourStepIndex < 0) return;
+  const step = TOUR_STEPS[tourStepIndex];
+  const target = $(step.target), ring = $('#tourTarget'), card = $('#tourCard');
+  if (!target || !ring || !card) return;
+  const rect = target.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  if (!rect.width || !rect.height || !viewportWidth || !viewportHeight) return;
+  const pad = 6;
+  ring.style.left = `${Math.max(0, rect.left - pad)}px`;
+  ring.style.top = `${Math.max(0, rect.top - pad)}px`;
+  ring.style.width = `${Math.min(viewportWidth - Math.max(0, rect.left - pad), rect.width + pad * 2)}px`;
+  ring.style.height = `${Math.min(viewportHeight - Math.max(0, rect.top - pad), rect.height + pad * 2)}px`;
+  const cardRect = card.getBoundingClientRect();
+  const gap = 18;
+  const below = rect.bottom + gap;
+  const above = rect.top - cardRect.height - gap;
+  const top = below + cardRect.height <= viewportHeight - 12 ? below
+    : above >= 12 ? above : Math.max(12, (viewportHeight - cardRect.height) / 2);
+  card.style.top = `${top}px`;
+  card.style.left = `${Math.max(12, Math.min(viewportWidth - cardRect.width - 12,
+    rect.left + rect.width / 2 - cardRect.width / 2))}px`;
+}
+
+function renderTourStep() {
+  if (tourStepIndex < 0) return;
+  const step = TOUR_STEPS[tourStepIndex];
+  const tab = $(`.tab[data-tab="${step.tab}"]`);
+  if (tab) activateAppTab(tab);
+  $('#tourStepCount').textContent = `${tourStepIndex + 1} of ${TOUR_STEPS.length}`;
+  $('#tourTitle').textContent = step.title;
+  $('#tourDescription').textContent = step.description;
+  $('#tourBack').classList.toggle('hidden', tourStepIndex === 0);
+  $('#tourNext').textContent = tourStepIndex === TOUR_STEPS.length - 1 ? 'Finish' : 'Next';
+  const target = $(step.target);
+  if (target && step.target === '#supportBtn') target.scrollIntoView({ block: 'center' });
+  requestAnimationFrame(() => {
+    positionTour();
+    $('#tourTitle').focus();
+  });
+}
+
+function startTour() {
+  if (!userId || tourStepIndex >= 0) return;
+  tourStepIndex = 0;
+  showManagedDialog('#tourDialog');
+  updateTourInvite();
+  renderTourStep();
+}
+
+function closeTour() {
+  if (tourStepIndex < 0) return;
+  tourStepIndex = -1;
+  hideManagedDialog('#tourDialog', false);
+  dismissTourInvite();
+  // The first-use opener disappears when the tour is dismissed. Focus the
+  // section now on screen instead of returning to that hidden prompt.
+  const activeTab = $('.tab.active');
+  if (activeTab) activeTab.focus();
+}
+
+function advanceTour(delta) {
+  if (tourStepIndex < 0) return;
+  const next = tourStepIndex + delta;
+  if (next >= TOUR_STEPS.length) closeTour();
+  else if (next >= 0) {
+    tourStepIndex = next;
+    renderTourStep();
+  }
+}
+
 function wireUI() {
   setupPhotoTransfer();
   wireNative();
@@ -5015,6 +5127,13 @@ function wireUI() {
   // Tabs
   $$('.tab').forEach(b => b.onclick = () => activateAppTab(b));
   setCurrentTab($$('.tab'), $('.tab.active'));
+  $('#tourInviteStart').onclick = startTour;
+  $('#tourInviteDismiss').onclick = dismissTourInvite;
+  $('#tourReplayBtn').onclick = startTour;
+  $('#tourBack').onclick = () => advanceTour(-1);
+  $('#tourNext').onclick = () => advanceTour(1);
+  $('#tourSkip').onclick = closeTour;
+  window.addEventListener('resize', positionTour);
 
   // Quick chips
   $$('#quickChips .chip').forEach(c => c.onclick = () => {
@@ -6041,8 +6160,9 @@ function showAccountLock(message = '') {
 }
 
 function hideAndClearPrivateOverlays() {
+  tourStepIndex = -1;
   if (window.WayfinderPhotoTransfer) window.WayfinderPhotoTransfer.close(true);
-  for (const id of ['#sheet', '#tripSheet', '#recSheet', '#continentPacksSheet', '#lightbox']) {
+  for (const id of ['#sheet', '#tripSheet', '#recSheet', '#continentPacksSheet', '#lightbox', '#tourDialog']) {
     const overlay = $(id);
     if (overlay) overlay.classList.add('hidden');
   }
