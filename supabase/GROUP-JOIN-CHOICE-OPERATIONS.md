@@ -10,6 +10,8 @@ If a released client later uses an older separate sharing control, the migration
 
 Some older groups still own canonical progress, photo or trip rows. A last-member leave or owner deletion now clears all memberships and projections while retaining an inert group row when one of those source rows exists. That row has no owner, active invite or member visibility. It preserves old source attribution and avoids rewriting a member's personal record or colliding with a same-adventure personal row. Groups without those historical source rows are deleted normally.
 
+The group completion feed now returns at most one tick per member and adventure. When a safely confirmed personal row and an older group-scoped row both exist, the personal row supplies the named tick and the old duplicate does not add an anonymous count. If neither row is confirmed, the feed keeps one anonymous tick and hides both rows' identities and notes. The feedback feed still returns only consented, safely attributable personal ratings and text.
+
 The migration gives every group a six-character uppercase code using digits and letters that avoid visually confusable symbols. Existing long codes are stored in a private alias table so already sent links continue to work. The alias expires on invite rotation, revocation, owner succession, or group deletion. All invite RPC calls are limited to 20 attempts per account per hour; a failed lookup returns no row so the attempt remains recorded. The new client should show the same “No group with that code” response for invalid or rate-limited codes. Existing members can still open their own group without using an invite.
 
 Read-only postflight checks in the Supabase SQL editor, after applying the migration:

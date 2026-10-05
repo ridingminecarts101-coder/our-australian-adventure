@@ -473,6 +473,68 @@ begin
 end;
 $$;
 
+-- One person can have an old group-scoped row and a confirmed personal row
+-- for the same adventure. Both may have group_progress projections. Prefer the
+-- safe personal row; otherwise retain one anonymous tick for that person. The
+-- caller still receives no identity, date or note for an anonymous source.
+create or replace function public.group_completion_feed(p_group_id uuid)
+returns table (
+  adventure_id integer,
+  completed boolean,
+  completed_at timestamptz,
+  completed_on date,
+  completed_by_id uuid,
+  completed_by text,
+  updated_at timestamptz,
+  source_user_id uuid,
+  source_is_personal boolean,
+  shared_by_id uuid
+)
+language sql
+security definer
+stable
+set search_path = pg_catalog, public
+as $$
+  with candidates as (
+    select p.adventure_id, p.completed, p.completed_at, p.completed_on,
+           p.completed_by_id, p.completed_by, p.updated_at, p.user_id,
+           gp.shared_by_id as projection_owner,
+           provenance.safe_personal,
+           row_number() over (
+             partition by gp.shared_by_id, p.adventure_id
+             order by provenance.safe_personal desc,
+                      p.updated_at desc nulls last, p.id desc
+           ) as source_rank
+      from public.group_progress gp
+      join public.progress p on p.id = gp.progress_id
+      join public.group_members gm
+        on gm.group_id = gp.group_id and gm.user_id = gp.shared_by_id
+      left join public.group_scoped_progress_origins origin
+        on origin.progress_id = p.id
+      left join public.personal_progress_sharing_origins personal
+        on personal.progress_id = p.id
+      cross join lateral (
+        select p.group_id is null and origin.progress_id is null
+          and personal.progress_id is not null
+          and p.user_id = gp.shared_by_id
+          and p.completed_by_id = gp.shared_by_id as safe_personal
+      ) provenance
+     where gp.group_id = p_group_id
+       and p.completed and gm.share_completions
+       and public.is_group_member(p_group_id)
+  )
+  select c.adventure_id, c.completed,
+         case when c.safe_personal then c.completed_at end,
+         case when c.safe_personal then c.completed_on end,
+         case when c.safe_personal then c.completed_by_id end,
+         case when c.safe_personal then c.completed_by end,
+         case when c.safe_personal then c.updated_at end,
+         case when c.safe_personal then c.user_id end,
+         c.safe_personal,
+         case when c.safe_personal then c.projection_owner end
+    from candidates c where c.source_rank = 1;
+$$;
+
 revoke all on function public.new_group_join_code() from PUBLIC, anon, authenticated;
 revoke all on function public.reset_group_sharing_choice_after_legacy_update()
   from PUBLIC, anon, authenticated;
@@ -480,10 +542,12 @@ revoke all on function public.expire_legacy_group_invite() from PUBLIC, anon, au
 revoke all on function public.assign_group_join_code(uuid, boolean) from PUBLIC, anon, authenticated;
 revoke all on function public.has_group_scoped_source(uuid) from PUBLIC, anon, authenticated;
 revoke all on function public.join_group_by_code(text, text) from PUBLIC, anon, authenticated;
+revoke all on function public.group_completion_feed(uuid) from PUBLIC, anon, authenticated;
 revoke all on function public.choose_group_sharing(uuid, boolean) from PUBLIC, anon, authenticated;
 revoke all on function public.create_group_with_sharing(text, text, boolean) from PUBLIC, anon, authenticated;
 revoke all on function public.join_group_with_sharing(text, text, boolean) from PUBLIC, anon, authenticated;
 grant execute on function public.join_group_by_code(text, text) to authenticated;
+grant execute on function public.group_completion_feed(uuid) to authenticated;
 grant execute on function public.choose_group_sharing(uuid, boolean) to authenticated;
 grant execute on function public.create_group_with_sharing(text, text, boolean) to authenticated;
 grant execute on function public.join_group_with_sharing(text, text, boolean) to authenticated;

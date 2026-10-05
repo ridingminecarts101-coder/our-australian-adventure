@@ -140,6 +140,15 @@ await denied(asUser(charlie, `update public.group_members set share_feedback=tru
   where group_id=$1 and user_id=$2`, [old.group_id, charlie]));
 console.log('PASS: old invite link joins privately and direct consent write is blocked');
 
+const oldClientGroup = await row(charlie, `select * from public.create_group('Released app','Charlie')`);
+assert.match(oldClientGroup.join_code, /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/);
+assert.equal((await flags(oldClientGroup.group_id, charlie)).sharing_choice_made_at, null);
+await asUser(charlie, 'select public.set_group_completion_sharing($1,true)',
+  [oldClientGroup.group_id]);
+assert.equal((await flags(oldClientGroup.group_id, charlie)).share_feedback, false);
+assert.equal((await flags(oldClientGroup.group_id, charlie)).sharing_choice_made_at, null);
+console.log('PASS: released two-argument create and split consent still work');
+
 // Legacy members answer once; a retry is safe, and a different answer requires
 // the explicit rejoin path rather than a silent toggle.
 await asUser(bob, 'select public.choose_group_sharing($1,$2)', [old.group_id, true]);
@@ -207,6 +216,19 @@ assert.equal((await groupFeed(charlie, old.group_id))
   .filter(r => r.adventure_id === 42).length, 2);
 console.log('PASS: all member notes for one adventure reach every group member');
 
+await asUser(bob, `insert into public.progress
+  (adventure_id,user_id,group_id,completed,completed_at,rating,memory)
+  values (42,$1,$2,true,now(),1,'Old group-only duplicate')`, [bob, old.group_id]);
+assert.equal((await groupFeed(charlie, old.group_id))
+  .filter(r => r.adventure_id === 42).length, 2);
+assert.equal((await groupFeed(dave, second.group_id))
+  .filter(r => r.adventure_id === 42).length, 1);
+assert.equal((await feedback(charlie, old.group_id))
+  .filter(r => r.adventure_id === 42).length, 2);
+assert.equal((await feedback(dave, second.group_id))
+  .find(r => r.adventure_id === 42).memory, 'Shared only after a new choice');
+console.log('PASS: old group-scoped duplicate does not create an extra anonymous tick');
+
 // A pre-migration ambiguous row stays anonymous/private until its owner
 // explicitly confirms it, even though the group has a combined yes choice.
 const ambiguous = await row(bob, `insert into public.progress
@@ -217,9 +239,18 @@ const before = (await groupFeed(alice, old.group_id)).find(r => r.adventure_id =
 assert.equal(before.source_is_personal, false);
 assert.equal(before.completed_by_id, null);
 assert.equal((await feedback(alice, old.group_id)).some(r => r.adventure_id === 45), false);
+await asUser(bob, `insert into public.progress
+  (adventure_id,user_id,group_id,completed,completed_at,memory)
+  values (45,$1,$2,true,now(),'Second old group-only copy')`, [bob, old.group_id]);
+assert.equal((await groupFeed(alice, old.group_id))
+  .filter(r => r.adventure_id === 45).length, 1);
 await asUser(bob, 'select public.revalidate_personal_progress($1)', [ambiguous.id]);
 assert.equal((await feedback(alice, old.group_id)).find(r => r.adventure_id === 45).memory,
   'Ambiguous older note');
+assert.equal((await groupFeed(alice, old.group_id))
+  .filter(r => r.adventure_id === 45).length, 1);
+assert.equal((await groupFeed(alice, old.group_id))
+  .find(r => r.adventure_id === 45).source_is_personal, true);
 console.log('PASS: ambiguous historical note remains private until owner confirmation');
 
 // Leaving removes the named projection and note from this group while the
