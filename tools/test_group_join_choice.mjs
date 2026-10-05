@@ -13,6 +13,7 @@ const eve = '55555555-5555-4555-8555-555555555555';
 await db.exec(`
 create role anon nologin;
 create role authenticated nologin;
+create role service_role nologin;
 create schema auth;
 create schema storage;
 create table auth.users (id uuid primary key);
@@ -88,6 +89,10 @@ create policy "delete owned memory files" on storage.objects
   using (bucket_id = 'memories' and public.can_manage_memory_object(name));
 `);
 await migration('schema-device-local-photos.sql');
+await migration('schema-revenuecat-deletion.sql');
+const accountDeletionBefore = (await db.query(
+  "select pg_get_functiondef('public.delete_my_account()'::regprocedure) definition"
+)).rows[0].definition;
 
 async function asUser(id, sql, params = []) {
   await db.exec(`set role authenticated; set "request.jwt.claim.sub" = '${id}'`);
@@ -121,6 +126,9 @@ await migration('schema-group-feedback.sql');
 assert.equal((await feedback(alice, old.group_id)).length, 0);
 
 await migration('schema-group-join-choice.sql');
+assert.equal((await db.query(
+  "select pg_get_functiondef('public.delete_my_account()'::regprocedure) definition"
+)).rows[0].definition, accountDeletionBefore);
 const shortCode = (await db.query('select join_code from public.groups where id=$1', [old.group_id])).rows[0].join_code;
 assert.match(shortCode, /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{6}$/);
 assert.notEqual(shortCode, oldLongCode);
@@ -317,10 +325,41 @@ assert.equal((await row(charlie, 'select count(*)::int n from public.groups wher
   [oldShared.group_id])).n, 0);
 console.log('PASS: deleting a legacy group removes all access while retaining owner records');
 
+const retiring = await row(eve, 'select * from public.create_group_with_sharing($1,$2,$3)',
+  ['Account deletion shell', 'Eve', false]);
+await asUser(eve, `insert into public.progress(adventure_id,user_id,group_id,completed,memory)
+  values (54,$1,$2,true,'Removed with the account')`, [eve, retiring.group_id]);
+await asUser(eve, 'select public.leave_group($1)', [retiring.group_id]);
+assert.equal((await db.query('select count(*)::int n from public.groups where id=$1',
+  [retiring.group_id])).rows[0].n, 1);
+await asUser(eve, 'select public.delete_my_account()');
+assert.equal((await db.query('select count(*)::int n from auth.users where id=$1', [eve])).rows[0].n, 0);
+assert.deepEqual((await db.query(`select app_user_id,state from public.revenuecat_deletion_jobs
+  where app_user_id=$1`, [eve])).rows, [{app_user_id: eve, state: 'pending'}]);
+assert.equal((await db.query('select count(*)::int n from public.progress where user_id=$1',
+  [eve])).rows[0].n, 0);
+assert.equal((await db.query('select count(*)::int n from public.groups where id=$1',
+  [retiring.group_id])).rows[0].n, 0);
+console.log('PASS: account deletion queues RevenueCat erasure and clears the inert shell');
+
+const shellIds = [historical.group_id, oldShared.group_id];
+const shellCodes = (await db.query('select id,join_code from public.groups where id=any($1::uuid[])',
+  [shellIds])).rows;
 await migration('schema-group-join-choice.sql');
 assert.equal((await db.query('select join_code from public.groups where id=$1',
   [old.group_id])).rows[0].join_code, rotated.code);
 assert.equal((await flags(old.group_id, bob)).share_feedback, true);
+assert.deepEqual((await db.query('select id,join_code from public.groups where id=any($1::uuid[])',
+  [shellIds])).rows, shellCodes);
+for (const shellId of shellIds) {
+  const shell = (await db.query('select owner_id,invite_enabled from public.groups where id=$1',
+    [shellId])).rows[0];
+  assert.deepEqual(shell, { owner_id: null, invite_enabled: false });
+  assert.equal((await db.query('select count(*)::int n from public.group_members where group_id=$1',
+    [shellId])).rows[0].n, 0);
+  assert.equal((await db.query('select count(*)::int n from public.group_progress where group_id=$1',
+    [shellId])).rows[0].n, 0);
+}
 for (const signature of [
   'public.create_group_with_sharing(text,text,boolean)',
   'public.join_group_with_sharing(text,text,boolean)',
@@ -329,5 +368,27 @@ for (const signature of [
   assert.equal((await db.query('select has_function_privilege($1,$2,$3) allowed',
     ['anon', signature, 'EXECUTE'])).rows[0].allowed, false);
 }
-console.log('PASS: replay preserves choices and code; anonymous RPC access is denied');
+console.log('PASS: replay preserves hidden shells, choices and codes; anonymous RPC access is denied');
+
+const lastSources = await row(alice, 'select * from public.create_group_with_sharing($1,$2,$3)',
+  ['Historical source cleanup', 'Alice', false]);
+await db.query(`insert into public.progress (adventure_id,user_id,group_id,completed)
+  values (55,$1,$2,true)`, [alice, lastSources.group_id]);
+await db.query(`insert into public.photos (adventure_id,user_id,group_id,storage_path)
+  values (55,$1,$2,'old/group/photo')`, [alice, lastSources.group_id]);
+await db.query(`insert into public.trips (user_id,group_id,name)
+  values ($1,$2,'Old group trip')`, [alice, lastSources.group_id]);
+await asUser(alice, 'select public.leave_group($1)', [lastSources.group_id]);
+assert.equal((await db.query('select retired_at is not null retired from public.groups where id=$1',
+  [lastSources.group_id])).rows[0].retired, true);
+await db.query('delete from public.progress where adventure_id=55 and group_id=$1',
+  [lastSources.group_id]);
+await db.query('delete from public.photos where adventure_id=55 and group_id=$1',
+  [lastSources.group_id]);
+assert.equal((await db.query('select count(*)::int n from public.groups where id=$1',
+  [lastSources.group_id])).rows[0].n, 1);
+await db.query('delete from public.trips where group_id=$1', [lastSources.group_id]);
+assert.equal((await db.query('select count(*)::int n from public.groups where id=$1',
+  [lastSources.group_id])).rows[0].n, 0);
+console.log('PASS: retired shell remains until the final progress, photo or trip source is deleted');
 await db.close();

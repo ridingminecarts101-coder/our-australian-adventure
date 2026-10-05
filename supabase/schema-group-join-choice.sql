@@ -25,6 +25,8 @@ $guard$;
 -- choice. Its old consent remains exactly as it was until that member answers.
 alter table public.group_members
   add column if not exists sharing_choice_made_at timestamptz;
+alter table public.groups
+  add column if not exists retired_at timestamptz;
 
 -- Released clients still use separate completion and feedback RPCs. If one
 -- changes either flag after a combined answer, clear the marker so the new
@@ -407,6 +409,41 @@ as $$
       or exists (select 1 from public.trips where group_id = p_group_id)
 $$;
 
+create or replace function public.cleanup_retired_group_after_source_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+begin
+  if old.group_id is null then return old; end if;
+  -- Lock the shell so concurrent last-source deletions cannot each see the
+  -- other's uncommitted row and leave it behind.
+  perform 1 from public.groups g
+   where g.id = old.group_id and g.retired_at is not null
+     and g.owner_id is null and not g.invite_enabled
+   for update;
+  if found and not exists (
+       select 1 from public.group_members gm where gm.group_id = old.group_id
+     ) and not public.has_group_scoped_source(old.group_id) then
+    delete from public.groups where id = old.group_id;
+  end if;
+  return old;
+end;
+$$;
+drop trigger if exists progress_cleanup_retired_group on public.progress;
+create trigger progress_cleanup_retired_group
+after delete on public.progress
+for each row execute function public.cleanup_retired_group_after_source_delete();
+drop trigger if exists photos_cleanup_retired_group on public.photos;
+create trigger photos_cleanup_retired_group
+after delete on public.photos
+for each row execute function public.cleanup_retired_group_after_source_delete();
+drop trigger if exists trips_cleanup_retired_group on public.trips;
+create trigger trips_cleanup_retired_group
+after delete on public.trips
+for each row execute function public.cleanup_retired_group_after_source_delete();
+
 create or replace function public.stabilize_group_after_member_delete()
 returns trigger
 language plpgsql
@@ -425,7 +462,9 @@ begin
    order by gm.joined_at, gm.user_id limit 1;
   if successor is null then
     if public.has_group_scoped_source(old.group_id) then
-      update public.groups set owner_id = null where id = old.group_id;
+      update public.groups
+         set owner_id = null, retired_at = coalesce(retired_at, now())
+       where id = old.group_id;
       perform public.assign_group_join_code(old.group_id, false);
     else
       delete from public.groups where id = old.group_id;
@@ -465,7 +504,9 @@ begin
     delete from public.group_photos where group_id = p_group_id;
     delete from public.group_trips where group_id = p_group_id;
     delete from public.group_members where group_id = p_group_id;
-    update public.groups set owner_id = null where id = p_group_id;
+    update public.groups
+       set owner_id = null, retired_at = coalesce(retired_at, now())
+     where id = p_group_id;
     perform public.assign_group_join_code(p_group_id, false);
   else
     delete from public.groups where id = p_group_id;
@@ -541,6 +582,8 @@ revoke all on function public.reset_group_sharing_choice_after_legacy_update()
 revoke all on function public.expire_legacy_group_invite() from PUBLIC, anon, authenticated;
 revoke all on function public.assign_group_join_code(uuid, boolean) from PUBLIC, anon, authenticated;
 revoke all on function public.has_group_scoped_source(uuid) from PUBLIC, anon, authenticated;
+revoke all on function public.cleanup_retired_group_after_source_delete()
+  from PUBLIC, anon, authenticated;
 revoke all on function public.join_group_by_code(text, text) from PUBLIC, anon, authenticated;
 revoke all on function public.group_completion_feed(uuid) from PUBLIC, anon, authenticated;
 revoke all on function public.choose_group_sharing(uuid, boolean) from PUBLIC, anon, authenticated;
