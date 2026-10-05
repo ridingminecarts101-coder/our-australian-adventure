@@ -48,10 +48,11 @@ async function turns() { await new Promise(r => setImmediate(r)); }
 function uiChecks() {
   const h = harness();
   h.run(`sb={}; activeGroupId='group-1';
-    myGroups=[{id:'group-1',name:'Friends',join_code:'0123456789ABCDEF0123456789ABCDEF',owner_id:'account-a',invite_enabled:true,share_completions:true}];
+    myGroups=[{id:'group-1',name:'Friends',join_code:'ABCD12',owner_id:'account-a',invite_enabled:true,share_completions:true,share_feedback:true,sharing_choice_made_at:'2026-10-05'}];
     members=new Map([['account-a','Alex'],['account-b','Blair']]); renderMe_groups();`);
   let html = h.elements.get('#groupPanel').innerHTML;
   assert.match(html, /Send an invite link/);
+  assert.doesNotMatch(html, /Stop sharing my|Share my completion ticks|Share my ratings/);
   assert.match(html, /Rotate invite code/);
   assert.match(html, /data-groupact="transfer-owner" data-member="account-b"/);
   assert.match(html, /data-groupact="remove-member" data-member="account-b"/);
@@ -79,13 +80,15 @@ async function operationChecks() {
     const h = harness(), calls = [];
     h.context.rpc = async (name, args) => {
       calls.push([name, args]);
-      if (name === 'join_group_by_code') return { data: [{ group_id: 'group-1', group_name: 'Friends' }], error: null };
+      if (name === 'join_group_with_sharing') return { data: [{ group_id: 'group-1', group_name: 'Friends' }], error: null };
       return { data: null, error: null };
     };
     h.run("sb={rpc}; loadGroups=async()=>{myGroups=[{id:'group-1',share_completions:false}]}; setProgressView=async()=>{}; pullPhotos=async()=>{}; pullTrips=async()=>{};");
-    await h.run("joinGroup('0123456789abcdef0123456789abcdef')");
-    assert.equal(calls[0][0], 'join_group_by_code');
-    assert.equal(calls[0][1].p_join_code, '0123456789ABCDEF0123456789ABCDEF');
+    await h.run("joinGroup('abcd12')");
+    assert.equal(calls[0][0], 'join_group_with_sharing');
+    assert.deepEqual(JSON.parse(JSON.stringify(calls[0][1])), {
+      p_join_code:'ABCD12',p_display_name:'Alex',p_share_memories:true,
+    });
   }
   {
     const h = harness(), calls = [];

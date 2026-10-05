@@ -2139,7 +2139,7 @@ async function loadGroups() {
   const previousGroupId = activeGroupId;
   const { data, error } = await sb
     .from('group_members')
-    .select('group_id, display_name, share_completions, share_feedback, groups(id, name, join_code, owner_id, invite_enabled)')
+    .select('group_id, display_name, share_completions, share_feedback, sharing_choice_made_at, groups(id, name, join_code, owner_id, invite_enabled)')
     .eq('user_id', owner);
   if (owner !== userId || generation !== authGeneration) return;
   if (error) {
@@ -2166,7 +2166,8 @@ async function loadGroups() {
   groupSchemaReady = true;
   myGroups = (data || []).map(r => r.groups
     ? { ...r.groups, share_completions: !!r.share_completions,
-        share_feedback: !!r.share_feedback }
+        share_feedback: !!r.share_feedback,
+        sharing_choice_made_at: r.sharing_choice_made_at }
     : null).filter(Boolean);
   const saved = localStorage.getItem(LS.group);
   activeGroupId = myGroups.some(g => g.id === saved) ? saved
@@ -2255,36 +2256,36 @@ function releaseGroupLifecycle(token) {
   if (groupLifecycleBusy === token) groupLifecycleBusy = null;
 }
 
-async function setCompletionSharing(groupId, enabled) {
-  if (!sb || !userId || !groupId) return false;
-  const owner = userId, generation = authGeneration;
-  const { error } = await sb.rpc('set_group_completion_sharing', {
-    p_group_id: groupId, p_enabled: !!enabled,
-  });
-  if (owner !== userId || generation !== authGeneration) return null;
-  if (error) { console.warn('completion sharing', error.message); return false; }
-  const group = myGroups.find(g => g.id === groupId);
-  if (group) {
-    group.share_completions = !!enabled;
-    if (!enabled) group.share_feedback = false;
-  }
-  clearGroupFeedback();
-  return true;
+function askGroupSharingChoice(action) {
+  return confirm(`Share your completed adventures with this group?\n\n`+
+    `Members will see your ticks, completion dates, star ratings and written memories together. `+
+    `Older entries with uncertain ownership stay private until you confirm them in My progress. `+
+    `Photos, purchases and your shortlist stay private.\n\n`+
+    `OK = share them. Cancel = ${action} privately.`);
 }
 
-async function setFeedbackSharing(groupId, enabled) {
-  if (!sb || !userId || !groupId) return false;
+async function chooseLegacyGroupSharing(groupId) {
   const group = myGroups.find(g => g.id === groupId);
-  if (enabled && !group?.share_completions) return false;
+  if (!sb || !userId || !online || !group || group.sharing_choice_made_at) return;
   const owner = userId, generation = authGeneration;
-  const { error } = await sb.rpc('set_group_feedback_sharing', {
-    p_group_id: groupId, p_enabled: !!enabled,
+  const shareMemories = askGroupSharingChoice('stay in the group');
+  const { error } = await sb.rpc('choose_group_sharing', {
+    p_group_id: groupId, p_share_memories: shareMemories,
   });
-  if (owner !== userId || generation !== authGeneration) return null;
-  if (error) { console.warn('feedback sharing', error.message); return false; }
-  if (group) group.share_feedback = !!enabled;
+  if (owner !== userId || generation !== authGeneration) return;
+  if (error) {
+    console.warn('group sharing choice', error.message);
+    toast('Could not save your choice. Try again when connected.');
+    return;
+  }
+  await loadGroups();
+  if (owner !== userId || generation !== authGeneration) return;
   clearGroupFeedback();
-  return true;
+  renderAll();
+  await pullProgress();
+  if (owner === userId && generation === authGeneration) renderAll();
+  toast(shareMemories ? 'Your completed adventures are shared with this group'
+    : 'Your adventures stay private in this group');
 }
 
 async function setProgressView(view) {
@@ -2321,8 +2322,10 @@ async function createGroup(name) {
   const current = () => owner === userId && generation === authGeneration;
   if (!await requireName('You are about to share a list.')) return;
   if (!current()) return;
-  const sharePast = confirm('Share your past and future completion ticks with this group?\n\nRatings and written memories stay private unless you separately choose to share them. Photos and shortlist stay private. Choose Cancel to join privately and share later. Your personal list stays yours either way.');
-  const result = await sb.rpc('create_group', { p_name: name, p_display_name: who });
+  const shareMemories = askGroupSharingChoice('create the group');
+  const result = await sb.rpc('create_group_with_sharing', {
+    p_name: name, p_display_name: who, p_share_memories: shareMemories,
+  });
   if (!current()) return;
   const data = rpcRow(result.data);
   if (result.error || !data) {
@@ -2332,9 +2335,6 @@ async function createGroup(name) {
   localStorage.setItem(LS.group, activeGroupId);
   await loadGroups();
   if (!current()) return;
-  const sharingChanged = await setCompletionSharing(data.group_id, sharePast);
-  if (!current() || sharingChanged === null) return;
-  if (!sharingChanged) return toast('Group created, but could not apply your sharing choice. Check sharing in Me.');
   if (activeGroupId !== data.group_id) return;
   await setProgressView('group');
   if (!current() || activeGroupId !== data.group_id) return;
@@ -2357,10 +2357,13 @@ async function joinGroup(code) {
   if (!await requireName('You are about to join a shared list.')) return;
   if (!current()) return;
   const clean = code.trim().toUpperCase();
-  if (!/^[A-Z0-9]{6,32}$/.test(clean)) return toast('That join code is not valid');
-  const sharePast = confirm('Share your past and future completion ticks with this group?\n\nRatings and written memories stay private unless you separately choose to share them. Photos and shortlist stay private. Choose Cancel to join privately and share later.');
-  const result = await sb.rpc('join_group_by_code', {
-    p_join_code: clean, p_display_name: who,
+  // Current codes have six characters. Older emailed links remain readable
+  // during the server-side alias transition; they are never displayed anew.
+  if (!/^(?:[A-Z0-9]{6}|[A-F0-9]{32})$/.test(clean))
+    return toast('Enter the six-character join code');
+  const shareMemories = askGroupSharingChoice('join');
+  const result = await sb.rpc('join_group_with_sharing', {
+    p_join_code: clean, p_display_name: who, p_share_memories: shareMemories,
   });
   if (!current()) return;
   const data = rpcRow(result.data);
@@ -2369,11 +2372,6 @@ async function joinGroup(code) {
   localStorage.setItem(LS.group, activeGroupId);
   await loadGroups();
   if (!current()) return;
-  // A repeated invite must honour "join privately" even if this membership
-  // previously shared completions. Target this invite, not a later selection.
-  const sharingChanged = await setCompletionSharing(data.group_id, sharePast);
-  if (!current() || sharingChanged === null) return;
-  if (!sharingChanged) return toast('Joined, but could not apply your sharing choice. Check sharing in Me.');
   if (activeGroupId !== data.group_id) return;
   await setProgressView('group');
   if (!current() || activeGroupId !== data.group_id) return;
@@ -2669,18 +2667,12 @@ function renderMe_groups() {
         <button class="btn-ghost${progressView === 'personal' ? ' on' : ''}" data-groupact="view" data-view="personal">My progress</button>
         <button class="btn-ghost${progressView === 'group' ? ' on' : ''}" data-groupact="view" data-view="group">Group progress</button>
       </div>
-      <p class="fineprint">${active.share_completions
-        ? 'Your existing and future completion ticks and dates are visible to this group.'
-        : 'Your personal completions are private from this group.'}</p>
-      <button class="btn-ghost" data-groupact="sharing" data-enabled="${active.share_completions ? 'false' : 'true'}">
-        ${active.share_completions ? 'Stop sharing my completion ticks' : 'Share my completion ticks'}
-      </button>
-      <p class="fineprint">${active.share_feedback && active.share_completions
-        ? 'Eligible personal ratings and written memories for completed adventures are visible to this group. Older entries need your confirmation in Personal view first. Photos and shortlist stay private.'
-        : 'Your ratings and written memories are not shared with this group. Older entries need your confirmation in Personal view first; photos stay private.'}</p>
-      <button class="btn-ghost" data-groupact="feedback-sharing" data-enabled="${active.share_feedback ? 'false' : 'true'}" ${!active.share_completions ? 'disabled' : ''}>
-        ${active.share_feedback ? 'Stop sharing my ratings and memories' : 'Share my ratings and memories'}
-      </button>
+      <p class="fineprint">${active.sharing_choice_made_at
+        ? (active.share_completions && active.share_feedback
+          ? 'You chose to share your ticks, dates, ratings and written memories with this group. Older entries still need your confirmation. Photos stay on your phone.'
+          : 'You joined privately. Your ticks, ratings and written memories are not shared with this group.')
+        : `Your earlier setting is still active: ${active.share_completions ? 'ticks are shared' : 'ticks are private'}; ${active.share_feedback ? 'ratings and notes are shared' : 'ratings and notes are private'}. Choose once how to share them together.`}</p>
+      ${active.sharing_choice_made_at ? '' : '<button class="btn-ghost" data-groupact="choose-sharing">Finish sharing setup</button>'}
       ${active.invite_enabled ? `
         <p class="fineprint">Join code <code class="joincode">${esc(active.join_code)}</code> — read it
            out, or send the link below and they will be asked to confirm.</p>
@@ -5350,7 +5342,7 @@ ${url}`);
       if (name && name.trim()) await createGroup(name.trim());
     }
     if (b.dataset.groupact === 'join') {
-      const code = prompt('Enter the join code');
+      const code = prompt('Enter the six-character join code');
       if (code && code.trim()) await joinGroup(code);
     }
     if (b.dataset.groupact === 'view') await setProgressView(b.dataset.view);
@@ -5369,33 +5361,7 @@ ${url}`);
       await setProgressView(progressView);
       await pullGroupTrips();
     }
-    if (b.dataset.groupact === 'sharing') {
-      const owner = userId, generation = authGeneration, groupId = activeGroupId;
-      const enabled = b.dataset.enabled === 'true';
-      const changed = await setCompletionSharing(groupId, enabled);
-      if (changed === null || owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
-      if (!changed) return toast('Could not change sharing');
-      renderAll();
-      await pullProgress();
-      if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
-      renderAll();
-      toast(enabled ? 'Your progress is shared with this group' : 'Your progress is private again');
-    }
-    if (b.dataset.groupact === 'feedback-sharing') {
-      const owner = userId, generation = authGeneration, groupId = activeGroupId;
-      const group = myGroups.find(g => g.id === groupId);
-      const enabled = b.dataset.enabled === 'true';
-      if (enabled && !group?.share_completions) return toast('Share completion ticks first');
-      if (enabled && !confirm(`Share eligible ratings and written memories on your personal completed adventures with everyone in ${group.name}?\n\nNew personal entries share normally. For older entries, review each one in Personal view and tap Confirm for group sharing first. Photos, shortlist and purchases stay private. You can stop sharing later.`)) return;
-      const changed = await setFeedbackSharing(groupId, enabled);
-      if (changed === null || owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
-      if (!changed) return toast('Could not change rating and memory sharing');
-      renderAll();
-      await pullProgress();
-      if (owner !== userId || generation !== authGeneration || groupId !== activeGroupId) return;
-      renderAll();
-      toast(enabled ? 'Eligible ratings and memories can now appear in this group' : 'Your ratings and memories are private again');
-    }
+    if (b.dataset.groupact === 'choose-sharing') await chooseLegacyGroupSharing(activeGroupId);
     if (b.dataset.groupact === 'rotate-invite') await rotateGroupInvite(activeGroupId);
     if (b.dataset.groupact === 'revoke-invite') await revokeGroupInvite(activeGroupId);
     if (b.dataset.groupact === 'remove-member') await removeGroupMember(activeGroupId, b.dataset.member);
@@ -6642,9 +6608,8 @@ async function resumePendingGroupInvite() {
   }
   pendingGroupInviteBusy = true;
   try {
-    const accepted = confirm('Join the Wayfinder group from this invite?\n\nYour personal list stays yours. You will choose whether to share past completions.');
     localStorage.removeItem(PENDING_GROUP_INVITE_KEY);
-    if (accepted && userId && (!pending.owner || pending.owner === userId)) {
+    if (userId && (!pending.owner || pending.owner === userId)) {
       await joinGroup(pending.code);
     }
   } finally {
