@@ -63,7 +63,7 @@ let ADV = [];                  // all 500 adventures
 let progress = new Map();      // adventure_id -> row
 let personalProgress = new Map(); // canonical rows used when editing a group aggregate
 let groupFeedback = new Map(); // adventure_id -> consented member feedback, memory only
-let groupCompletions = new Map(); // adventure_id -> current group members' shared ticks
+let groupCompletions = new Map(); // adventure_id -> current and retained shared ticks
 let groupLegacyCompletions = new Map(); // older group-only rows without safe member attribution
 let groupFeedbackScope = null; // owner and group that supplied the in-memory feed
 let groupFeedbackAvailable = false; // distinguish an empty feed from a failed refresh
@@ -615,8 +615,8 @@ function currentGroupFeedReady() {
 function groupMemberTicks(id) {
   if (!currentGroupFeedReady()) return [];
   return [...(groupCompletions.get(id)?.values() || [])]
-    .sort((a, b) => nameOf(a.completed_by_id, a.completed_by)
-      .localeCompare(nameOf(b.completed_by_id, b.completed_by))
+    .sort((a, b) => groupCompletionName(a)
+      .localeCompare(groupCompletionName(b))
       || a.completed_by_id.localeCompare(b.completed_by_id));
 }
 
@@ -2090,6 +2090,10 @@ let userId = null;             // auth.users.id for this session
 let myGroups = [];             // groups this user belongs to
 let activeGroupId = null;      // the group new rows are written into
 let members = new Map();       // user_id -> display name, for everyone in the group
+let membersLoadedForGroup = null; // distinguish a former member from a failed member fetch
+let retainedGroupHistory = []; // departed groups with owner-removable shared snapshots
+let retainedGroupHistoryOwner = null;
+let retainedGroupHistoryLoadEpoch = 0;
 let pushedName = null;         // the display name last written to the server
 let groupSchemaReady = true;
 let groupLifecycleBusy = null;
@@ -2106,6 +2110,17 @@ function nameOf(id, fallback) {
   if (id && members.has(id)) return members.get(id);
   if (id && id === userId) return who || 'You';
   return fallback || 'Someone';
+}
+
+function groupCompletionName(tick) {
+  if (members.has(tick.completed_by_id)) return members.get(tick.completed_by_id);
+  return tick.completed_by || nameOf(tick.completed_by_id);
+}
+
+function groupCompletionLabel(tick) {
+  const name = groupCompletionName(tick);
+  return membersLoadedForGroup === activeGroupId && !members.has(tick.completed_by_id)
+    ? `${name} (former member)` : name;
 }
 
 /* Ask for a name, but only when it will actually be seen.
@@ -2152,6 +2167,10 @@ async function loadGroups() {
     clearGroupFeedback();
     clearGroupTripCache();
     members = new Map();
+    membersLoadedForGroup = null;
+    retainedGroupHistory = [];
+    retainedGroupHistoryOwner = null;
+    retainedGroupHistoryLoadEpoch++;
     localStorage.removeItem(LS.group);
     if (progressView === 'group') {
       progressView = 'personal';
@@ -2191,12 +2210,14 @@ async function loadGroups() {
     saveLocalProgress();
   }
   await loadMembers();
+  await loadRetainedGroupHistory();
 }
 
 // Everyone in the active group, so ticks can be attributed to a person
 // rather than to a string that was copied at the time.
 async function loadMembers() {
   members = new Map();
+  membersLoadedForGroup = null;
   if (!sb || !activeGroupId) return;
   const owner = userId, generation = authGeneration, groupId = activeGroupId;
   const { data, error } = await sb.from('group_members')
@@ -2210,7 +2231,25 @@ async function loadMembers() {
   }
   for (const m of data || []) members.set(m.user_id,
     m.display_name || (m.user_id === userId ? who || 'You' : 'Group member'));
+  membersLoadedForGroup = groupId;
   await pushMyName();
+}
+
+async function loadRetainedGroupHistory() {
+  const request = ++retainedGroupHistoryLoadEpoch;
+  retainedGroupHistory = [];
+  retainedGroupHistoryOwner = null;
+  if (!sb || !userId || !online || typeof sb.rpc !== 'function') return;
+  const owner = userId, generation = authGeneration;
+  const { data, error } = await sb.rpc('list_my_retained_group_history');
+  if (request !== retainedGroupHistoryLoadEpoch
+      || owner !== userId || generation !== authGeneration) return;
+  if (error) {
+    console.warn('retained group history', error.message);
+    return;
+  }
+  retainedGroupHistory = (data || []).filter(row => row.group_id && Number(row.retained_count) > 0);
+  retainedGroupHistoryOwner = owner;
 }
 
 /* Keep this phone's name on the server so the others can see it.
@@ -2261,8 +2300,9 @@ function releaseGroupLifecycle(token) {
 
 function askGroupSharingChoice(action) {
   return confirm(`Share your completed adventures with this group?\n\n`+
-    `Members will see your ticks, completion dates, star ratings and written memories together. `+
+    `Current and future members will see your ticks, completion dates, star ratings and written memories together. `+
     `Older entries with uncertain ownership stay private until you confirm them in My progress. `+
+    `If you leave, what you already shared stays with your name in the group until you remove your shared group history, delete your account, or the group is deleted. `+
     `Photos, purchases and your shortlist stay private.\n\n`+
     `OK = share them. Cancel = ${action} privately.`);
 }
@@ -2399,9 +2439,8 @@ async function joinGroup(code) {
   }
 }
 
-/* Leaving removes only the consent projections and membership. The canonical
- * rows stay owned by the person throughout, so no data has to be moved and a
- * partially failed client sequence cannot strand it behind group access.
+/* The server freezes eligible already-shared entries for the remaining group
+ * members, while the canonical personal rows stay with their owner.
  */
 async function leaveGroup(id) {
   if (!sb || !userId) return;
@@ -2411,7 +2450,11 @@ async function leaveGroup(id) {
   const owner = userId, generation = authGeneration;
   const current = () => owner === userId && generation === authGeneration;
   const g = myGroups.find(x => x.id === id);
-  if (!confirm(`Leave ${g ? g.name : 'this group'}?\n\nYour personal ticks and trips stay with you. Their shared copies stop showing in this group, and you lose access to other members’ shared trips.`)) return;
+  const lastMember = membersLoadedForGroup === id && members.size === 1;
+  const consequence = lastMember
+    ? 'You are the last member, so leaving deletes the group and its shared history.'
+    : `If other members remain, your previously shared ticks, dates, ratings and written memories stay under your name for the group. Later edits to your personal list do not change that history. You can remove your shared group history from Me after leaving.${membersLoadedForGroup === id ? '' : ' If you are the last member, leaving deletes the group and its shared history.'}`;
+  if (!confirm(`Leave ${g ? g.name : 'this group'}?\n\n${consequence} Your personal ticks and trips stay with you. Shared trips stop showing in this group, and you lose access to other members’ shared trips. Photos stay on your device.`)) return;
 
   toast('Leaving…');
   const { error } = await sb.rpc('leave_group', { p_group_id: id });
@@ -2431,6 +2474,31 @@ async function leaveGroup(id) {
   if (!current()) return;
   renderAll();
   toast('Left the group. Your personal data is still yours.');
+  } finally {
+    releaseGroupLifecycle(lifecycle);
+  }
+}
+
+async function eraseRetainedGroupHistory(groupId) {
+  if (!sb || !online || !userId || retainedGroupHistoryOwner !== userId) return;
+  const entry = retainedGroupHistory.find(row => row.group_id === groupId);
+  if (!entry) return;
+  const lifecycle = claimGroupLifecycle();
+  if (!lifecycle) return toast('A group change is already in progress');
+  try {
+    if (!confirm(`Remove your shared history from ${entry.group_name || 'this group'}?\n\nThis permanently removes the ticks, dates, ratings and written memories retained under your name for that group. Your personal list and other members’ entries stay. Copies someone already saved cannot be recalled.`)) return;
+    const owner = userId, generation = authGeneration;
+    const { error } = await sb.rpc('erase_my_group_history', { p_group_id: groupId });
+    if (owner !== userId || generation !== authGeneration) return;
+    if (error) {
+      console.warn('erase retained group history', error.message);
+      toast('Could not remove your shared group history. Try again.');
+      return;
+    }
+    await loadRetainedGroupHistory();
+    if (owner !== userId || generation !== authGeneration) return;
+    renderMe_groups();
+    toast('Your shared history was removed from that group.');
   } finally {
     releaseGroupLifecycle(lifecycle);
   }
@@ -2483,7 +2551,7 @@ async function removeGroupMember(groupId, memberId) {
   if (!lifecycle) return toast('A group change is already in progress');
   try {
     const label = nameOf(memberId, 'this member');
-    if (!confirm(`Remove ${label} from this group?\n\nTheir personal progress, trips and photos remain theirs. Their shared completions and trips stop showing here.`)) return;
+    if (!confirm(`Remove ${label} from this group?\n\nTheir personal progress, trips and photos remain theirs. Their previously shared ticks, dates, ratings and written memories stay under their name for this group. Their shared trips stop showing here. They can later erase their retained shared history.`)) return;
     const { error } = await sb.rpc('remove_group_member', {
       p_group_id: groupId, p_user_id: memberId,
     });
@@ -2500,7 +2568,7 @@ async function removeGroupMember(groupId, memberId) {
     await pullGroupTrips();
     if (!currentGroupLifecycle(lifecycle, groupId)) return;
     renderAll();
-    toast(`${label} was removed. Their personal data was not deleted.`);
+    toast(`${label} was removed. Their shared history remains in this group.`);
   } finally {
     releaseGroupLifecycle(lifecycle);
   }
@@ -2717,7 +2785,16 @@ function renderMe_groups() {
       <button class="btn-ghost" data-groupact="join">Join with a code</button>
     ${active ? '</div></details>' : ''}
     ${myGroups.length > 1 ? `<div class="group-list"><p class="fineprint">Switch group:</p>${myGroups
-      .map(g => `<button class="btn-ghost${g.id === activeGroupId ? ' on' : ''}" data-groupact="switch" data-id="${esc(g.id)}">${esc(g.name)}</button>`).join('')}</div>` : ''}`;
+      .map(g => `<button class="btn-ghost${g.id === activeGroupId ? ' on' : ''}" data-groupact="switch" data-id="${esc(g.id)}">${esc(g.name)}</button>`).join('')}</div>` : ''}
+    ${retainedGroupHistoryOwner === userId && retainedGroupHistory.length ? `
+      <div class="group-list" aria-label="Shared history in groups you left">
+        <p><strong>Shared history in groups you left</strong></p>
+        <p class="fineprint">Your previously shared name, ticks, dates, ratings and written memories remain visible to those groups. Your personal list stays with you.</p>
+        ${retainedGroupHistory.map(entry => `<div class="group-member">
+          <span>${esc(entry.group_name || 'Former group')} · ${Number(entry.retained_count)} shared adventure${Number(entry.retained_count) === 1 ? '' : 's'}</span>
+          <button class="btn-ghost danger" data-groupact="erase-history" data-id="${esc(entry.group_id)}" aria-label="Remove my shared group history from ${esc(entry.group_name || 'former group')}">Remove my shared group history</button>
+        </div>`).join('')}
+      </div>` : ''}`;
 }
 
 function renderAccountPanel() {
@@ -2829,7 +2906,7 @@ async function retryConfirmedLocalAccountCleanup() {
 async function deleteAccount() {
   if (!sb || !userId || accountDeletionInProgress) return;
   if (!online) return toast('Reconnect before deleting your account');
-  const typed = prompt('This deletes your Wayfinder account, saved progress and trips, and photos stored in Wayfinder on this device. '
+  const typed = prompt('This deletes your Wayfinder account, saved progress and trips, your retained shared history in groups, and photos stored in Wayfinder on this device. '
                      + 'Creating another account with the same email will not recover this account or its progress. '
                      + 'Purchase-service data is queued for deletion, but Apple keeps its transaction history; eligible purchases can be restored separately. '
                      + 'Contact support if paid access is not restored. '
@@ -4117,7 +4194,7 @@ function renderMemories() {
           ? groupFeedback.get(a.id)?.get(tick.completed_by_id) : null;
         const date = tick.completed_on || tick.completed_at
           ? ` · completed ${esc(fmtCompletionDate(tick))}` : ' · completed';
-        return `<span class="memory-note"><strong>${esc(nameOf(tick.completed_by_id, tick.completed_by))}</strong>${date}${entry?.rating ? ` <span class="badge star" aria-label="${entry.rating} stars">${'★'.repeat(entry.rating)}</span>` : ''}${entry?.memory?.trim() ? ` — ${esc(entry.memory)}` : ''}</span>`;
+        return `<span class="memory-note"><strong>${esc(groupCompletionLabel(tick))}</strong>${date}${entry?.rating ? ` <span class="badge star" aria-label="${entry.rating} stars">${'★'.repeat(entry.rating)}</span>` : ''}${entry?.memory?.trim() ? ` — ${esc(entry.memory)}` : ''}</span>`;
       });
       return `<div class="memory">
         <button type="button" class="memory-open" data-open="${a.id}" aria-label="Open ${esc(safeTitle(a))}">
@@ -4529,8 +4606,17 @@ function renderMe() {
   const avg = rated.length ? (rated.reduce((s, n) => s + n, 0) / rated.length).toFixed(1) : '—';
   const shortlisted = [...progress.values()].filter(r => r.shortlisted && !r.completed).length;
   const byPerson = completionCountsByPerson();
+  const groupPersonNames = new Map();
+  if (progressView === 'group') {
+    for (const rows of groupCompletions.values()) {
+      for (const tick of rows.values()) {
+        groupPersonNames.set(tick.completed_by_id, groupCompletionLabel(tick));
+      }
+    }
+  }
   const people = [...byPerson.entries()]
-    .map(([key, n]) => [key.startsWith('name:') ? key.slice(5) : nameOf(key), n])
+    .map(([key, n]) => [key.startsWith('name:') ? key.slice(5)
+      : groupPersonNames.get(key) || nameOf(key), n])
     .sort((a, b) => b[1] - a[1]).slice(0, 4);
 
   $('#usStats').innerHTML = `
@@ -4607,12 +4693,13 @@ function groupFeedbackHTML(id) {
       || groupFeedbackScope?.groupId !== activeGroupId) return '';
   const entries = [...(groupFeedback.get(id)?.values() || [])]
     .filter(entry => entry.completed_by_id !== userId && (entry.rating || entry.memory))
-    .sort((a, b) => nameOf(a.completed_by_id).localeCompare(nameOf(b.completed_by_id)));
+    .sort((a, b) => groupCompletionName(groupCompletions.get(id)?.get(a.completed_by_id) || a)
+      .localeCompare(groupCompletionName(groupCompletions.get(id)?.get(b.completed_by_id) || b)));
   if (!entries.length) return '';
   return `<section aria-label="Group ratings and memories">
     <h3>From your group</h3>
     ${entries.map(entry => `<div class="donenote">
-      <strong>${esc(nameOf(entry.completed_by_id))}</strong>
+      <strong>${esc(groupCompletionLabel(groupCompletions.get(id)?.get(entry.completed_by_id) || entry))}</strong>
       ${entry.rating ? `<span class="badge star" aria-label="${entry.rating} stars">${'★'.repeat(entry.rating)}</span>` : ''}
       ${entry.memory ? `<p class="trip-readonly-note">${esc(entry.memory)}</p>` : ''}
     </div>`).join('')}
@@ -4625,7 +4712,7 @@ function groupCompletionNotesHTML(id) {
     ? '<div class="donenote">Group completion details are loading or temporarily unavailable.</div>' : '';
   const others = groupMemberTicks(id).filter(tick => tick.completed_by_id !== userId);
   const legacyCount = groupLegacyCompletions.get(id)?.length || 0;
-  return `${others.map(tick => `<div class="donenote">Ticked off by ${esc(nameOf(tick.completed_by_id, tick.completed_by))}${tick.completed_on || tick.completed_at ? ' on ' + esc(fmtCompletionDate(tick)) : ''}.</div>`).join('')}
+  return `${others.map(tick => `<div class="donenote">Ticked off by ${esc(groupCompletionLabel(tick))}${tick.completed_on || tick.completed_at ? ' on ' + esc(fmtCompletionDate(tick)) : ''}.</div>`).join('')}
     ${legacyCount ? `<div class="donenote">${legacyCount} earlier shared completion${legacyCount === 1 ? '' : 's'} without verified personal attribution.</div>` : ''}`;
 }
 
@@ -5540,6 +5627,7 @@ ${url}`);
     if (b.dataset.groupact === 'transfer-owner') await transferGroupOwnership(activeGroupId, b.dataset.member);
     if (b.dataset.groupact === 'delete-group') await deleteOwnedGroup(activeGroupId);
     if (b.dataset.groupact === 'leave') await leaveGroup(b.dataset.id);
+    if (b.dataset.groupact === 'erase-history') await eraseRetainedGroupHistory(b.dataset.id);
   });
 
   $('#refreshBtn').onclick = async () => {

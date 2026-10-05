@@ -47,6 +47,11 @@ async function turns() { await new Promise(r => setImmediate(r)); }
 
 function uiChecks() {
   const h = harness();
+  h.context.confirm = message => { h.context.sharingPrompt = message; return true; };
+  h.run("askGroupSharingChoice('join')");
+  assert.match(h.context.sharingPrompt, /Current and future members will see/);
+  assert.match(h.context.sharingPrompt, /If you leave, what you already shared stays with your name/);
+  assert.match(h.context.sharingPrompt, /remove your shared group history/);
   h.run(`sb={}; activeGroupId='group-1';
     myGroups=[{id:'group-1',name:'Friends',join_code:'ABCD12',owner_id:'account-a',invite_enabled:true,share_completions:true,share_feedback:true,sharing_choice_made_at:'2026-10-05'}];
     members=new Map([['account-a','Alex'],['account-b','Blair']]); renderMe_groups();`);
@@ -84,6 +89,18 @@ function uiChecks() {
   h.run("myGroups[0].owner_id='account-a'; renderMe_groups();");
   html = h.elements.get('#groupPanel').innerHTML;
   assert.match(html, /Create a new invite/);
+  h.run(`retainedGroupHistoryOwner=userId;
+    retainedGroupHistory=[{group_id:'past-group',group_name:'Old <friends>',retained_count:2}];
+    renderMe_groups()`);
+  html = h.elements.get('#groupPanel').innerHTML;
+  assert.match(html, /Shared history in groups you left/);
+  assert.match(html, /Old &lt;friends&gt; · 2 shared adventures/);
+  assert.match(html, /data-groupact="erase-history" data-id="past-group"/,
+    'owner can find history removal after leaving the group');
+  assert.doesNotMatch(html, /Old <friends>/);
+  h.run(`userId='other-account'; renderMe_groups()`);
+  assert.doesNotMatch(h.elements.get('#groupPanel').innerHTML, /Old &lt;friends&gt;/,
+    'history from the prior account is hidden while an account switch is loading');
   console.log('PASS: group owner, member and paused-invite controls expose only permitted actions');
 }
 
@@ -112,6 +129,57 @@ async function operationChecks() {
     assert.deepEqual(JSON.parse(JSON.stringify(calls[0][1])), {
       p_join_code:'ABCD12',p_display_name:'Alex',p_share_memories:true,
     });
+  }
+  {
+    const h = harness(), calls = [];
+    h.context.confirm = message => { h.context.lastPrompt = message; return true; };
+    h.context.rpc = async (name, args) => { calls.push([name, args]); return { error: null }; };
+    h.run(`sb={rpc}; activeGroupId='group-1'; myGroups=[{id:'group-1',name:'Friends'}];
+      members=new Map([['account-a','Alex'],['account-b','Blair']]);
+      membersLoadedForGroup='group-1';
+      loadGroups=async()=>{}; setProgressView=async()=>{}; pullPhotos=async()=>{};
+      pullTrips=async()=>{}; pullGroupTrips=async()=>{};`);
+    await h.run("leaveGroup('group-1')");
+    assert.match(h.context.lastPrompt, /previously shared ticks, dates, ratings and written memories stay under your name/);
+    assert.match(h.context.lastPrompt, /remove your shared group history from Me after leaving/);
+    assert.deepEqual(JSON.parse(JSON.stringify(calls)), [['leave_group', { p_group_id: 'group-1' }]]);
+  }
+  {
+    const h = harness(), calls = [];
+    h.context.confirm = message => { h.context.lastPrompt = message; return true; };
+    h.context.rpc = async (name, args) => {
+      calls.push([name, args]);
+      return { data: [], error: null };
+    };
+    h.run(`sb={rpc}; retainedGroupHistoryOwner=userId;
+      retainedGroupHistory=[{group_id:'old-group',group_name:'Old friends',retained_count:3}];`);
+    await h.run("eraseRetainedGroupHistory('old-group')");
+    assert.match(h.context.lastPrompt, /permanently removes the ticks, dates, ratings and written memories/);
+    assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+      ['erase_my_group_history', { p_group_id: 'old-group' }],
+      ['list_my_retained_group_history', null],
+    ]);
+    assert.equal(h.run('retainedGroupHistory.length'), 0);
+    assert.equal(h.run('retainedGroupHistoryOwner'), 'account-a');
+  }
+  {
+    const h = harness(), calls = [];
+    h.context.rpc = async (name, args) => { calls.push([name, args]); return { error: null }; };
+    h.run(`sb={rpc}; retainedGroupHistoryOwner='other-account';
+      retainedGroupHistory=[{group_id:'old-group',group_name:'Old friends',retained_count:3}];`);
+    await h.run("eraseRetainedGroupHistory('old-group')");
+    assert.equal(calls.length, 0, 'another account cannot invoke retained-history removal');
+  }
+  {
+    const h = harness(), pending = deferred();
+    h.context.rpc = () => pending.promise;
+    h.run('sb={rpc}; online=true');
+    const load = h.run('loadRetainedGroupHistory()');
+    h.run("userId='other-account'; authGeneration++");
+    pending.resolve({data:[{group_id:'old-group',group_name:'Old friends',retained_count:3}],error:null});
+    await load;
+    assert.equal(h.run('retainedGroupHistory.length'), 0,
+      'a departed-history response cannot cross an account switch');
   }
   {
     const h = harness(), calls = [];

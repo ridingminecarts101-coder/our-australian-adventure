@@ -96,6 +96,28 @@ assert.match(h.html(), /&lt;Bob &amp; team&gt;/, 'member names are escaped like 
 assert.doesNotMatch(h.html(), /<Bob & team>/);
 h.run(`members.set('bob','Bob')`);
 
+// A departed member has no current group_members row. The completion feed
+// carries their frozen display name, and the feedback feed retains their note.
+h.run(`membersLoadedForGroup='group-a';
+  members.delete('charlie');
+  groupCompletions.get(17).get('charlie').completed_by='Charlie at departure';
+  renderMemories()`);
+assert.match(h.html(), /Charlie at departure \(former member\).*completed 1 Oct 2026.*Great views/,
+  'a retained entry uses its frozen name and is marked as a former member');
+assert.match(h.run('groupFeedbackHTML(17)'), /Charlie at departure \(former member\).*Great views/s,
+  'the adventure sheet attributes retained ratings and notes to the former member');
+assert.match(h.run('groupCompletionNotesHTML(17)'), /Charlie at departure \(former member\).*1 Oct 2026/,
+  'the adventure sheet attributes retained completion dates to the former member');
+h.run(`members.set('charlie','Charlie rejoined'); renderMemories()`);
+assert.match(h.html(), /Charlie rejoined.*Great views/,
+  'an active membership uses the current group display name');
+assert.doesNotMatch(h.html(), /Charlie at departure \(former member\)/);
+h.run(`members.delete('charlie'); membersLoadedForGroup=null; renderMemories()`);
+assert.match(h.html(), /Charlie at departure.*Great views/);
+assert.doesNotMatch(h.html(), /Charlie at departure \(former member\)/,
+  'a failed membership fetch does not falsely identify a member as departed');
+h.run(`members.set('charlie','Charlie'); membersLoadedForGroup='group-a'`);
+
 h.run(`groupFeedback=indexGroupFeedback([]); renderMemories()`);
 assert.match(h.html(), /Shared walk/);
 assert.match(h.html(), /No memory written yet/, 'group ticks remain visible without feedback consent');
