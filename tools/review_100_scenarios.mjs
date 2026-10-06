@@ -116,7 +116,7 @@ const cases = [
   r('Discovery/booking', 'Product registry excludes inactive/unverified matches', 'test_booking_registry.py', '9 booking-registry checks passed: ACTIVE product, current/future schedule, dated evidence and intact affiliate URL required', 'static/unit'),
   r('Discovery/booking', 'Adventure sheet places paid link with disabled state correctly', 'test_booking_render.js', 'Real adventure-sheet rendering, link placement, disclosure, trip details and disabled-state checks passed', 'synthetic UI'),
   r('Discovery/booking', 'Catalogue coverage math and pack counts remain consistent', 'test_content_inventory.py', null, 'static/unit'),
-  r('Discovery/booking', 'Every registered country has at least one quality adventure', 'check_quality.py', null, 'static content'),
+  r('Discovery/booking', 'Every uncovered country fails unless an explicit do-not-travel safety hold applies', 'check_quality.py', null, 'static content'),
 
   // Policy, accessibility, native release structure.
   r('Policy/access/native', 'Cards and dialogs support keyboard/focus semantics', 'test_accessibility.js', 'PASS: keyboard card activation, selection semantics and six-dialog focus lifecycle', 'synthetic UI'),
@@ -139,7 +139,8 @@ const head = spawnSync('git', ['rev-parse', 'HEAD'], {
 const commands = new Map();
 for (const c of cases) {
   if (commands.has(c.file)) continue;
-  const executable = c.file.endsWith('.py') ? 'python' : process.execPath;
+  const executable = c.file.endsWith('.py')
+    ? (process.platform === 'win32' ? 'python' : 'python3') : process.execPath;
   const script = c.file.includes('review_')
     ? fileURLToPath(new URL(`./${c.file.split('/').at(-1)}`, import.meta.url))
     : c.file;

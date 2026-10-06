@@ -74,11 +74,11 @@ const workflowBuildNumber = workflow.match(
   /build_number:[\s\S]*?^\s+default:\s*['"]?([1-9][0-9]*)['"]?\s*$/m)?.[1];
 assert(workflowMarketingVersion, 'the signed workflow must have a semantic marketing-version default');
 assert(workflowBuildNumber, 'the signed workflow must have a positive internal-build default');
-assert.equal(`${workflowMarketingVersion}:${workflowBuildNumber}`, '1.1.0:10',
-  'the signed-workflow default must use the approved 1.1.0 (build 10) pair');
+assert.equal(`${workflowMarketingVersion}:${workflowBuildNumber}`, '1.2.0:11',
+  'the signed-workflow default must use the prepared 1.2.0 (build 11) pair');
 assert.match(workflow,
-  /test "\$RELEASE_MARKETING_VERSION:\$RELEASE_BUILD_NUMBER" = "1\.1\.0:10"/,
-  'the signed workflow must reject upload inputs outside the approved 1.1.0 (build 10) pair');
+  /test "\$RELEASE_MARKETING_VERSION:\$RELEASE_BUILD_NUMBER" = "1\.2\.0:11"/,
+  'the signed workflow must reject upload inputs outside the prepared 1.2.0 (build 11) pair');
 const projectMarketingVersions = [...project.matchAll(/MARKETING_VERSION = ([^;]+);/g)]
   .map(match => match[1]);
 const projectBuildNumbers = [...project.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)]

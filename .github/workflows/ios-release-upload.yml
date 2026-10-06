@@ -18,14 +18,14 @@ name: iOS signed archive and delivery
         required: true
         type: string
       marketing_version:
-        description: Public App Store version for the prepared build 10 release
+        description: Public App Store version for the prepared build 11 release
         required: true
-        default: 1.1.0
+        default: 1.2.0
         type: string
       build_number:
-        description: Internal build number for the prepared 1.1.0 release
+        description: Internal build number for the prepared 1.2.0 release
         required: true
-        default: '10'
+        default: '11'
         type: string
 
 permissions:
@@ -71,7 +71,7 @@ jobs:
           [[ "$RELEASE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]
           # Explicit pair for this candidate. Change both together for the next
           # release; caller-supplied mismatches cannot bypass this gate.
-          test "$RELEASE_MARKETING_VERSION:$RELEASE_BUILD_NUMBER" = "1.1.0:10"
+          test "$RELEASE_MARKETING_VERSION:$RELEASE_BUILD_NUMBER" = "1.2.0:11"
           for name in APPLE_TEAM_ID APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID \
             REVENUECAT_IOS_PUBLIC_SDK_KEY; do
             test -n "${!name}" || { echo "Missing protected environment value: $name" >&2; exit 1; }
@@ -102,6 +102,9 @@ jobs:
         run: |
           set -eu
           npm ci
+          python3 -X utf8 tools/check_all.py
+          node tools/review_100_scenarios.mjs
+          node tools/test_qa_75_scenarios.mjs .
           node tools/test_billing.js
           python3 -X utf8 tools/check_billing.py
           python3 -X utf8 tools/check_ios_products.py

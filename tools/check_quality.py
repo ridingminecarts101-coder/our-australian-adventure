@@ -33,6 +33,11 @@ VERBOSE = '--verbose' in sys.argv or '-v' in sys.argv
 
 findings = []          # (severity, check, message, examples)
 COUNTRY_WIDE_ADMIN1 = {'AU': frozenset({'AUS'})}
+# These three currently have no responsible visitor recommendation. Australia's
+# Smartraveller advice for each is "Do not travel" (checked 6 October 2026).
+# Keep this list explicit: a new uncovered country, or changed in-app advice,
+# must still fail the coverage gate rather than silently becoming an exception.
+SAFETY_HELD_EMPTY_COUNTRIES = frozenset({'CF', 'KP', 'SS'})
 
 
 def report(sev, check, msg, examples=()):
@@ -439,10 +444,18 @@ def check_gem_coverage(rows):
         by_continent[adventure['continent']].append(adventure)
 
     missing = sorted(set(COUNTRIES) - set(by_country))
-    if missing:
+    safety_held_missing = [country for country in missing
+                           if country in SAFETY_HELD_EMPTY_COUNTRIES
+                           and ADVISORIES.get(country, ('', ''))[0] == 'avoid']
+    actionable_missing = sorted(set(missing) - set(safety_held_missing))
+    if actionable_missing:
         report('problem', 'missing country coverage',
-               f'{len(missing)} registry countries or territories have no adventures',
-               missing[:12])
+               f'{len(actionable_missing)} registry countries or territories have no adventures',
+               actionable_missing[:12])
+    if safety_held_missing:
+        report('note', 'safety-held country coverage',
+               f'{len(safety_held_missing)} do-not-travel countries currently have no responsible visitor recommendation; do not add filler',
+               safety_held_missing)
 
     zero_countries, safety_held = [], []
     for country, items in sorted(by_country.items()):
