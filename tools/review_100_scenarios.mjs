@@ -120,7 +120,7 @@ const cases = [
 
   // Policy, accessibility, native release structure.
   r('Policy/access/native', 'Cards and dialogs support keyboard/focus semantics', 'test_accessibility.js', 'PASS: keyboard card activation, selection semantics and six-dialog focus lifecycle', 'synthetic UI'),
-  r('Policy/access/native', 'Guided tour is opt-in, scoped and replayable', 'test_tour.js', 'PASS: optional account-scoped tour, six live targets, support, Back, Skip and replay', 'synthetic UI'),
+  r('Policy/access/native', 'First-use tour is optional, device-scoped and replayable', 'test_tour.js', 'PASS: once-per-device welcome, legacy no-nag, nine live tour targets, nonmember Group teaching, Back, Skip and replay', 'synthetic UI'),
   r('Policy/access/native', 'Framed app refuses to expose private state', 'test_frame_guard.js', 'PASS: top-level startup is unchanged; framed startup paints only a refusal and reads no private state', 'synthetic client'),
   r('Policy/access/native', 'Bundled privacy manifests match archive collection claims', 'test_archive_privacy.py', null, 'static/unit'),
   r('Policy/access/native', 'Historical cloud photo objects remain closed to group members', 'test_group_feedback.mjs', 'PASS 15: group member cannot read historical cloud photo object', 'PGlite'),

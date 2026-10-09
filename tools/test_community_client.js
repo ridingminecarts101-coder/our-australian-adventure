@@ -33,7 +33,7 @@ function harness() {
   vm.createContext(context);
   for(const file of ['store.js','app.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
   const run=code=>vm.runInContext(code,context);
-  run('globalThis.actualPullRecommendations=pullRecommendations;');
+  run('globalThis.actualPullRecommendations=pullRecommendations; updateTourInvite=()=>{};');
   run("userId='owner-a'; accountUser={id:userId}; authGeneration=1; who='Fixture'; sb={from}; online=true; toast=t=>effects.push(t); renderRecs=()=>effects.push('render'); pullRecommendations=async()=>effects.push('pull'); closeRecSheet=()=>effects.push('close'); recs=[{id:'post',created_by:'author',author_name:'<Fixture>',up_votes:0,down_votes:0}];");
   return {run,context,values,elements,calls,effects,response:fn=>response=fn};
 }

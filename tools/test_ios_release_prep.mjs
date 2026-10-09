@@ -78,11 +78,11 @@ const buildOrdinal = Number(workflowBuildNumber);
 assert(Number.isSafeInteger(buildOrdinal), 'the iOS build number must be a safe integer');
 assert.equal(workflowMarketingVersion, `1.${Math.floor(buildOrdinal / 10)}.${buildOrdinal % 10}`,
   'public version must follow the owner numbering sequence (11→1.1.1, 19→1.1.9, 20→1.2.0)');
-assert.equal(`${workflowMarketingVersion}:${workflowBuildNumber}`, '1.1.1:11',
-  'the signed-workflow default must use the prepared 1.1.1 (build 11) pair');
+assert.equal(`${workflowMarketingVersion}:${workflowBuildNumber}`, '1.1.2:12',
+  'the signed-workflow default must use the prepared 1.1.2 (build 12) pair');
 assert.match(workflow,
-  /test "\$RELEASE_MARKETING_VERSION:\$RELEASE_BUILD_NUMBER" = "1\.1\.1:11"/,
-  'the signed workflow must reject upload inputs outside the prepared 1.1.1 (build 11) pair');
+  /test "\$RELEASE_MARKETING_VERSION:\$RELEASE_BUILD_NUMBER" = "1\.1\.2:12"/,
+  'the signed workflow must reject upload inputs outside the prepared 1.1.2 (build 12) pair');
 assert.match(workflow, /expected_sequential_version="1\.\$\(\(RELEASE_BUILD_NUMBER \/ 10\)\)\.\$\(\(RELEASE_BUILD_NUMBER % 10\)\)"/,
   'the signed workflow must derive the public version from the sequential build number');
 assert.match(workflow, /test "\$RELEASE_MARKETING_VERSION" = "\$expected_sequential_version"/,

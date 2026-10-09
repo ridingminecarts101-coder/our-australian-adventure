@@ -29,6 +29,7 @@ const ctx = vm.createContext({
   pendingGroupInviteBusy: false,
   lastExternalDeepLink: null, lastExternalDeepLinkAt: 0,
   toast: () => {}, joinGroup: async code => joins.push(code),
+  updateTourInvite: () => {}, // Welcome behavior is covered by test_tour.js.
   openDeepLink: search => opened.push(search),
   OAA_CONFIG: { inviteBase: 'https://rlapplications.com/wayfinder/invite/' },
   window: { OAA_CONFIG: { inviteBase: 'https://rlapplications.com/wayfinder/invite/' } },
