@@ -1,12 +1,12 @@
 {
   "prepared_on": "2026-10-06",
-  "status": "Draft 1.2.0 (build 11) source and App Store copy; production migrations, signed build, phone acceptance and review submission pending",
+  "status": "Draft 1.1.1 (build 11) source and App Store copy; production migrations, signed build, phone acceptance and review submission pending",
   "app": {
     "platform": "iOS",
     "bundle_id": "app.wayfinder.mobile",
     "sku": "wayfinder-ios-001",
-    "version": "1.2.0",
-    "version_policy": "Wayfinder 1.1.0 (build 10) is public. This subsequent feature update pairs 1.2.0 with build 11. The signed workflow rejects another pair. Preparing this copy neither uploads nor submits a binary.",
+    "version": "1.1.1",
+    "version_policy": "Wayfinder 1.1.0 (build 10) is public. This update pairs 1.1.1 with build 11 under the owner's sequential rule: build 19 is 1.1.9 and build 20 is 1.2.0. The signed workflow rejects another pair. Preparing this copy neither uploads nor submits a binary.",
     "primary_locale": "en-AU",
     "name": "Wayfinder: Adventure Lists",
     "subtitle": "Real adventures worldwide",
@@ -15,12 +15,12 @@
     "developer_identity_status": "The live App Store listing displays Riley Lawler as seller and RL Applications as the studio brand. Existing app record 6812170174 and bundle ID app.wayfinder.mobile remain in use.",
     "copyright": "2026 Riley Nicholas Lawler trading as RL Applications",
     "app_download_price_aud": "0.00",
-    "release_mode": "Verify the selected release method for the 1.2.0 draft in App Store Connect before submission. The public 1.1.0 version used AFTER_APPROVAL.",
+    "release_mode": "Verify the selected release method for the 1.1.1 draft in App Store Connect before submission. The public 1.1.0 version used AFTER_APPROVAL.",
     "availability": null,
-    "content_rights": "The owner authorised the third-party-content rights declaration after the bounded licence and provenance review; see THIRD-PARTY-NOTICES.md. No new external artwork or venue photos are added in 1.2.0.",
+    "content_rights": "The owner authorised the third-party-content rights declaration after the bounded licence and provenance review; see THIRD-PARTY-NOTICES.md. No new external artwork or venue photos are added in 1.1.1.",
     "apple_membership_status": "The individual/sole-trader Apple membership and existing app record 6812170174 are active. Wayfinder 1.1.0 is live; organisation conversion remains a separate future matter.",
-    "purchase_setup_status": "All eight non-consumable products are approved. All continents is AUD 14.99 and the seven regional packs are AUD 2.99 in Australia; smoke-test purchase and restore in the 1.2.0 TestFlight build.",
-    "signing_setup_status": "Protected GitHub signing and upload succeeded for public 1.1.0 (build 10). The 1.2.0 (build 11) candidate has not yet been signed, uploaded or submitted."
+    "purchase_setup_status": "All eight non-consumable products are approved. All continents is AUD 14.99 and the seven regional packs are AUD 2.99 in Australia; smoke-test purchase and restore in the 1.1.1 TestFlight build.",
+    "signing_setup_status": "Protected GitHub signing and upload succeeded for public 1.1.0 (build 10). The 1.1.1 (build 11) candidate has not yet been signed, uploaded or submitted."
   },
   "localization": {
     "whats_new": "Group sharing is simpler: choose once when creating or joining a group whether to share your eligible adventure ticks, dates, ratings and written memories. Group Memories brings each sharing traveller’s entries together. Adventures you already shared remain under your name if you leave; you can remove that saved group history later, and deleting your account removes it. Six-character invite codes, an optional guided tour and a tidier Me screen make the app easier to use. Longer photo galleries now scroll inside their cards. Photos stay on the device where you added them.",
@@ -40,13 +40,13 @@
     "sign_in_required": true,
     "demo_username": null,
     "demo_password": null,
-    "notes": "Wayfinder is a travel checklist and guide. Sign in using the private verified review-account credentials supplied in App Review Information. An account is required. The eight non-consumable purchases unlock digital guide content, not travel or admission; All continents covers every geographic pack and Antarctica. Me → Paid collections includes Restore purchases. Near me requests foreground location only after selection; manual browsing is available.\n\nFor 1.2.0, Me → Groups & sharing lets you create or join a group with a six-character code. The single prompt chooses either sharing eligible personal completion ticks, dates, star ratings and written notes together, or joining privately. Group Memories shows each consenting member’s dated entry and note. Older entries of uncertain origin remain anonymous with private feedback until their owner reviews the personal adventure and taps Confirm for group sharing. New eligible personal entries do not need that extra confirmation. If a sharing member leaves, the group retains a frozen copy of what it could already see under that member’s name; later personal edits do not change that copy. The former member can use Me → Groups & sharing → Shared history in groups you left to erase it. Account or group deletion also removes it. Shared trips follow a separate rule: leaving unshares the trip while the personal trip remains. No photos join group sharing.\n\nMe contains Support & help, Privacy policy, Delete my account and all my data, a guided tour, encrypted photo export/import and iPhone/iPad Save photos to camera roll. New in-app photo copies stay on the originating device; the optional camera-roll action copies them only to that device’s Photos library after confirmation. Viator buttons are labelled paid links and lead to a matching third-party booking page. Community recommendations are text-only and pre-moderated."
+    "notes": "Wayfinder is a travel checklist and guide. Sign in using the private verified review-account credentials supplied in App Review Information. An account is required. The eight non-consumable purchases unlock digital guide content, not travel or admission; All continents covers every geographic pack and Antarctica. Me → Paid collections includes Restore purchases. Near me requests foreground location only after selection; manual browsing is available.\n\nFor 1.1.1, Me → Groups & sharing lets you create or join a group with a six-character code. The single prompt chooses either sharing eligible personal completion ticks, dates, star ratings and written notes together, or joining privately. Group Memories shows each consenting member’s dated entry and note. Older entries of uncertain origin remain anonymous with private feedback until their owner reviews the personal adventure and taps Confirm for group sharing. New eligible personal entries do not need that extra confirmation. If a sharing member leaves, the group retains a frozen copy of what it could already see under that member’s name; later personal edits do not change that copy. The former member can use Me → Groups & sharing → Shared history in groups you left to erase it. Account or group deletion also removes it. Shared trips follow a separate rule: leaving unshares the trip while the personal trip remains. No photos join group sharing.\n\nMe contains Support & help, Privacy policy, Delete my account and all my data, a guided tour, encrypted photo export/import and iPhone/iPad Save photos to camera roll. New in-app photo copies stay on the originating device; the optional camera-roll action copies them only to that device’s Photos library after confirmation. Viator buttons are labelled paid links and lead to a matching third-party booking page. Community recommendations are text-only and pre-moderated."
   },
   "submission_gates": [
     "Apply schema-group-join-choice.sql and schema-group-history.sql in order after a current production backup; require both counts-only postflights to pass before publishing the aligned client",
     "Complete two-iPhone acceptance for consented/private joins, old and new invite codes, former-member retained entries and erasure, account deletion, Realtime, local photos and camera-roll export",
     "Verify eight approved non-consumable products, account-bound purchase and restore behavior on the candidate",
-    "Pass exact-source signed archive, privacy/billing audits, Apple validation and TestFlight upload for 1.2.0 (build 11)",
+    "Pass exact-source signed archive, privacy/billing audits, Apple validation and TestFlight upload for 1.1.1 (build 11)",
     "Verify final App Store privacy answers, support/privacy URLs, review login, screenshots, contact and release method against the processed build",
     "Submit the processed exact build to App Review; approval and public release remain separate states"
   ]

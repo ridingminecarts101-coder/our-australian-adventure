@@ -1,10 +1,10 @@
 # Wayfinder iOS entry package
 
-Originally prepared 15 September 2026; updated for the **1.2.0 (build 11)** feature candidate on 6 October 2026. **Wayfinder: Adventure Lists 1.1.0 (build 10)** and all eight non-consumable purchases are approved and live on the App Store. The owner uses Apple's individual/sole-trader membership, with **RL Applications** as the studio brand and **help.rlapplications@gmail.com** for support. The coordination workspace holds the current store receipts.
+Originally prepared 15 September 2026; updated for the **1.1.1 (build 11)** feature candidate on 9 October 2026. **Wayfinder: Adventure Lists 1.1.0 (build 10)** and all eight non-consumable purchases are approved and live on the App Store. The owner uses Apple's individual/sole-trader membership, with **RL Applications** as the studio brand and **help.rlapplications@gmail.com** for support. The coordination workspace holds the current store receipts.
 
 ## iOS version rule
 
-This release deliberately pairs **1.2.0 with build 11**. The signed workflow accepts only that exact pair until another release is prepared. Public **1.1.0 (build 10)** remains unchanged until the new version passes App Review. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
+The owner's sequential iOS rule pairs **1.1.1 with build 11**: build 19 becomes **1.1.9**, then build 20 becomes **1.2.0**. The signed workflow accepts only the prepared pair until another release is reviewed. Public **1.1.0 (build 10)** remains unchanged until the new version passes App Review. Android `versionName` and `versionCode` remain independent and must not be changed merely to match an iOS upload.
 
 The Capacitor Geolocation plugin requires both `NSLocationWhenInUseUsageDescription` and `NSLocationAlwaysAndWhenInUseUsageDescription`, as documented in its [iOS setup](https://capacitorjs.com/docs/apis/geolocation#ios). Both describe the existing optional Near me lookup and its BigDataCloud disclosure. Wayfinder does not enable background location or request Always authorization. The signed archive audit checks the purpose strings against reviewed source before delivery.
 
@@ -17,7 +17,7 @@ The legacy `tools/release.py` command is an Android-oriented helper that current
 3. **Publish and verify the aligned PWA.** Merge only after production database postflight passes, since `main` automatically deploys the PWA. Verify new and old invite codes, private and shared joins, multiple members' ratings/notes, frozen history after leave, post-leave erasure, account deletion, Realtime and phone-local photos.
 4. **Test on both iPhones.** Include consent and privacy boundaries, shared-trip leave behavior, uncertain older-row confirmation, account switching, purchase and restore, offline resume, encrypted photo transfer and explicit **Save photos to camera roll**. Check permission refusal, success and that Photos/iCloud copies remain governed by the phone settings. Review [privacy, age and media guidance](IOS-PRIVACY-AGE-ASSETS.md) and refresh screenshots if the changed UI makes them inaccurate.
 5. **Validate and upload the signed archive.** The manual [iOS upload workflow](../.github/workflows/ios-release-upload.yml) runs from `main` in the protected `app-store` environment. Its `upload` mode checks the signed archive, privacy and billing before sending the IPA to TestFlight; `validate-only` is available for a dry run. GitHub requires owner review for each protected run. These actions do not submit to public App Review.
-6. **Finish the existing App Store record.** [ios-listing.json](ios-listing.json) holds updated 1.2.0 What's New, description and private reviewer steps. Verify review login/contact, screenshots, privacy answers, release method, eight approved purchases and the processed **1.2.0 (build 11)** identity, then submit that exact build. Approval and public availability are separate states.
+6. **Finish the existing App Store record.** [ios-listing.json](ios-listing.json) holds updated 1.1.1 What's New, description and private reviewer steps. Verify review login/contact, screenshots, privacy answers, release method, eight approved purchases and the processed **1.1.1 (build 11)** identity, then submit that exact build. Approval and public availability are separate states.
 
 ## Keep private
 
@@ -32,4 +32,4 @@ Apple payment details, identity documents, certificates, provisioning material, 
 - [App Store Connect](https://appstoreconnect.apple.com/)
 - [RevenueCat dashboard](https://app.revenuecat.com/)
 
-Preparing 1.2.0 (build 11) source and metadata does not upload a binary, enter TestFlight, submit the update for review or change the live 1.1.0 listing.
+Preparing 1.1.1 (build 11) source and metadata does not upload a binary, enter TestFlight, submit the update for review or change the live 1.1.0 listing.
