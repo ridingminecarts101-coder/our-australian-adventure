@@ -1,0 +1,863 @@
+/* Wayfinder — mobile-first, built for an iPhone home-screen PWA */
+
+:root {
+  --ochre:      #8c3d1f;
+  --ochre-lt:   #b8552c;
+  --sand:       #f6efe6;
+  --sand-2:     #efe4d6;
+  --ink:        #241c17;
+  --ink-2:      #5c4f45;
+  --muted:      #8a7b6e;
+  --line:       #e0d3c3;
+  --card:       #fffdfa;
+  --eucalypt:   #3f6b52;
+  --gem:        #a8630f;
+  --danger:     #a33224;
+  --shadow:     0 1px 2px rgba(60,40,24,.06), 0 6px 20px rgba(60,40,24,.07);
+  --radius:     14px;
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ochre:    #c8623a;
+    --ochre-lt: #e07d52;
+    --sand:     #17130f;
+    --sand-2:   #211a15;
+    --ink:      #f2e9df;
+    --ink-2:    #c3b4a6;
+    --muted:    #94867a;
+    --line:     #35291f;
+    --card:     #201913;
+    --eucalypt: #7fb094;
+    --gem:      #d99a3f;
+    --danger:   #e0705d;
+    --shadow:   0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  background: var(--sand);
+  color: var(--ink);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  overscroll-behavior-y: none;
+}
+
+/* Keep the navigation in the page flow so short panels fill the viewport and
+   the bottom safe area is reserved once, by the bar itself. */
+#app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+}
+#app > .panel { flex: 1 0 auto; width: 100%; }
+.hidden { display: none !important; }
+h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, select, textarea { font: inherit; color: inherit; }
+
+/* ── Lock screen ────────────────────────────────────────────────── */
+.lock {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: center;
+  padding: calc(24px + var(--safe-top)) calc(24px + var(--safe-right))
+           calc(24px + var(--safe-bottom)) calc(24px + var(--safe-left));
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  background: linear-gradient(160deg, var(--ochre) 0%, #5d2714 100%);
+}
+.lock-card {
+  width: 100%; max-width: 380px; text-align: center;
+  flex: none; margin: auto 0;
+  background: var(--card); border-radius: 20px;
+  padding: 32px 24px 28px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+.lock-emblem { font-size: 44px; line-height: 1; }
+.lock-card h1 { font-size: 24px; margin: 12px 0 6px; }
+.lock-sub { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+.lock-card label {
+  display: block; text-align: left; font-size: 13px;
+  font-weight: 600; color: var(--ink-2); margin-bottom: 6px;
+}
+.lock-card input {
+  width: 100%; padding: 13px 14px; font-size: 17px;   /* 17px stops iOS zooming on focus */
+  border: 1.5px solid var(--line); border-radius: 12px;
+  background: var(--sand-2); margin-bottom: 14px;
+}
+.lock-card form { display: grid; gap: 0; }
+.lock-card .btn-ghost { margin-top: 10px; }
+.text-button {
+  min-height: 44px; padding: 8px; color: var(--ochre); font-weight: 650;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.lock-card input:focus { outline: 2px solid var(--ochre); outline-offset: 1px; }
+.lock-msg { min-height: 20px; margin: 12px 0 0; font-size: 14px; color: var(--danger); }
+.lock-msg.ok { color: var(--eucalypt); }
+
+.btn-primary {
+  /* 44px is Apple's minimum touch target and roughly where a thumb stops
+     missing. The padding alone came a couple of pixels short. */
+  width: 100%; min-height: 44px; padding: 14px; font-size: 17px; font-weight: 650;
+  border-radius: 12px; background: var(--ochre); color: #fff;
+}
+.btn-primary:disabled { opacity: .55; }
+.btn-ghost {
+  padding: 9px 14px; font-size: 14px; font-weight: 600;
+  border-radius: 10px; border: 1.5px solid var(--line);
+  background: var(--card); color: var(--ink-2);
+}
+.btn-ghost.danger { color: var(--danger); border-color: var(--danger); }
+
+/* ── Top bar ─────────────────────────────────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+  padding: calc(12px + var(--safe-top)) calc(16px + var(--safe-right))
+           10px calc(16px + var(--safe-left));
+  background: var(--ochre); color: #fff;
+}
+.eyebrow { font-size: 11px; letter-spacing: .16em; opacity: .8; font-weight: 600; }
+.topbar h1 { font-size: 26px; margin-top: 2px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.btn-view {
+  min-width: 44px; height: 44px; padding: 0 11px; border-radius: 999px;
+  background: rgba(255,255,255,.18); color: #fff; font-size: 12px; font-weight: 700;
+}
+.btn-dice {
+  width: 44px; height: 44px; border-radius: 50%; font-size: 21px;
+  background: rgba(255,255,255,.18); flex: none;
+}
+.btn-dice:active { background: rgba(255,255,255,.34); }
+
+.progressbar { height: 4px; background: rgba(0,0,0,.12); position: sticky; top: 0; z-index: 19; }
+.progressbar i { display: block; height: 100%; width: 0; background: var(--eucalypt); transition: width .35s ease; }
+
+.syncbar {
+  font-size: 12px; padding: 0 16px; color: var(--muted);
+  height: 0; overflow: hidden; transition: height .2s, padding .2s;
+}
+.syncbar.show { height: 26px; padding-top: 6px; }
+.syncbar.warn { color: var(--gem); }
+
+/* ── Filters ─────────────────────────────────────────────────────── */
+.panel { padding: 14px calc(16px + var(--safe-right)) 24px calc(16px + var(--safe-left)); }
+.filters { display: grid; gap: 10px; }
+#search {
+  width: 100%; padding: 12px 14px; font-size: 17px;
+  border: 1.5px solid var(--line); border-radius: 12px; background: var(--card);
+}
+.chiprow { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.chiprow::-webkit-scrollbar { display: none; }
+.chip {
+  /* 44px, like every other control. Chips are the most-tapped thing in the
+     app and were the smallest. */
+  flex: none; min-height: 44px; padding: 8px 14px; font-size: 14px; font-weight: 600;
+  border-radius: 999px; border: 1.5px solid var(--line);
+  background: var(--card); color: var(--ink-2); white-space: nowrap;
+}
+.chip.on { background: var(--ochre); border-color: var(--ochre); color: #fff; }
+.morefilters summary {
+  font-size: 14px; font-weight: 600; color: var(--ink-2);
+  padding: 6px 0; cursor: pointer;
+}
+.selects { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0 10px; }
+.selects label { font-size: 12px; font-weight: 600; color: var(--muted); display: grid; gap: 4px; }
+.selects select {
+  padding: 10px; font-size: 15px; border-radius: 10px;
+  border: 1.5px solid var(--line); background: var(--card);
+}
+.resultcount { font-size: 13px; color: var(--muted); margin: 12px 2px 8px; }
+
+/* ── Adventure cards ─────────────────────────────────────────────── */
+.list { display: grid; gap: 10px; }
+.card {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow);
+}
+.card.done { background: var(--sand-2); }
+.card.done .card-title { color: var(--muted); text-decoration: line-through; }
+.tick {
+  /* Stays a 30px circle, because a 44px one looks like a button rather than a
+     checkbox. The touch target is expanded to 44px with an invisible overlay
+     instead - the thing a thumb has to hit is not the thing the eye sees. */
+  flex: none; width: 30px; height: 30px; margin-top: 1px; position: relative;
+  border-radius: 50%; border: 2px solid var(--line);
+  background: transparent; font-size: 15px; color: transparent;
+  display: grid; place-items: center;
+}
+.tick::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 50%;
+}
+.tick.on { background: var(--eucalypt); border-color: var(--eucalypt); color: #fff; }
+.card-body { flex: 1; min-width: 0; }
+.card-detail {
+  appearance: none; border: 0; padding: 0 28px 0 0; background: transparent; position: relative;
+  color: inherit; font: inherit; text-align: left;
+}
+.card-detail:focus-visible { outline: 3px solid var(--ochre); outline-offset: 4px; border-radius: 4px; }
+.card-title { font-weight: 620; line-height: 1.3; }
+.card-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.badge {
+  font-size: 11px; font-weight: 650; padding: 3px 8px; border-radius: 999px;
+  background: var(--sand-2); color: var(--ink-2); border: 1px solid var(--line);
+}
+.badge.gem { color: var(--gem); border-color: var(--gem); background: transparent; }
+.badge.star { color: var(--ochre); border-color: var(--ochre); background: transparent; }
+.card-open {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  font-size: 22px; color: var(--muted);
+}
+.empty { text-align: center; color: var(--muted); padding: 40px 20px; }
+
+/* ── Stats grids ─────────────────────────────────────────────────── */
+.panel h2 { font-size: 17px; margin: 18px 0 10px; }
+.panel h2:first-child { margin-top: 0; }
+.muted { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+.stategrid { display: grid; gap: 8px; }
+.staterow {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: 10px 12px;
+}
+.staterow-top { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+.staterow-top span:last-child { color: var(--muted); font-weight: 500; }
+.minibar { height: 5px; border-radius: 3px; background: var(--sand-2); margin-top: 7px; overflow: hidden; }
+.minibar i { display: block; height: 100%; background: var(--eucalypt); }
+
+.usstats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: 14px; text-align: center;
+}
+.stat b { display: block; font-size: 24px; }
+.stat span { font-size: 12px; color: var(--muted); }
+
+.achlist { display: grid; gap: 8px; }
+.ach {
+  display: flex; gap: 10px; align-items: center;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: 11px 12px;
+}
+.ach.locked { opacity: .45; }
+.ach-icon { font-size: 22px; }
+.ach b { display: block; font-size: 14px; }
+.ach span { font-size: 12px; color: var(--muted); }
+
+.settings { display: grid; gap: 12px; justify-items: start; }
+.settings p { margin: 0; font-size: 14px; }
+.tour-invite {
+  display: grid; gap: 10px; margin: 0 0 14px; padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--card);
+}
+.tour-invite strong, .tour-invite span { display: block; }
+.tour-invite span { color: var(--muted); font-size: 13px; }
+.tour-invite-actions, .me-quick-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tour-invite-actions .text-button { min-height: 44px; font-size: 14px; }
+.me-quick-actions .btn-ghost { min-height: 44px; }
+.me-fold {
+  margin: 14px 0; border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--card);
+}
+.me-fold summary {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 48px; padding: 11px 14px; cursor: pointer;
+  font-weight: 650; list-style: none;
+}
+.me-fold summary::-webkit-details-marker { display: none; }
+.me-fold summary::after { content: '⌄'; color: var(--muted); font-size: 22px; line-height: 1; }
+.me-fold[open] summary::after { transform: rotate(180deg); }
+.me-fold > .settings, .me-fold > .usstats { padding: 0 14px 14px; }
+.me-fold .storelist { width: 100%; }
+.account-panel {
+  width: 100%; display: grid; gap: 10px; padding: 14px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--card);
+}
+.view-switch, .group-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.view-switch .on, .group-list .on {
+  border-color: var(--eucalypt); color: var(--eucalypt); background: rgba(45, 104, 89, .08);
+}
+.retained-history { width: 100%; }
+.retained-history-row { width: 100%; display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+.retained-history-row .btn-ghost { justify-self: start; max-width: 100%; min-height: 44px; white-space: normal; text-align: left; }
+.account-panel input {
+  width: 100%; padding: 11px 12px; font-size: 16px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--sand-2);
+}
+.fineprint { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.muted.warn { color: var(--gem); }
+
+/* ── Bottom tab bar ──────────────────────────────────────────────── */
+.tabbar {
+  position: sticky; bottom: 0; z-index: 30; flex: none;
+  /* Five tabs. Named rather than counted so adding one does not silently
+     wrap the last item onto a second row, which is what happened. */
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  background: var(--card); border-top: 1px solid var(--line);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left); padding-right: var(--safe-right);
+}
+.tab {
+  display: grid; gap: 2px; justify-items: center; align-content: center;
+  min-height: 44px;
+  padding: 8px 2px 6px; font-size: 10px; font-weight: 600; color: var(--muted);
+}
+.tab span { font-size: 20px; line-height: 1.1; }
+.tab.active { color: var(--ochre); }
+
+/* A focused tour that leaves every section available after Skip or Finish. */
+.tour { position: fixed; inset: 0; z-index: 90; pointer-events: none; }
+.tour-shade { position: absolute; inset: 0; background: rgba(22, 14, 10, .65); pointer-events: auto; }
+.tour-target {
+  position: fixed; z-index: 1; border: 3px solid #fff; border-radius: 14px;
+  box-shadow: 0 0 0 3px var(--ochre), 0 8px 25px rgba(0, 0, 0, .45);
+}
+.tour-card {
+  position: fixed; z-index: 2; width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px); overflow-y: auto; pointer-events: auto;
+  padding: 16px; border-radius: 16px; background: var(--card); color: var(--ink);
+  box-shadow: 0 14px 45px rgba(0, 0, 0, .35);
+}
+.tour-card h2 { font-size: 20px; margin: 3px 0 8px; }
+.tour-card p { margin: 0 0 12px; }
+.tour-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.tour-actions button { min-height: 44px; }
+.tour-actions .btn-primary { width: auto; padding: 9px 18px; font-size: 14px; }
+
+/* ── Detail sheet ────────────────────────────────────────────────── */
+.sheet { position: fixed; inset: 0; z-index: 40; }
+.sheet-backdrop { position: absolute; inset: 0; background: rgba(30,18,10,.5); }
+.sheet-card {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--sand); border-radius: 20px 20px 0 0;
+  padding: 22px calc(18px + var(--safe-right))
+           calc(28px + var(--safe-bottom)) calc(18px + var(--safe-left));
+  animation: rise .22s ease;
+}
+@keyframes rise { from { transform: translateY(28px); opacity: .4; } }
+.sheet-close {
+  position: absolute; top: 12px; right: calc(12px + var(--safe-right));
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--sand-2); color: var(--ink-2); font-size: 15px;
+}
+.sheet-card h2 { font-size: 21px; line-height: 1.25; padding-right: 40px; }
+#photoBackupSheet label { display: block; margin: 16px 0; font-weight: 600; }
+#photoBackupSheet input { display: block; width: 100%; min-width: 0; padding: 12px; margin-top: 6px; font-size: 17px; color: var(--ink); background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; }
+#photoBackupSheet .sheet-card > button:not(.sheet-close) { display: block; width: 100%; margin-top: 12px; }
+#photoBackupSheet p { line-height: 1.55; overflow-wrap: anywhere; }
+#photoBackupSheet .sheet-card { max-height: calc(100dvh - max(20px, var(--safe-top))); }
+#photoBackupClose { width: 44px; height: 44px; }
+.sheet-place { color: var(--muted); font-size: 14px; margin: 6px 0 12px; }
+.sheet-desc { font-size: 15px; line-height: 1.55; margin: 12px 0; }
+.factgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+.fact { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
+.fact b { display: block; font-size: 10.5px; letter-spacing: .07em; color: var(--muted); text-transform: uppercase; }
+.fact span { font-size: 14px; font-weight: 600; }
+.sheet-actions { display: grid; gap: 9px; margin: 16px 0; }
+.sheet-actions .btn-primary.doneState { background: var(--eucalypt); }
+.rowbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.sheet h3 { font-size: 14px; margin: 18px 0 8px; color: var(--ink-2); }
+.stars { display: flex; gap: 6px; }
+.stars button { font-size: 30px; line-height: 1; color: var(--gem); padding: 2px; }
+.sheet textarea {
+  width: 100%; min-height: 96px; padding: 12px; font-size: 16px;
+  border: 1.5px solid var(--line); border-radius: 12px;
+  background: var(--card); resize: vertical;
+}
+.donenote {
+  background: var(--card); border-left: 3px solid var(--eucalypt);
+  border-radius: 8px; padding: 9px 12px; font-size: 13.5px; color: var(--ink-2); margin: 12px 0;
+}
+.completion-editor {
+  display: grid; gap: 8px; padding: 12px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+}
+.completion-editor label { font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.completion-editor-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.completion-editor input {
+  min-width: 0; padding: 9px; font: inherit; color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: 10px; background: var(--sand);
+}
+.completion-editor .btn-ghost { padding: 9px 12px; }
+.completion-editor .fineprint { margin: 0; }
+@media (max-width: 350px) {
+  .completion-editor-row { grid-template-columns: 1fr; }
+}
+
+/* ── Memories ────────────────────────────────────────────────────── */
+/* A long thumbnail rail must not set the grid track's minimum page width. */
+#memList { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.memory {
+  min-width: 0;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 13px; box-shadow: var(--shadow);
+}
+.memory b { font-size: 15px; }
+.memory .card-meta { margin-bottom: 6px; }
+.memory-open {
+  display: block; width: 100%; min-width: 0; padding: 0; border: 0; background: transparent;
+  color: inherit; font: inherit; text-align: left;
+  overflow-wrap: anywhere;
+}
+.memory-open .card-meta, .memory-note { display: block; }
+.memory-note { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
+.memory-open:focus-visible, .tripitem-body:focus-visible {
+  outline: 3px solid var(--ochre); outline-offset: 3px; border-radius: 4px;
+}
+.memory .nomemory { color: var(--muted); font-style: italic; }
+.memory-review { min-height: 44px; max-width: 100%; margin-top: 10px; }
+
+/* ── World map + place navigation ────────────────────────────────── */
+.btn-ghost.wide { width: 100%; margin-bottom: 14px; }
+.joincode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 15px; font-weight: 700; letter-spacing: .18em;
+  background: var(--sand-2); padding: 3px 8px; border-radius: 6px; color: var(--ink);
+  overflow-wrap: anywhere; word-break: break-word;
+}
+.mapwrap {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 10px; box-shadow: var(--shadow);
+}
+#worldMap, #placeMap { display: block; width: 100%; cursor: pointer; }
+/* The zoomed map sits above the place title, so it needs a little air below. */
+#placeView .mapwrap { margin-bottom: 12px; }
+.maphint { font-size: 12.5px; color: var(--muted); margin: 8px 2px 14px; text-align: center; }
+
+.placelist { display: grid; gap: 8px; }
+.placerow {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow);
+}
+.placerow:active { background: var(--sand-2); }
+.placerow-main { flex: 1; min-width: 0; }
+.placerow-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.placerow-label { font-weight: 620; font-size: 15.5px; }
+.swatch {
+  display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+  margin-right: 7px; vertical-align: 1px;
+}
+.placerow-count { font-size: 13px; color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+.placerow-sub { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.placerow .minibar { margin-top: 8px; }
+.placerow-chev { color: var(--muted); font-size: 20px; flex: none; }
+
+.crumb {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
+  font-size: 13px; margin-bottom: 12px;
+}
+.crumb-link {
+  color: var(--ochre); font-weight: 600; padding: 3px 0; position: relative;
+}
+/* Same trick: the crumb reads as text, but is reachable as a control. */
+.crumb-link::after { content: ''; position: absolute; inset: -12px -6px; }
+.crumb-sep { color: var(--muted); }
+.crumb-here { color: var(--muted); font-weight: 600; }
+#placeTitle { font-size: 22px; }
+#placeView .muted { margin: 4px 0 16px; }
+.badge.dog { color: var(--eucalypt); border-color: var(--eucalypt); background: transparent; }
+
+/* ── Passport ────────────────────────────────────────────────────── */
+.passport-head {
+  background: var(--ochre); color: #fff; border-radius: var(--radius);
+  padding: 16px; margin-bottom: 20px;
+}
+.passport-head .eyebrow { color: rgba(255,255,255,.75); }
+.passport-head h2 { color: #fff; font-size: 21px; margin: 4px 0 14px; }
+.passport-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ptotal { text-align: center; }
+.ptotal b { display: block; font-size: 24px; line-height: 1.1; }
+.ptotal span { font-size: 11px; opacity: .8; }
+
+.passport-achievements {
+  margin: 0 0 20px; border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--card);
+}
+.passport-achievements summary {
+  display: flex; align-items: center; gap: 8px; min-height: 48px;
+  padding: 12px 14px; cursor: pointer; list-style: none; font-weight: 700;
+}
+.passport-achievements summary::-webkit-details-marker { display: none; }
+.passport-achievements #achCount { margin: 0; line-height: 1.2; white-space: nowrap; }
+.passport-achievements summary::after {
+  content: '›'; margin-left: auto; color: var(--muted); font-size: 22px;
+}
+.passport-achievements[open] summary::after { transform: rotate(90deg); }
+.passport-achievements .achlist { padding: 0 12px 12px; }
+
+.stampgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.stampgrid > .empty { grid-column: 1 / -1; }
+@media (min-width: 460px) { .stampgrid { grid-template-columns: repeat(3, 1fr); } }
+
+/* Stamps are drawn like the real thing: a double-ruled box, banged on at a
+   slight angle, with the date it was earned. Blank ones are just outlines. */
+.stamp {
+  position: relative; display: grid; gap: 1px; justify-items: center;
+  padding: 12px 8px 10px; text-align: center; background: transparent;
+  border: 1.5px dashed var(--line); border-radius: 4px;
+  color: var(--muted); transform: rotate(0deg);
+}
+.stamp.earned {
+  border: 2px double var(--eucalypt); color: var(--eucalypt);
+  background: var(--card); transform: rotate(var(--tilt, 0deg));
+  box-shadow: var(--shadow);
+}
+.stamp.earned::before {
+  /* inner rule, so the border reads as a stamp rather than a card */
+  content: ''; position: absolute; inset: 3px;
+  border: 1px solid currentColor; border-radius: 2px; opacity: .35;
+}
+.stamp.complete { border-color: var(--gem); color: var(--gem); }
+.stamp-flag { font-size: 22px; line-height: 1.2; filter: grayscale(1) opacity(.5); }
+.stamp.earned .stamp-flag { filter: none; }
+.stamp-name {
+  font-size: 12px; font-weight: 700; line-height: 1.2;
+  letter-spacing: .02em; color: var(--ink);
+}
+.stamp.earned .stamp-name { color: inherit; }
+.stamp-count {
+  font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.stamp.earned .stamp-count { color: inherit; opacity: .8; }
+.stamp-date {
+  margin-top: 3px; font-size: 11px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; font-variant-numeric: tabular-nums;
+}
+.stamp-time {
+  font-size: 9.5px; letter-spacing: .1em; opacity: .7; font-variant-numeric: tabular-nums;
+}
+.stamp-blank { margin-top: 3px; font-size: 10px; letter-spacing: .06em; opacity: .55; }
+.stamp-seal {
+  position: absolute; top: 4px; right: 5px; font-weight: 700; font-size: 12px;
+}
+.stamp-divider {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 10px;
+  margin: 10px 0 2px; font-size: 11.5px; color: var(--muted);
+}
+.stamp-divider::before, .stamp-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--line);
+}
+
+/* ── Trips ───────────────────────────────────────────────────────── */
+.trip {
+  display: block; width: 100%; text-align: left;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 13px; box-shadow: var(--shadow);
+}
+.trip-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.trip-top b { font-size: 16px; }
+.trip-top span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.trip .minibar { margin-top: 10px; }
+.trip-share-label { margin-top: 6px; color: var(--eucalypt); font-size: 12px; font-weight: 700; }
+#newTripBtn { margin-top: 12px; }
+.group-trip-section { margin-top: 30px; }
+.group-trip-section h3 { margin-bottom: 4px; }
+.group-trip-section .muted { margin-top: 0; }
+.trip-readonly-note { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.daterow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.daterow label { font-size: 12px; font-weight: 600; color: var(--muted); display: grid; gap: 4px; }
+.daterow input {
+  padding: 10px; font-size: 16px; border-radius: 10px;
+  border: 1.5px solid var(--line); background: var(--card);
+}
+.tripgroup { margin-bottom: 14px; }
+.tripgroup-head {
+  font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.tripitem {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 10px; padding: 9px 10px; margin-bottom: 6px;
+}
+.tripitem.done .card-title { color: var(--muted); text-decoration: line-through; }
+.tripitem-body {
+  flex: 1; min-width: 0; padding: 0; border: 0; background: transparent;
+  color: inherit; font: inherit; text-align: left;
+}
+.tripitem-body .card-title, .tripitem-body .card-meta { display: block; }
+.tripitem-remove { color: var(--muted); font-size: 14px; padding: 4px 6px; flex: none; }
+
+.trippicker { display: flex; flex-wrap: wrap; gap: 7px; }
+.trippick {
+  font-size: 13.5px; font-weight: 600; padding: 8px 13px; border-radius: 999px;
+  border: 1.5px solid var(--line); background: var(--card); color: var(--ink-2);
+}
+.trippick.on { background: var(--eucalypt); border-color: var(--eucalypt); color: #fff; }
+.trippick.new { border-style: dashed; }
+
+/* ── Photos ──────────────────────────────────────────────────────── */
+.photostatus {
+  display: none;                 /* not a fixed height — the text wraps on narrow phones */
+  font-size: 13px; line-height: 1.45; color: var(--gem);
+}
+.photostatus.show { display: block; margin: 8px 2px 4px; }
+
+.strip {
+  display: flex; gap: 8px; width: 100%; max-width: 100%; min-width: 0;
+  overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 0 4px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.strip::-webkit-scrollbar { display: none; }
+.strip:focus-visible { outline: 3px solid var(--ochre); outline-offset: 2px; }
+.memory .strip { margin-top: 10px; }
+.sheet-strip { margin-bottom: 4px; }
+
+.grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+}
+@media (min-width: 520px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+
+.thumb {
+  position: relative; flex: none; padding: 0; overflow: hidden;
+  border-radius: 10px; background: var(--sand-2);
+  border: 1px solid var(--line); aspect-ratio: 1;
+}
+.strip .thumb { width: 76px; height: 76px; }
+.grid  .thumb { width: 100%; height: auto; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb.pending { opacity: .72; }
+.thumb-badge {
+  position: absolute; right: 3px; bottom: 3px;
+  background: var(--gem); color: #fff; font-size: 10px; font-weight: 700;
+  border-radius: 999px; padding: 1px 6px;
+}
+.thumb-wait {
+  position: absolute; inset: 0;
+  background: linear-gradient(100deg, var(--sand-2) 30%, var(--line) 50%, var(--sand-2) 70%);
+  background-size: 220% 100%; animation: shimmer 1.3s linear infinite;
+}
+@keyframes shimmer { to { background-position: -220% 0; } }
+.thumb.add {
+  display: grid; place-content: center; gap: 1px;
+  border-style: dashed; border-width: 1.5px; color: var(--muted); background: transparent;
+}
+.thumb.add span { font-size: 22px; line-height: 1; }
+.thumb.add small { font-size: 10px; font-weight: 600; }
+.photohint { font-size: 12.5px; color: var(--muted); margin: 2px 0 0; line-height: 1.45; }
+.sheet h3 .count { color: var(--muted); font-weight: 500; }
+
+.photogroup { margin-bottom: 22px; }
+.photogroup-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line);
+}
+.photogroup-head h3 { font-size: 15px; margin: 0; }
+.photogroup-head span { font-size: 12px; color: var(--muted); }
+
+/* ── Lightbox ────────────────────────────────────────────────────── */
+.lightbox {
+  position: fixed; inset: 0; z-index: 70;
+  background: #0c0906; display: grid;
+  grid-template-rows: 1fr auto;
+  padding-top: var(--safe-top);
+}
+.lb-stage { display: grid; place-items: center; overflow: hidden; padding: 8px; }
+.lb-stage img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.lb-close {
+  position: absolute; top: calc(10px + var(--safe-top)); right: 10px; z-index: 2;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255,255,255,.16); color: #fff; font-size: 16px;
+}
+.lb-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+  width: 44px; height: 60px; font-size: 30px; color: #fff;
+  background: rgba(255,255,255,.1);
+}
+.lb-nav.prev { left: 0; border-radius: 0 10px 10px 0; }
+.lb-nav.next { right: 0; border-radius: 10px 0 0 10px; }
+.lb-meta {
+  padding: 14px 18px calc(20px + var(--safe-bottom));
+  color: #f2e9df; display: grid; gap: 4px; justify-items: start;
+  background: #16100b;
+}
+.lb-title { font-weight: 650; font-size: 15px; }
+.lb-sub { font-size: 12.5px; color: #b3a496; line-height: 1.5; }
+.lb-meta .btn-ghost {
+  margin-top: 8px; background: transparent; color: #e0705d; border-color: #e0705d;
+}
+
+/* ── Toast ───────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%) translateY(20px);
+  bottom: calc(78px + var(--safe-bottom)); z-index: 60;
+  background: var(--ink); color: var(--sand);
+  padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+  max-width: 88vw; text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (min-width: 640px) {
+  .panel, .filters { max-width: 620px; margin-inline: auto; }
+  .sheet-card { max-width: 620px; margin-inline: auto; border-radius: 20px; bottom: 20px; left: 16px; right: 16px; }
+}
+
+/* ── Travel advisories ────────────────────────────────────────────────
+ * Muted rather than alarming. A country you should not visit right now is
+ * still a country someone may want to read about, so the row stays legible
+ * instead of turning into a warning triangle.
+ */
+.advisory {
+  display: inline-block; margin: 2px 0 0; padding: 1px 7px;
+  border-radius: 999px; font-size: 11px; font-weight: 700;
+  letter-spacing: .02em;
+}
+.advisory.avoid { background: rgba(190, 60, 45, .18); color: #e58573; }
+.advisory.care  { background: rgba(196, 149, 43, .18); color: #d9b45e; }
+.placerow.has-advisory { opacity: .82; }
+
+.advisory-box {
+  margin: 10px 0 14px; padding: 12px 14px; border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--card);
+}
+.advisory-box.avoid { border-color: rgba(190, 60, 45, .45); }
+.advisory-box.care  { border-color: rgba(196, 149, 43, .45); }
+.advisory-head { font-weight: 700; margin-bottom: 5px; }
+.advisory-box.avoid .advisory-head { color: #e58573; }
+.advisory-box.care  .advisory-head { color: #d9b45e; }
+.advisory-box p { margin: 0 0 6px; font-size: 13.5px; line-height: 1.45; }
+.advisory-box .fineprint { margin-bottom: 0; }
+
+/* ── Hidden gem packs ─────────────────────────────────────────────────
+ * A locked card stays readable. Greying it out to the point of illegibility
+ * would hide the thing being sold, which helps nobody.
+ */
+.storelist { display: grid; gap: 8px; margin-bottom: 10px; }
+#continentPacksSheet .sheet-card { max-height: calc(100dvh - max(20px, var(--safe-top))); }
+#continentPacksSheet .storelist { margin-top: 16px; }
+.packrow {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.packrow b { display: block; font-size: 15px; }
+.packrow span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.packrow.owned { opacity: .7; }
+.packrow.bundle { border: 2px solid var(--ochre); }
+.btn-buy {
+  /* 44px minimum, same as every other control - a price button is exactly
+     the one you do not want people mis-tapping. */
+  flex: none; min-height: 44px; padding: 10px 16px; border-radius: 999px;
+  background: var(--ochre); color: #fff; font-weight: 700; font-size: 14px;
+}
+.packowned { flex: none; font-size: 13px; font-weight: 700; color: var(--eucalypt); }
+
+/* A locked gem is blurred rather than hidden: you can see there is something
+ * there and roughly how much of it, which is the honest way to sell it. The
+ * blur is on the text only - the badges stay sharp so the row still reads.
+ * user-select is off so the title cannot be lifted out by selecting it.
+ */
+.card.locked .card-title,
+.card.locked .card-meta {
+  filter: blur(4.5px);
+  user-select: none; -webkit-user-select: none;
+  pointer-events: none;
+}
+.card.locked { position: relative; }
+.card.locked .card-body::after {
+  content: '🔒 Locked';
+  position: absolute; left: 50%; top: 20px; transform: translateX(-50%);
+  font-size: 12px; font-weight: 700; letter-spacing: .02em;
+  color: var(--ochre); background: var(--card);
+  padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.card.locked .tick { opacity: .3; }
+.badge.gem { white-space: nowrap; }
+
+/* ── Traveller recommendations ────────────────────────────────────────
+ * Deliberately styled apart from the adventure cards. Somebody scrolling
+ * should never be in doubt about which list they are looking at.
+ */
+.reccard {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--card); border: 1px dashed var(--line);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.reccard.hidden-post { opacity: .55; }
+.recvote { display: grid; justify-items: center; gap: 1px; flex: none; min-width: 34px; }
+.recvote b { font-size: 14px; font-variant-numeric: tabular-nums; }
+.recv {
+  min-height: 28px; min-width: 34px; font-size: 15px; line-height: 1;
+  color: var(--muted); border-radius: 8px;
+}
+.recv.on { color: var(--ochre); background: rgba(140, 61, 31, .14); }
+.recmain { flex: 1; min-width: 0; }
+.rectitle { font-weight: 650; font-size: 15px; }
+.recmeta { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.recdesc { font-size: 13.5px; line-height: 1.45; margin: 7px 0 4px; }
+
+.recstars { display: flex; align-items: center; gap: 1px; margin: 4px 0 2px; }
+.star {
+  min-height: 30px; min-width: 26px; font-size: 16px; line-height: 1;
+  color: var(--line);
+}
+.star.on { color: #d9a13a; }
+.star.mine.on { color: var(--ochre); }
+.recavg { font-size: 12px; color: var(--muted); margin-left: 6px; }
+
+.recfoot {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 6px; font-size: 12px; color: var(--muted);
+}
+.reclink { font-size: 12px; color: var(--muted); text-decoration: underline;
+           min-height: 30px; }
+.reclink.danger { color: #c4553c; }
+.recnote { margin-top: 6px; font-size: 12px; color: #c4553c; }
+#recSheet label.rec-consent { display: flex; align-items: flex-start; gap: 10px; margin: 18px 0 8px; }
+#recSheet .rec-consent input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px; padding: 0; margin: 2px 0 0; accent-color: var(--rust, #8c3e20); }
+#recSheet .rec-consent span { flex: 1; font-size: 14px; line-height: 1.5; }
+
+#recSheet label { display: block; margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+#recSheet input, #recSheet select, #recSheet textarea {
+  width: 100%; margin-top: 4px; padding: 11px 12px; font-size: 16px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--paper); color: var(--ink);
+}
+
+/* Booking links.
+ *
+ * Styled quieter than the app's own buttons, not louder. It is the last
+ * control in the sheet and it should read as a useful afterthought, because
+ * that is what it is - the moment it starts competing with "Mark as
+ * completed" the app has changed into something else.
+ */
+.btn-ghost.booking {
+  border-style: dashed; display: flex; align-items: center;
+  justify-content: space-between; gap: 8px; text-align: left; min-height: 44px;
+}
+.booking-paid { font-size: 11px; font-weight: 700; white-space: nowrap; color: var(--muted); }
+
+
+/* Pull to refresh.
+ *
+ * Fixed rather than in the flow: the indicator is dragged with a transform,
+ * which the compositor can do on its own thread, so the gesture stays smooth
+ * while the list behind it does nothing at all.
+ */
+.pull {
+  position: fixed; top: 0; left: 50%; z-index: 30;
+  width: 34px; height: 34px; margin-left: -17px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--card); color: var(--accent);
+  box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  transform: translateY(-60px);
+  opacity: 0;
+  pointer-events: none;
+}
+.pull.dragging { transition: none; }
+.pull.settling { transition: transform .25s ease, opacity .25s ease; }
+.pull-spin { font-size: 19px; line-height: 1; display: block; }
+.pull.busy .pull-spin { animation: pull-spin 900ms linear infinite; }
+@keyframes pull-spin { to { transform: rotate(360deg); } }

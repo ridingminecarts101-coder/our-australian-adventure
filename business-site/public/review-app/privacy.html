@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wayfinder — Privacy</title>
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root { color-scheme: light dark; --ink:#241c17; --paper:#f6efe6; --muted:#6b5d52;
+          --line:#e0d4c6; --ochre:#8c3d1f; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#f3ece4; --paper:#191512; --muted:#a2938a; --line:#33291f; --ochre:#d0714a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 22px 80px; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 34px 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  p, li { color: var(--ink); }
+  li { margin-bottom: 6px; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 4px; font-size: 15px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  a { color: var(--ochre); }
+  a:focus-visible { outline: 3px solid var(--ochre); outline-offset: 4px; }
+  .page-nav { position: sticky; top: 0; z-index: 2; background: var(--paper);
+    border-bottom: 1px solid var(--line); padding: 12px 22px;
+    padding-top: max(12px, env(safe-area-inset-top)); }
+  .page-nav-inner { max-width: 676px; margin: auto; display: flex;
+    align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .page-nav a { display: inline-flex; align-items: center; min-height: 44px; }
+  .return-link { display: inline-flex; align-items: center; min-height: 44px;
+    padding: 8px 14px; border: 1px solid var(--ochre); border-radius: 999px;
+    font-weight: 600; text-decoration: none; }
+  .note { border-left: 3px solid var(--ochre); padding: 2px 0 2px 14px; color: var(--muted); }
+  footer { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<nav class="page-nav" aria-label="Page navigation"><div class="page-nav-inner">
+  <a class="return-link" href="./">← Return to Wayfinder</a>
+  <a href="support.html">Support &amp; help</a>
+</div></nav>
+<main>
+  <h1>Privacy</h1>
+  <p class="sub">Wayfinder · last updated 3 October 2026</p>
+
+  <p>Wayfinder is a travel checklist. It keeps the places you want to go, the ones
+     you have been to, and the photos you attach to them. This page says exactly
+     what that means for your data, in plain terms.</p>
+  <p class="note"><strong>Availability:</strong> Wayfinder is available for iPhone and iPad on the App Store. Email verification, password
+     recovery and optional group sharing are available. New Community recommendations
+     and edits stay private until an operator approves them; review may take time.
+     Purchases are not active in the web review build. Avoid
+     posting sensitive material and keep another copy of important photos and trip
+     notes. See the
+     <a href="https://rlapplications.com/wayfinder/privacy/">current Wayfinder privacy supplement</a>
+     for testing updates.</p>
+
+  <h2>What is stored</h2>
+  <table>
+    <tr><th>Data</th><th>Why</th><th>Where</th></tr>
+    <tr><td>Which adventures you have ticked, shortlisted, rated or written a note on</td>
+        <td>It is the point of the app</td><td>Your device, and our database if you are online; personal completion ticks and dates, ratings and written memories can appear in each group where you make the relevant sharing choices</td></tr>
+    <tr><td>Photos you attach, and the date taken read from the photo</td>
+        <td>To show them against the adventure</td><td>Current photos stay on the device where you add them. The production cloud photo store is empty; a separate historical Desktop backup is retained as described below.</td></tr>
+    <tr><td>Trips you plan: names, dates, selected adventures and notes</td><td>To group adventures together and optionally share a trip with a group</td>
+        <td>Your device and our database; a trip you explicitly add to a group is also visible to its members</td></tr>
+    <tr><td>A display name, if you set one</td><td>So a shared list can say who ticked what</td>
+        <td>Our database</td></tr>
+    <tr><td>Your email address, account identifier and authentication information</td>
+        <td>To sign in and sync between devices</td>
+        <td>Supabase authentication; a sign-in session is also kept on your device</td></tr>
+    <tr><td>Your account-email recipient address, confirmation or recovery message and link or code, and delivery metadata</td>
+        <td>To verify your email, recover your account and troubleshoot delivery</td>
+        <td>Resend transactional email</td></tr>
+    <tr><td>Group membership and your completed-adventure sharing choice for each group</td>
+        <td>To show the completed-adventure information you choose to share with your group</td>
+        <td>Our database</td></tr>
+    <tr><td>Purchase records and unlocked packs in the mobile apps</td>
+        <td>To recognise purchases and restore access for your account</td>
+        <td>Apple for iOS purchases, RevenueCat, and a cache on your device; Google if Android purchases are enabled later</td></tr>
+  </table>
+
+  <h2>Accounts and advertising</h2>
+  <ul>
+    <li>An email and password account is required. Your display name does not need to be your legal name.</li>
+    <li>Wayfinder does not embed advertising networks or tracking SDKs. Optional Viator links are disclosed below and may earn RL Applications a commission.</li>
+    <li>We do not sell or rent your personal data. Service providers process information needed to operate the app, as described below.</li>
+    <li>Your email and password are not shown to group members or Community readers.</li>
+  </ul>
+
+  <h2>Location</h2>
+  <p>The <em>Near me</em> button asks for your location when you press it. With your
+     permission, your current coordinates are sent to BigDataCloud to find your
+     region. That provider also receives your IP address and explains that its free
+     service uses these observations to improve IP geolocation. Wayfinder does not
+     save these coordinates in your account or track your route. You can browse all
+     destinations without granting location access.
+     <a href="https://www.bigdatacloud.com/docs/article/why-is-reverse-geocoding-api-free">How BigDataCloud uses this request</a>.</p>
+
+  <h2>Photos</h2>
+  <p>Photos are read only when you choose them. In the current device-local build,
+     a new photo is resized and its in-app copy stays on the device where you add it. In the native app it is stored in Wayfinder's
+     private app files; attaching it does not automatically copy it to the phone's Photos library. In the PWA it is
+     stored in that browser's IndexedDB storage. Wayfinder does not upload the new
+     image or its related photo record to the RL Applications backend or GitHub.
+     Wayfinder's in-app photo copies do not sync with your account, so signing in on another device will not show them.
+     The production backend now blocks client photo-record and cloud-file uploads.</p>
+  <p>On supported iPhone and iPad versions, <strong>Me → Settings → Save photos to camera roll</strong> lets you copy all photos stored locally for the signed-in Wayfinder account to that device's Photos library. Wayfinder shows the number of photos for confirmation and asks for permission to add to Photos when needed. Its in-app copies remain. This is a choice you make; attaching a photo does not save it to Photos automatically. Photos are never shared through a group, so another member cannot download them from your group. The web app and Android build cannot use this control to save to Photos. Copies in Photos are outside Wayfinder's account filter and are managed by Apple and your device settings. If iCloud Photos is enabled, they may sync to iCloud and your other devices. RL Applications does not receive the exported images. Deleting your Wayfinder account or app does not delete copies saved to Photos.</p>
+  <p>Signing out keeps new device-local photos for the same account and hides them
+     from other signed-in accounts. Uninstalling the native app, clearing its app
+     data, or clearing the PWA's browser/site storage can permanently remove them.
+     Under <em>Me → Settings</em>, <strong>Export photos from this device</strong>
+     prepares password-encrypted, numbered <code>.wfpbackup</code> files. Save every
+     part and use <strong>Import a photo backup</strong> while signed in to the same
+     Wayfinder account on another device. This is a manual transfer of photo copies;
+     Wayfinder does not automatically sync them or upload the backup to RL Applications.
+     A file you save to Files, transfer by AirDrop, email or put with a cloud-storage
+     provider is a separate copy handled by the route you choose. Keep the backup
+     password safe: Wayfinder cannot recover an encrypted file if you forget it.
+     Native releases exclude Wayfinder's persistent app data, including new photos,
+     from Android and iOS device or cloud backups. The PWA cannot control copies a
+     browser, operating system or user-configured device backup may retain outside
+     its site storage.</p>
+  <p>On 15 September 2026, the 15 historical cloud photo objects and all 11 active
+     photo metadata records were removed from the production Wayfinder service.
+     RL Applications separately retains a Desktop backup of those historical
+     originals and migration snapshots for rollback evidence pending a final
+     retention decision. It is not accessible in the app. Group membership,
+     completed-adventure sharing and trip sharing do not share new device-local photos.
+     If you leave a group with other members, your previously shared name, ticks,
+     completion dates, ratings and written memories remain in that group as a fixed
+     record. Changes to your personal list after departure do not update it. In Me,
+     you can erase your retained shared history from a group you left. Deleting your
+     account or the group removes that record. If you are the last member, leaving
+     deletes the group and its shared history. Leaving does not withdraw trip plans
+     you separately shared with other groups. Another person may retain a separate
+     copy of information they previously saw or saved.</p>
+
+  <h2>Traveller recommendations</h2>
+  <p>A new Community recommendation, or an edit to one already visible, is shown only
+     to its author while it awaits review. After approval it can be
+     <strong>public</strong> to everyone using the app, along with the display name
+     you have set. Your votes and star
+     ratings are private &mdash; the totals are public, but nobody can see who voted
+     which way. Reports you make are visible only to us, and blocking somebody is
+     private to you. Three reports can hold a post hidden.
+     A post can remain hidden while a report is reviewed. Review and responses may
+     take time.
+     Do not post private or sensitive information there.</p>
+  <p>For the optional AI-assisted recommendation review route, when enabled, you must
+     separately check an unchecked consent box for each new post or edit. It permits
+     RL Applications to send your chosen <strong>public display name</strong>, title,
+     place, country, optional region/category, description and any source link to its
+     review mailbox through Resend and Google Gmail, and to process that task with
+     OpenAI through the connected Codex/ChatGPT account. A short post ID and revision
+     identify the task. Your Wayfinder sign-in email, account UUID, Memories photos,
+     photo metadata, purchases and reporter details are not included in that review
+     email. Do not paste private links or personal details into the post or source URL.
+     The AI agent may approve low-risk suggestions or reject clear abuse after rechecking
+     the current submission; it cannot promise every venue, claim or access condition is
+     genuine. Uncertain or reported posts remain private for
+     operator review; a denied post remains private with an author-only reason and you
+     can appeal at <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20privacy">help.rlapplications@gmail.com</a>.
+     The review email and connected task may be retained separately by those providers;
+     deleting or withdrawing a post cannot unsend an email already delivered. Request
+     access or deletion through the contact above. This route does not handle photos.</p>
+
+
+  <h2>Personal progress and groups</h2>
+  <p>Your progress belongs to your account. Groups are optional, and new join codes
+     contain six letters or numbers. When you create or join a group, one choice asks
+     whether to share your eligible personal completion ticks, dates, star ratings
+     and written memories together with that group's current and future members.
+     You may instead join privately and view what other members choose to share.
+     The choice is made separately for each group. New personal entries share normally
+     after a yes answer; ratings and notes on unfinished adventures, photos, purchases,
+     shortlist and trips are not included. Trips have a separate explicit share action.</p>
+  <p>Some older records cannot safely be attributed to a person. They remain unnamed,
+     with their date, rating and note private, until their owner opens the adventure
+     in <em>My progress</em> and taps <em>Confirm for group sharing</em>. Merely finding
+     the same words in a note does not prove who completed it. Older ratings or notes
+     written only in a former group list remain private unless their author intentionally
+     copies them into a personal entry. In Group Memories, all eligible shared ticks,
+     ratings and notes for one adventure appear together, labelled by member; without
+     a shared note it says <em>No memory written yet</em>.</p>
+  <p>Existing memberships keep their previous settings until each member makes the
+     new one-time combined choice. Switch between <em>My progress</em> and <em>Group
+     progress</em> in the app. Leaving removes your membership but keeps the eligible
+     name, ticks, dates, ratings and written memories you already shared visible to
+     current and future members of that group. Group Memories labels you as a former
+     member. This record stops syncing with your personal list, which stays with your
+     account. Use <em>Me → Shared history in groups you left → Remove my shared group
+     history</em> to erase it. Deleting your account or the group erases it too. If you
+     are the last member, leaving deletes the group. Someone who already viewed shared
+     information may have kept a separate copy.</p>
+  <p>Trips are personal by default. When you explicitly choose <em>Add to group</em>
+     on a trip, that group's members can view its name, dates, selected adventures
+     and notes. Connected members receive updates as the owner changes the trip;
+     only the owner can edit or delete it. You can use <em>Remove from group</em>
+     to revoke group access without deleting your personal trip. Leaving the group
+     also removes your shared trips from that group. A member's own purchases
+     control access to protected gem place details; sharing a trip does not turn on
+     completed-adventure sharing or give the group your purchases, photos or shortlist. Revocation
+     cannot remove copies another person already saved or remembered.</p>
+
+  <h2>Purchases</h2>
+  <p>Purchases are not active in the PWA web review build. The iOS app offers optional
+     one-time hidden-gem packs through Apple's in-app purchase flow for the individual
+     Wayfinder account. Joining a group
+     does not give other members your purchases. Apple handles iOS payment details,
+     and Wayfinder does not receive your card number. RevenueCat processes the linked
+     Wayfinder account identifier, purchase and receipt information, unlocked packs
+     and technical information needed to check or restore access. Google purchases
+     are not configured for Android yet. <a href="https://www.revenuecat.com/privacy-policy">RevenueCat privacy policy</a>.</p>
+
+  <h2>Notifications</h2>
+  <p>Optional, off unless you turn them on, and generated on your own device. They
+     fire at most once a week and only for shortlisted adventures that are in season.
+     No notification content leaves your phone.</p>
+
+  <h2 id="delete-account">Deleting your account</h2>
+  <p>Wayfinder includes Me → <strong>Delete my account and all my data</strong>,
+     which requires a connection and confirmation. It removes your active Wayfinder
+     account, hosted travel records and retained shared history in groups, and starts
+     removal of the linked purchase-provider
+     customer record. Service providers may retain separate operational,
+     transaction or backup records under their own rules. If you cannot
+     use the in-app control, email
+     <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20account%20deletion">help.rlapplications@gmail.com</a>.
+     Uninstalling the app alone does not delete your account.</p>
+  <p>Use the
+     <a href="https://rlapplications.com/wayfinder/delete-account/">Wayfinder account-deletion page</a>
+     for the current request status and guidance. For an emailed request, RL Applications
+     will verify account ownership and confirm completion only after the relevant
+     data and service-provider steps have been checked. A request is intended to cover the
+     account, personal progress, trips, group memberships, retained shared history and
+     Community contributions. Store transaction records and copies another person
+     independently saved are separate; account deletion does not itself issue a refund.</p>
+  <p>Creating another account with the same email does not recover the deleted account
+     or its progress. Apple retains its transaction history; eligible purchases can be restored
+     separately. Contact support if paid access is not restored.</p>
+  <p>The in-app deletion flow removes the account's new device-local photos from the
+     device where it runs. An emailed or server-side deletion request cannot remotely
+     erase local photos on another device or browser profile. Clear that app's data,
+     clear the PWA's browser/site storage, or uninstall the native app to remove any
+     remaining local copies. Exported <code>.wfpbackup</code> files remain wherever
+     you saved or transferred them; delete those files separately. Photos you chose to
+     save to the device's Photos library also remain there and must be managed in Photos.
+     Signing out alone preserves device-local photos.</p>
+
+  <h2>Who runs it</h2>
+  <p>Wayfinder is developed and operated by Riley Lawler, a sole trader
+     operating RL Applications in Australia (ABN 92 363 169 656).
+     Email enquiries about privacy, access and corrections to
+     <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20privacy">help.rlapplications@gmail.com</a>.
+     Use the account-deletion route above for deletion requests.</p>
+  <p>Supabase hosts account authentication and the database. Its former active
+     cloud-photo records and bucket objects are empty, with client uploads blocked. GitHub
+     Pages serves the web review build. Supabase sends account confirmation and
+     recovery messages through Resend using the sending-only
+     <code>auth.rlapplications.com</code> domain. Resend receives the recipient email
+     address, the authentication message and link or code, and delivery metadata
+     needed to send and troubleshoot that message. Its configured sending region is
+     Tokyo (<code>ap-northeast-1</code>); this setting does not mean all processing or
+     storage stays in Japan. Open and click tracking are disabled. This account-email
+     path does not receive Wayfinder photos. <a href="https://resend.com/legal/privacy-policy">Resend privacy policy</a>.</p>
+  <p>Google provides the current Gmail support mailbox and its email infrastructure
+     may retain messages previously sent to the former support address.
+     The no-reply Resend sender is not a monitored support
+     mailbox. Apple and RevenueCat support the iOS purchase and restore flow;
+     Google purchases remain future Android work. BigDataCloud handles optional location
+     lookups. These services receive
+     the information needed for their role, including normal network request
+     information, and may process it outside Australia.</p>
+  <p>If you choose the optional AI-assisted Community review route when it is enabled,
+     Resend sends only the consented post text, public display name, source URL and task
+     reference to the Gmail review mailbox; Google delivers/stores the email, and OpenAI
+     processes the text in the connected Codex/ChatGPT task. This is a connected account
+     route, not the OpenAI API, so API retention rules are not a promise about it.
+     Provider retention depends on their applicable terms and the operator's account
+     settings; RL Applications has not established a universal deletion period for copies
+     already received. <a href="https://resend.com/legal/privacy-policy">Resend privacy</a>,
+     <a href="https://policies.google.com/privacy">Google privacy</a>,
+     <a href="https://help.openai.com/en/articles/7730893-data-controls-faq">OpenAI data controls</a>.</p>
+
+
+  <h2>Retention and device copies</h2>
+  <p>Your hosted travel records remain until you remove them or delete your account.
+     Local caches let a previously signed-in device work offline. Signing out clears
+     the account-data cache but preserves account-scoped device-local photos; other
+     offline devices may still hold earlier records until they reconnect or their app
+     data is cleared. Service-provider backup and
+     operational records may persist beyond removal from the active app. Retention
+     enquiries and privacy requests can be sent to the support address above.</p>
+
+  <h2>Children</h2>
+  <p>Wayfinder is not directed at children under 13 and does not knowingly collect
+     data from them.</p>
+
+  <h2>Optional Viator booking links</h2>
+  <p>Where a reviewed experience link is available, you can choose to open Viator
+     outside Wayfinder. The link contains RL Applications' affiliate identifier
+     and Viator's product-link attribution, not your Wayfinder account ID, email, progress,
+     photos or location. Wayfinder does not contact Viator before you open a link
+     and does not embed its tracking scripts. Once opened, Viator receives normal
+     connection information such as your IP address and browser details and may
+     use cookies under its <a href="https://www.viator.com/support/privacyPolicy" target="_blank" rel="noopener noreferrer">Privacy and Cookies Statement</a>. RL Applications may earn a commission
+     on eligible bookings. Bookings, payments and cancellations are handled by
+     Viator and the experience provider; they are separate from gem purchases.</p>
+
+  <h2>Travel advice is not our advice</h2>
+  <p class="note">Some countries carry a travel warning inside the app. It is a
+     convenience, not a source of truth, and it can be out of date. Always check your
+     own government's current advice before booking anything. Opening hours, access,
+     permits, seasonal closures and Traditional Owner requirements also change; check
+     before you travel.</p>
+
+  <h2>Changes</h2>
+  <p>We update the date on this page when the policy changes. Review this page for
+     the current description of how Wayfinder handles your information.</p>
+
+  <footer>
+    <p><a class="return-link" href="./">← Return to Wayfinder</a></p>
+    <p>Support email: <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support">help.rlapplications@gmail.com</a></p>
+    <p>RL Applications · ABN 92 363 169 656<br>Riley Nicholas Lawler - Sole Trader - Australia.</p>
+    <a href="support.html">Support &amp; help</a> ·
+    <a href="https://rlapplications.com/wayfinder/privacy/">Privacy supplement</a> ·
+    <a href="https://rlapplications.com/wayfinder/delete-account/">Delete account</a>
+  </footer>
+</main>
+</body>
+</html>

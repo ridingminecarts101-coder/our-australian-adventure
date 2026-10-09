@@ -229,7 +229,10 @@ def normalise(data: bytes) -> bytes:
 def local_checks() -> tuple[list[str], set[str]]:
     errors: list[str] = []
     external: set[str] = set()
-    html_files = sorted(ROOT.rglob("*.html"))
+    # The branch-only phone acceptance PWA is checked by
+    # check_phone_preview.mjs; these rules are for the studio website pages.
+    html_files = sorted(path for path in ROOT.rglob("*.html")
+                        if "review-app" not in path.relative_to(ROOT).parts)
     if len(html_files) != len(ROUTES) + 1:
         errors.append(f"expected {len(ROUTES) + 1} HTML pages, found {len(html_files)}")
 

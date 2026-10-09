@@ -11,6 +11,16 @@
 /assets/*
   Cache-Control: public, max-age=604800, no-transform
 
+# Temporary phone acceptance build on a branch-only Pages preview. This
+# overrides the studio site's script/connect/camera restrictions only here.
+/review-app/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://ajyuozqoukigeeyhvuqc.supabase.co; connect-src 'self' https://ajyuozqoukigeeyhvuqc.supabase.co wss://ajyuozqoukigeeyhvuqc.supabase.co https://api.bigdatacloud.net; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  ! Permissions-Policy
+  Permissions-Policy: accelerometer=(), camera=(self), geolocation=(self), gyroscope=(), microphone=(), payment=(), usb=()
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+
 # Only the invite route needs a local script to retain the join code.
 /wayfinder/invite/*
   ! Content-Security-Policy

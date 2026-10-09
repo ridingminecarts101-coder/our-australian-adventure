@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wayfinder — Third-party notices</title>
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root { color-scheme: light dark; --ink:#241c17; --paper:#f6efe6; --muted:#6b5d52;
+          --line:#e0d4c6; --ochre:#8c3d1f; --card:#fffaf3; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#f3ece4; --paper:#191512; --muted:#a2938a; --line:#33291f;
+            --ochre:#d0714a; --card:#211b16; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 22px 80px; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 32px 0 6px; overflow-wrap:anywhere; }
+  .sub, .source { color:var(--muted); }
+  a { color:var(--ochre); overflow-wrap:anywhere; }
+  a:focus-visible { outline:3px solid var(--ochre); outline-offset:4px; }
+  .page-nav { position:sticky; top:0; z-index:2; background:var(--paper);
+              border-bottom:1px solid var(--line); padding:12px 22px;
+              padding-top:max(12px,env(safe-area-inset-top)); }
+  .page-nav-inner { max-width:676px; margin:auto; display:flex;
+                    align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .page-nav a { display:inline-flex; align-items:center; min-height:44px; }
+  .return-link { padding:8px 14px; border:1px solid var(--ochre); border-radius:999px;
+                 font-weight:600; text-decoration:none; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th,td { border-bottom:1px solid var(--line); padding:8px 6px; text-align:left; vertical-align:top; }
+  pre { background:var(--card); border:1px solid var(--line); border-radius:12px;
+        padding:14px; white-space:pre-wrap; overflow-wrap:anywhere; font:13px/1.55 ui-monospace,monospace; }
+  footer { margin-top:44px; padding-top:16px; border-top:1px solid var(--line);
+           color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+<nav class="page-nav" aria-label="Page navigation"><div class="page-nav-inner">
+  <a class="return-link" href="./">← Return to Wayfinder</a>
+  <a href="support.html">Support &amp; help</a>
+</div></nav>
+<main>
+  <h1>Third-party notices</h1>
+  <p class="sub">Wayfinder · source inventory reviewed 15 September 2026</p>
+  <p>Wayfinder includes third-party software and map data. The copyright and full permission
+     texts below accompany the browser bundle, native web assets, and the five Swift package
+     pins recorded for the current iOS project. Their licences do not transfer ownership of
+     RL Applications' original app text and artwork.</p>
+  <h2>Included components</h2>
+  <table><thead><tr><th scope="col">Component</th><th scope="col">Version</th>
+    <th scope="col">Notice</th></tr></thead><tbody>
+<tr><th scope='row'>@capacitor/core</th><td>8.5.1</td><td><a href='#license-7edf453d1584'>Full licence</a></td></tr>
+<tr><th scope='row'>@capacitor/android</th><td>8.5.1</td><td><a href='#license-7edf453d1584'>Full licence</a></td></tr>
+<tr><th scope='row'>@capacitor/ios</th><td>8.5.1</td><td><a href='#license-7edf453d1584'>Full licence</a></td></tr>
+<tr><th scope='row'>@capacitor/app</th><td>8.1.1</td><td><a href='#license-eb99a0d61b50'>Full licence</a></td></tr>
+<tr><th scope='row'>@capacitor/filesystem</th><td>8.1.3</td><td><a href='#license-7290a4bdbc2f'>Full licence</a></td></tr>
+<tr><th scope='row'>@capacitor/geolocation</th><td>8.2.2</td><td><a href='#license-7290a4bdbc2f'>Full licence</a></td></tr>
+<tr><th scope='row'>@capacitor/local-notifications</th><td>8.3.1</td><td><a href='#license-eb99a0d61b50'>Full licence</a></td></tr>
+<tr><th scope='row'>@capacitor/preferences</th><td>8.0.1</td><td><a href='#license-eb99a0d61b50'>Full licence</a></td></tr>
+<tr><th scope='row'>@capacitor/share</th><td>8.0.1</td><td><a href='#license-eb99a0d61b50'>Full licence</a></td></tr>
+<tr><th scope='row'>@capacitor/splash-screen</th><td>8.0.2</td><td><a href='#license-eb99a0d61b50'>Full licence</a></td></tr>
+<tr><th scope='row'>@capacitor/status-bar</th><td>8.0.3</td><td><a href='#license-eb99a0d61b50'>Full licence</a></td></tr>
+<tr><th scope='row'>@revenuecat/purchases-capacitor</th><td>13.5.0</td><td><a href='#license-944aa499a6bc'>Full licence</a></td></tr>
+<tr><th scope='row'>Supabase JavaScript browser bundle</th><td>2.113.0</td><td><a href='#license-4fab5fb12a3f'>Full licence</a></td></tr>
+<tr><th scope='row'>world-atlas TopoJSON used to generate land.js</th><td>2</td><td><a href='#license-7f7a686a9e08'>Full licence</a></td></tr>
+<tr><th scope='row'>capacitor-swift-pm</th><td>8.5.1</td><td><a href='#license-9865d3d6ad04'>Full licence</a></td></tr>
+<tr><th scope='row'>ion-ios-filesystem</th><td>1.1.4</td><td><a href='#license-7290a4bdbc2f'>Full licence</a></td></tr>
+<tr><th scope='row'>ion-ios-geolocation</th><td>2.1.1</td><td><a href='#license-7290a4bdbc2f'>Full licence</a></td></tr>
+<tr><th scope='row'>purchases-hybrid-common</th><td>18.33.1</td><td><a href='#license-70991dd0f2f0'>Full licence</a></td></tr>
+<tr><th scope='row'>purchases-ios-spm</th><td>5.87.1</td><td><a href='#license-4a428e9c567e'>Full licence</a></td></tr>
+  </tbody></table>
+  <h2>Natural Earth map data</h2>
+  <p>The underlying country geometry comes from Natural Earth, whose
+     <a href="https://www.naturalearthdata.com/about/terms-of-use/">terms of use</a>
+     place its vector and raster data in the public domain. The world-atlas
+     representation has its own ISC notice below.</p>
+  <h2>Full copyright and permission texts</h2>
+<section id='license-7edf453d1584'><h2>@capacitor/core 8.5.1, @capacitor/android 8.5.1, @capacitor/ios 8.5.1</h2><p class='source'>Licence source: source licence · source licence · source licence.</p><pre>MIT License
+
+Copyright (c) 2017-present Drifty Co.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the &quot;Software&quot;), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section id='license-eb99a0d61b50'><h2>@capacitor/app 8.1.1, @capacitor/local-notifications 8.3.1, @capacitor/preferences 8.0.1, @capacitor/share 8.0.1, @capacitor/splash-screen 8.0.2, @capacitor/status-bar 8.0.3</h2><p class='source'>Licence source: source licence · source licence · source licence · source licence · source licence · source licence.</p><pre>Copyright 2020-present Ionic
+https://ionic.io
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+&quot;Software&quot;), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</pre></section>
+<section id='license-7290a4bdbc2f'><h2>@capacitor/filesystem 8.1.3, @capacitor/geolocation 8.2.2, ion-ios-filesystem 1.1.4, ion-ios-geolocation 2.1.1</h2><p class='source'>Licence source: source licence · source licence · <a href="https://raw.githubusercontent.com/ionic-team/ion-ios-filesystem/56bd6f9e77cb4f2269c03f2d92a9fe58fe168a1c/LICENSE">source licence</a> · <a href="https://raw.githubusercontent.com/ionic-team/ion-ios-geolocation/db363927d3a954e3ea24d2e72b6e9814769a84be/LICENSE">source licence</a>.</p><pre>MIT License
+
+Copyright (c) 2025 Ionic
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the &quot;Software&quot;), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section id='license-944aa499a6bc'><h2>@revenuecat/purchases-capacitor 13.5.0</h2><p class='source'>Licence source: source licence.</p><pre>MIT License
+
+Copyright (c) 2023 RevenueCat, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the &quot;Software&quot;), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section id='license-4fab5fb12a3f'><h2>Supabase JavaScript browser bundle 2.113.0</h2><p class='source'>Licence source: <a href="https://raw.githubusercontent.com/supabase/supabase-js/master/LICENSE">source licence</a>.</p><pre>MIT License
+
+Copyright (c) 2020 Supabase
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the &quot;Software&quot;), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section id='license-7f7a686a9e08'><h2>world-atlas TopoJSON used to generate land.js 2</h2><p class='source'>Licence source: <a href="https://raw.githubusercontent.com/topojson/world-atlas/master/LICENSE">source licence</a>.</p><pre>Copyright 2013-2019 Michael Bostock
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.</pre></section>
+<section id='license-9865d3d6ad04'><h2>capacitor-swift-pm 8.5.1</h2><p class='source'>Licence source: <a href="https://raw.githubusercontent.com/ionic-team/capacitor-swift-pm/6afa7424fd2fcd8ca1e577478e8a00af284b7e82/LICENSE.md">source licence</a>.</p><pre>The MIT License (MIT)
+
+Copyright (c) 2022-present Drifty Co.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Third-party components, software, and/or libraries (collectively, &quot;components&quot;) are included under the licenses specified by their authors. For information about these third-party licenses, refer to the separate legal notices governing such components at NOTICE file at the top level of the package.</pre></section>
+<section id='license-70991dd0f2f0'><h2>purchases-hybrid-common 18.33.1</h2><p class='source'>Licence source: <a href="https://raw.githubusercontent.com/RevenueCat/purchases-hybrid-common/1ddfae809003768d49bbfd30b008b29181ce4cb1/LICENSE">source licence</a>.</p><pre>MIT License
+
+Copyright (c) 2019 RevenueCat, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the &quot;Software&quot;), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+<section id='license-4a428e9c567e'><h2>purchases-ios-spm 5.87.1</h2><p class='source'>Licence source: <a href="https://raw.githubusercontent.com/RevenueCat/purchases-ios-spm/b65cae4f227be800c57cb9700dbd94f2aa5409b2/LICENSE">source licence</a>.</p><pre>MIT License
+
+Copyright (c) 2024 RevenueCat, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the &quot;Software&quot;), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</pre></section>
+  <footer><p><a class="return-link" href="./">← Return to Wayfinder</a></p>
+    <p><a href="support.html">Support</a> · <a href="privacy.html">Privacy</a></p>
+    <p>RL Applications · Riley Nicholas Lawler - Sole Trader - Australia · ABN 92 363 169 656.</p>
+  </footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wayfinder — Support</title>
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root { color-scheme: light dark; --ink:#241c17; --paper:#f6efe6; --muted:#6b5d52;
+          --line:#e0d4c6; --ochre:#8c3d1f; --card:#fffaf3; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink:#f3ece4; --paper:#191512; --muted:#a2938a; --line:#33291f;
+            --ochre:#d0714a; --card:#211b16; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 22px 80px; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 32px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 26px; }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 12px 14px; margin-bottom: 8px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { margin: 8px 0 2px; }
+  a { color: var(--ochre); }
+  a:focus-visible, summary:focus-visible { outline: 3px solid var(--ochre); outline-offset: 4px; }
+  .page-nav { position: sticky; top: 0; z-index: 2; background: var(--paper);
+    border-bottom: 1px solid var(--line); padding: 12px 22px;
+    padding-top: max(12px, env(safe-area-inset-top)); }
+  .page-nav-inner { max-width: 676px; margin: auto; display: flex;
+    align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .page-nav a { display: inline-flex; align-items: center; min-height: 44px; }
+  .return-link { display: inline-flex; align-items: center; min-height: 44px;
+    padding: 8px 14px; border: 1px solid var(--ochre); border-radius: 999px;
+    font-weight: 600; text-decoration: none; }
+  code { background: rgba(140,61,31,.12); padding: 1px 5px; border-radius: 5px;
+         font-size: 14px; }
+  footer { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line);
+           color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<nav class="page-nav" aria-label="Page navigation"><div class="page-nav-inner">
+  <a class="return-link" href="./">← Return to Wayfinder</a>
+  <a href="privacy.html">Privacy policy</a>
+</div></nav>
+<main>
+  <h1>Support</h1>
+  <p class="sub">Wayfinder — real places worth going, ticked off together.</p>
+
+  <p>Support email: <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support">help.rlapplications@gmail.com</a>.</p>
+  <p>Wayfinder is developed and operated by Riley Lawler, a sole trader
+     operating RL Applications in Australia (ABN 92 363 169 656).</p>
+  <p><strong>Wayfinder is available for iPhone and iPad on the
+     <a href="https://apps.apple.com/au/app/wayfinder-adventure-lists/id6812170174">App Store</a>.</strong> Account verification and password
+     recovery emails and optional groups are available. New Community posts and edits
+     remain private until review approves them for other travellers; review and
+     replies to reports may take time. Purchases are not active
+     in the web review build; the native iOS app offers optional packs. Keep another
+     copy of important photos and trip notes. See the
+     <a href="https://rlapplications.com/wayfinder/support/">current Wayfinder support page</a>
+     for current information.</p>
+
+  <h2>Common questions</h2>
+
+  <details>
+    <summary>How do I use the same progress on another phone?</summary>
+    <p>Use the same verified account on both phones. Signed-in progress syncs across
+       devices.
+       First confirm that changes have synced on the original device. New photos do
+       not sync automatically. To move their real image bytes, choose
+       <strong>Me → Settings → Export photos from this device</strong>, save and
+       personally transfer every numbered <code>.wfpbackup</code> file, then choose
+       <strong>Import a photo backup</strong> while signed in to the same account on
+       the other device. Keep the backup password: Wayfinder cannot recover an
+       exported file if you forget it.</p>
+  </details>
+
+  <details>
+    <summary>How do two phones share one list?</summary>
+    <p>Each person uses their own verified account. One person creates an optional group
+       and shares its six-character invitation code. When you create or join, one clear
+       choice asks whether to share your completed-adventure ticks, dates, ratings and
+       written memories together. You can also join privately and still view what
+       other members choose to share. Some older completions need you to review them
+       in <strong>My progress</strong> and tap <strong>Confirm for group sharing</strong>
+       before they can appear under your name. Photos, purchases and shortlist stay personal.</p>
+  </details>
+
+  <details>
+    <summary>Can I keep my own list while I am in a group?</summary>
+    <p>Yes. Personal progress belongs to your account, and group sharing is optional.
+       Switch between My progress and Group progress. If you leave while other members
+       remain, the name, ticks, dates, ratings and written memories you already shared
+       stay in that group as a fixed record. Later changes to your personal list do not
+       change it. Your personal history stays with your account. In Me, you can remove
+       your shared history from a group you left. If you are the last member, leaving
+       deletes the group and its shared history.</p>
+  </details>
+
+  <details>
+    <summary>Can my group see my ratings and written memories?</summary>
+    <p>Only when you choose to share at group creation or join. That one choice covers
+       your eligible personal completion ticks, dates, star ratings and written memories
+       for completed adventures. Each member makes their own choice for each group.
+       Current and future members see shared entries for an adventure together, with
+       each person's name beside their own tick, rating and note. If nobody has shared
+       a written memory, it says <strong>No memory written yet</strong>. Older entries
+       whose personal ownership cannot be proved stay unnamed and private until their
+       owner opens the adventure in <strong>My progress</strong> and taps
+       <strong>Confirm for group sharing</strong>. Older notes created only in a group
+       stay private unless their author copies them into their own personal entry.
+       Unfinished adventures, photos, purchases and shortlist stay private. Leaving
+       preserves what you already shared for remaining group members, labelled as a
+       former member. It does not sync your later personal edits into that record.
+       After leaving, use <strong>Me → Shared history in groups you left → Remove my
+       shared group history</strong> to erase your retained entries. Deleting your
+       account or the group also removes that record. Someone may keep a separate copy
+       of information they already saw.</p>
+  </details>
+
+  <details>
+    <summary>Can I change when I completed an adventure?</summary>
+    <p>Yes. Open an adventure you have ticked and use <strong>Date completed</strong>
+       to save the correct day, from 1 January 1900 through 31 December 2100.
+       You can correct an earlier tick even if that listing is now paused.
+       The date syncs with your account; group members see the correction only
+       when you have chosen to share completion ticks and the entry is eligible
+       for group sharing.</p>
+  </details>
+
+  <details>
+    <summary>How do I share a trip with my group?</summary>
+    <p>Trips stay personal until their owner opens a trip and chooses
+       <strong>Add to group</strong> for the active group. Confirm the choice while
+       online. Group members can then view its name, dates, itinerary and notes,
+       with connected devices refreshing as the trip changes. Only the owner can
+       edit or delete it. Use <strong>Remove from group</strong> in that trip to
+       revoke group access, or leave the group. Removing a share does not erase
+       copies someone may already have saved.</p>
+    <p>Trip sharing is a separate choice from sharing completed adventures.
+       Sharing a trip does not turn the group-memory choice on or share photos or purchases.
+       Each member needs their own pack to see protected gem place details.</p>
+  </details>
+
+  <details>
+    <summary>“Ticked by” shows the wrong name</summary>
+    <p>Check that each person is signed in to their own account, then set your display
+       name under Me → Settings → <strong>Change name</strong>. Reconnect the other
+       devices to refresh names. If a completion comes from an older shared account,
+       a display-name change cannot reliably recover who originally did it.</p>
+  </details>
+
+  <details>
+    <summary>My two phones disagree about what is ticked</summary>
+    <p>Ticks sync live, but a phone that has been in a pocket for a while can drop the
+       connection. Opening the app reconnects it. If they still disagree, Me → Settings
+       → <strong>Force refresh from server</strong>.</p>
+  </details>
+
+  <details>
+    <summary>A photo will not attach</summary>
+    <p>Wayfinder reads a photo only after you choose it and resizes a copy on the
+       device. A large photo can take a moment to process. If attaching it fails,
+       keep the original and try again with free storage available.</p>
+  </details>
+
+  <details>
+    <summary>Where is an attached photo stored?</summary>
+    <p>When you add photos, Wayfinder keeps resized in-app copies on the device where you add them. The
+       native app uses private app files and does not automatically copy the Wayfinder version to
+       your Photos library; the PWA uses that browser's IndexedDB storage. Wayfinder does
+       not upload the new image or its related photo record to the RL Applications
+       backend or GitHub, and its in-app copies do not sync to another Wayfinder installation. The production
+       backend now blocks client photo-record and cloud-file uploads. Signing out preserves them for the same account, while
+       uninstalling, clearing app data, or clearing browser/site storage can remove
+       them permanently. Me → Settings offers manual export and import of
+       password-encrypted, numbered <code>.wfpbackup</code> files for the same
+       account. Wayfinder does not automatically sync those files or upload them to
+       RL Applications. Files, AirDrop, email or a cloud provider can hold a
+       separate copy if you choose that route. Save every part and keep the backup
+       password safe. Native releases exclude Wayfinder's persistent
+       app data from Android and iOS device or cloud backups. A PWA cannot control copies retained by browser,
+       operating-system or user-configured device backups. The active cloud-photo
+       store is empty. RL Applications retains a separate Desktop backup of 15
+       historical originals and migration snapshots pending a final retention
+       decision; those copies are not available through Wayfinder.</p>
+  </details>
+
+  <details>
+    <summary>How do I save my Wayfinder photos to my iPhone's Photos app?</summary>
+    <p>In a supported iPhone or iPad version, open <strong>Me → Settings → Save photos to camera roll</strong>. Wayfinder shows how many photos are stored locally for your signed-in account; confirm to copy them to that device's Photos library and allow add-only Photos access if asked. The Wayfinder copies stay in the app. This saves only photos already on that device; group members cannot download them from your group. This is separate from the encrypted backup files and does not move photos to another Wayfinder sign-in. You can use Photos to view, share or remove the new copies. They remain visible in Photos if you switch Wayfinder accounts; saving again creates another set of copies. Your iCloud Photos settings may sync them to iCloud and other devices. RL Applications does not receive them, and removing your Wayfinder account or app will not remove the Photos copies. The web app and Android build cannot use this control to save to Photos.</p>
+  </details>
+
+  <details>
+    <summary>Does it work without signal?</summary>
+    <p>After signing in on that device and loading the list, you can browse and save
+       progress without signal. Changes queue until you reconnect. First sign-in,
+       account recovery, group changes, purchases and account deletion need a connection.
+       Device-local photos on this device remain available after signing in to
+       the same account, subject to local storage still being present.</p>
+  </details>
+
+  <details>
+    <summary>How do I delete everything?</summary>
+    <p>Wayfinder includes Me → <strong>Delete my account and all my data</strong>
+       while online. It removes your active Wayfinder account and hosted travel records
+       and starts removal of the linked purchase-provider customer record. Other devices'
+       local photos must be cleared there; providers may retain separate records.
+       Creating another account with the same email does not recover the deleted account
+       or its progress. Apple retains its transaction history; eligible purchases can be restored
+       separately. Contact support if paid access is not restored.
+       The <a href="https://rlapplications.com/wayfinder/delete-account/">account-deletion instructions</a>
+       explain these limits and how to request help if you cannot access the app.
+       Uninstalling does not delete your account.</p>
+  </details>
+
+  <details>
+    <summary>Do purchases cover my whole group?</summary>
+    <p>Purchases are not active in the PWA web review build. The iOS app offers
+       optional one-time packs for one Wayfinder account through Apple's in-app
+       purchase flow. Restore belongs to that same individual Wayfinder account;
+       group members do not own or receive your packs. The Australian base prices are
+       <strong>AUD $14.99 once for every continent pack</strong> or
+       <strong>AUD $2.99 once for an individual continent pack</strong>.
+       Apple shows the actual price for your storefront before you buy.
+       Google purchases are not configured for Android yet.</p>
+  </details>
+
+  <details>
+    <summary>Does a pack purchase pay for the adventures?</summary>
+    <p>An iOS pack purchase unlocks Wayfinder guide content for your account when the
+       native purchase flow is available. Travel, admission, equipment and guide
+       fees are separate. The all-continents bundle includes Antarctica;
+       it will not book or pay for an expedition.</p>
+  </details>
+
+  <details>
+    <summary>How do Viator experience links work?</summary>
+    <p>Some adventures have a reviewed link to a matching Viator experience beneath
+       the Maps and shortlist buttons. The provider page opens outside Wayfinder.
+       Check its itinerary, departure point, options, access requirements and current
+       availability before booking. A guided visit may be optional for a place you
+       can visit independently. Unmatched adventures have no booking button.</p>
+    <p>We may earn a commission on eligible bookings. Tours and admission are separate
+       purchases from Wayfinder gem collections. Booking changes, refunds and
+       cancellations must be arranged through Viator or the provider. Wayfinder does
+       not guarantee availability and does not receive your payment-card details.</p>
+  </details>
+
+  <details>
+    <summary>Are adventure costs and visit times live quotes?</summary>
+    <p>Cost bands, durations and difficulty are planning estimates. Transport, equipment,
+       guide requirements and your route can change the total. Check current operator
+       prices, access, weather and travel advice before booking or setting out.</p>
+  </details>
+
+  <details>
+    <summary>A place in the app has closed, moved or is wrong</summary>
+    <p>Email <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20content%20correction">help.rlapplications@gmail.com</a>
+       with the adventure name and a note of what changed. Access, opening hours, permits and
+       seasonal closures can change; check current information before travelling.</p>
+  </details>
+
+  <details>
+    <summary>What are traveller recommendations?</summary>
+    <p>A separate list of places other travellers suggest and vote on. New posts and
+       edits remain private until reviewed and approved. This review does
+       not verify every travel detail or place opening, and posts never join the curated
+       adventure list.</p>
+  </details>
+
+
+
+  <details>
+    <summary>How is my Community suggestion reviewed?</summary>
+    <p>New posts and edits remain private until reviewed. If the optional AI-assisted
+       review route is enabled, each submission or edit asks you to check a separate,
+       unchecked box before your chosen public display name, recommendation text and
+       any source link are sent to RL Applications through Resend, Gmail and the connected
+       OpenAI Codex/ChatGPT review task. Your account sign-in email and Memories photos
+       are not sent in that task email. The source is a lead, not a guarantee that the
+       place or all details are genuine. The AI agent may approve low-risk suggestions or
+       reject clear abuse after checking the current revision. Uncertain or reported posts
+       stay private for operator review;
+       rejected posts stay private with a reason visible only to you. You can appeal to
+       <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support">help.rlapplications@gmail.com</a>.
+       Review timing depends on operator availability; there is no one-hour promise.</p>
+  </details>
+
+  <details>
+    <summary>Something on the Community list is wrong or offensive</summary>
+    <p>Press <strong>Report</strong> on the post. Three reports hide it from everyone
+       pending review. You can also press <strong>Block</strong>, which hides that
+       person's posts from your view. Review and replies may take longer during testing.
+       Email <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support">help.rlapplications@gmail.com</a>
+       if further help is needed; avoid sharing private or sensitive information.</p>
+  </details>
+
+  <h2 id="delete-account">Request Wayfinder account and data deletion</h2>
+  <p>Deletion-request email: <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20account%20deletion">help.rlapplications@gmail.com</a>.
+     Wayfinder includes Me →
+     <strong>Delete my account and all my data</strong> while online. This removes the
+     active account, hosted travel records and your retained shared history in groups;
+     other-device photos and some provider
+     records need separate attention. The
+     <a href="https://rlapplications.com/wayfinder/delete-account/">account-deletion page</a>
+     explains the current route and limits. Do not send passwords or identity documents.</p>
+  <p>For a manual request, RL Applications will verify ownership and confirm completion only after the
+     relevant data and service-provider steps have been checked. The request is
+     intended to cover your account, progress, trips, group memberships, retained
+     shared group history and
+     Community contributions. Store transaction records and independently saved copies
+     are separate; deleting an account does not issue a refund. See the
+     <a href="https://rlapplications.com/wayfinder/privacy/">Wayfinder privacy supplement</a>
+     for current data and retention information.</p>
+  <p>The in-app deletion flow also removes the account's device-local photos from the
+     device where it runs. An emailed request cannot remotely erase local photos on
+     another phone or browser profile. Clear its app data or browser/site storage, or
+     uninstall the native app, to remove those copies. Exported
+     <code>.wfpbackup</code> files remain wherever you saved or transferred them and
+     must be deleted separately. Copies you chose to save to the device's Photos library
+     remain there too; manage those copies in Photos. Signing out alone preserves
+     device-local photos.</p>
+
+  <details>
+    <summary>Why does a country say “do not travel”?</summary>
+    <p>Some countries carry a warning where the honest advice is not when to go but
+       whether to. It is a convenience and it can be out of date — always check your
+       own government's current travel advice before booking.</p>
+  </details>
+
+  <footer>
+    <p><a class="return-link" href="./">← Return to Wayfinder</a></p>
+    <p>Support email: <a href="mailto:help.rlapplications@gmail.com?subject=Wayfinder%20support">help.rlapplications@gmail.com</a></p>
+    <p>RL Applications · ABN 92 363 169 656<br>Riley Nicholas Lawler - Sole Trader - Australia.</p>
+    <a href="privacy.html">Privacy policy</a> ·
+    <a href="notices.html">Third-party notices</a> ·
+    <a href="https://rlapplications.com/wayfinder/support/">Current support</a> ·
+    <a href="https://rlapplications.com/wayfinder/delete-account/">Delete account</a>
+  </footer>
+</main>
+</body>
+</html>
