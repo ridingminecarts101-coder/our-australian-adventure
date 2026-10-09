@@ -15,21 +15,28 @@ const turn = () => new Promise(resolve => setImmediate(resolve));
 const plain = value => JSON.parse(JSON.stringify(value));
 
 function harness() {
-  const elements = new Map(), values = new Map(), effects = [], timers = new Map();
+  const elements = new Map(), collections = new Map(), values = new Map(), effects = [], timers = new Map();
   let nextTimer = 1;
   const element = key => {
     if (!elements.has(key)) {
-      const classes = new Set();
+      const classes = new Set(), attributes = new Map();
       elements.set(key, {
         innerHTML: '', textContent: '', value: '', disabled: false, dataset: {}, style: {},
         classList: { add: (...xs) => xs.forEach(x => classes.add(x)),
           remove: (...xs) => xs.forEach(x => classes.delete(x)),
           contains: x => classes.has(x), toggle: (x, on) => on ? classes.add(x) : classes.delete(x) },
-        addEventListener() {}, setAttribute() {}, querySelector: () => null, querySelectorAll: () => [],
+        addEventListener() {}, setAttribute: (name, value) => attributes.set(name, String(value)),
+        getAttribute: name => attributes.get(name) || null,
+        querySelector: () => null, querySelectorAll: () => [],
       });
     }
     return elements.get(key);
   };
+  const allChip = element('#quickChips .chip[data-quick="all"]');
+  allChip.dataset.quick = 'all';
+  const todoChip = element('quick-todo');
+  todoChip.dataset.quick = 'todo';
+  collections.set('#quickChips .chip', [allChip, todoChip]);
   const context = {
     console: { log() {}, warn() {}, error() {} }, queueMicrotask,
     setTimeout(fn, ms) { const id = nextTimer++; timers.set(id, { fn, ms }); return id; },
@@ -38,7 +45,8 @@ function harness() {
     location: { hostname: 'localhost', origin: 'http://localhost', pathname: '/', search: '' },
     history: { state: null, pushState() {}, replaceState() {} },
     navigator: { onLine: true, userAgent: '', platform: '', maxTouchPoints: 0 },
-    document: { querySelector: element, querySelectorAll: () => [], createElement: () => element('new'),
+    document: { querySelector: element, querySelectorAll: selector => collections.get(selector) || [],
+      createElement: () => element('new'),
       body: element('body') },
     localStorage: { getItem: key => values.get(key) || null,
       setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) },
@@ -65,7 +73,7 @@ function harness() {
   renderPlaces=()=>{}; renderList=()=>{}; buildFilterOptions=()=>{}; renderTrips=()=>{};
   toast=message=>effects.push({kind:'toast',message});
   goTo=(level,opts={})=>{effects.push({kind:'nav',level,opts});return true};`);
-  return { context, run, elements, values, effects, timers, element,
+  return { context, run, elements, collections, values, effects, timers, element, allChip, todoChip,
     fireTimer(ms) {
       const found = [...timers].find(([, timer]) => timer.ms === ms);
       assert(found, `expected a ${ms}ms timer`);
@@ -75,6 +83,26 @@ function harness() {
 }
 
 function navEffects(h) { return h.effects.filter(effect => effect.kind === 'nav'); }
+function staleFilters(h) {
+  h.run("Object.assign(filters,{quick:'todo',q:'old search',st:'VIC',cat:'Hiking',diff:2,cost:1,dog:'yes'})");
+  for (const [selector, value] of [
+    ['#search', 'old search'], ['#fState', 'VIC'], ['#fCat', 'Hiking'],
+    ['#fDiff', '2'], ['#fCost', '1'], ['#fDog', 'yes'],
+  ]) h.element(selector).value = value;
+  h.allChip.classList.remove('on');
+  h.todoChip.classList.add('on');
+  h.allChip.setAttribute('aria-pressed', 'false');
+  h.todoChip.setAttribute('aria-pressed', 'true');
+}
+function filterSnapshot(h) {
+  return {
+    model: JSON.parse(h.run('JSON.stringify(filters)')),
+    controls: Object.fromEntries(['#search', '#fState', '#fCat', '#fDiff', '#fCost', '#fDog']
+      .map(selector => [selector, h.element(selector).value])),
+    allOn: h.allChip.classList.contains('on'), todoOn: h.todoChip.classList.contains('on'),
+    allPressed: h.allChip.getAttribute('aria-pressed'), todoPressed: h.todoChip.getAttribute('aria-pressed'),
+  };
+}
 
 async function main() {
   {
@@ -164,17 +192,21 @@ async function main() {
   {
     const h = harness();
     let confirmations = 0;
+    staleFilters(h);
+    const before = filterSnapshot(h);
     h.context.confirm = () => { confirmations++; return false; };
     h.run("locate=async()=>{effects.push({kind:'locate'})}; whereAmI=async()=>{effects.push({kind:'vendor'})}");
     await h.run('jumpToHere()');
     assert.equal(confirmations, 1);
     assert.equal(h.effects.length, 0, 'cancellation performs no device or provider request');
     assert.equal(h.elements.has('#hereBtn'), false, 'cancellation does not mutate the button');
+    assert.deepEqual(filterSnapshot(h), before, 'cancellation preserves the current search and filters');
   }
 
   {
     const h = harness(), gate = deferred();
     h.context.locationGate = gate;
+    staleFilters(h);
     h.run(`locate=()=>{effects.push({kind:'locate'});return locationGate.promise};
       whereAmI=async()=>({continent:'Oceania',country:'AU',region:'South Australia',regionCode:'AU-SA'})`);
     const first = h.run('jumpToHere()');
@@ -194,16 +226,25 @@ async function main() {
     assert.equal(h.run('jumpToHere.busy'), false);
     assert.equal(h.run('lastFix'), null, 'the coordinate fix is discarded after navigation');
     assert.equal(h.values.size, 0, 'Near me does not persist coordinates');
+    assert.deepEqual(filterSnapshot(h), {
+      model: { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 'All', dog: 'All' },
+      controls: { '#search': '', '#fState': 'All', '#fCat': 'All', '#fDiff': '5',
+        '#fCost': 'All', '#fDog': 'All' },
+      allOn: true, todoOn: false, allPressed: 'true', todoPressed: 'false',
+    }, 'successful Near me routing clears stale global-search model and controls');
   }
 
   {
     const h = harness();
+    staleFilters(h);
+    const before = filterSnapshot(h);
     h.run("locate=async()=>{throw new Error('fixture failure')}");
     await h.run('jumpToHere()');
     assert.equal(h.element('#hereBtn').disabled, false, 'failure restores the button');
     assert.equal(h.element('#hereBtn').textContent, '📍 Near me');
     assert.equal(h.run('lastFix'), null);
     assert.equal(h.effects.at(-1).message, 'fixture failure');
+    assert.deepEqual(filterSnapshot(h), before, 'a failed lookup preserves the current search and filters');
   }
 
   {

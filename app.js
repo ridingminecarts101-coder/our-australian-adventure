@@ -1786,6 +1786,7 @@ async function jumpToHere() {
 
     const country = here.country && countOf(a => a.country === here.country) ? here.country : null;
     const admin1 = country ? matchRegion(country, here.region, here.regionCode) : null;
+    resetAdventureFilters();
 
     if (country && admin1) {
       goTo('adventures', { continent: here.continent, country, admin1 });
@@ -3125,12 +3126,19 @@ function browseBack() {
   return goTo(parent.level, parent);
 }
 
-function openWorldSearch() {
+function resetAdventureFilters() {
   Object.assign(filters, { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 'All', dog: 'All' });
-  $('#search').value = '';
+  for (const [selector, value] of [
+    ['#search', ''], ['#fState', 'All'], ['#fCat', 'All'], ['#fDiff', '5'],
+    ['#fCost', 'All'], ['#fDog', 'All'],
+  ]) $(selector).value = value;
   const allChip = $('#quickChips .chip[data-quick="all"]');
   $$('#quickChips .chip').forEach(chip => chip.classList.toggle('on', chip === allChip));
   setPressedSelection($$('#quickChips .chip'), allChip);
+}
+
+function openWorldSearch() {
+  resetAdventureFilters();
   goTo('adventures');
   $('#search').focus();
 }
@@ -5378,11 +5386,7 @@ function wireUI() {
   $('#fCost').onchange  = e => { filters.cost = e.target.value === 'All' ? 'All' : +e.target.value; renderList(); };
   $('#fDog').onchange   = e => { filters.dog = e.target.value; renderList(); };
   $('#clearFilters').onclick = () => {
-    Object.assign(filters, { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 'All', dog: 'All' });
-    $('#search').value = ''; $('#fState').value = 'All'; $('#fCat').value = 'All';
-    $('#fDiff').value = '5'; $('#fCost').value = 'All'; $('#fDog').value = 'All';
-    $$('#quickChips .chip').forEach((x, i) => x.classList.toggle('on', i === 0));
-    setPressedSelection($$('#quickChips .chip'), $('#quickChips .chip'));
+    resetAdventureFilters();
     renderList();
   };
 
