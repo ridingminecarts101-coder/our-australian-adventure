@@ -1673,12 +1673,21 @@ function renderPhotoStatus() {
 
 // ── Where am I? ──────────────────────────────────────────────────────
 // Per-adventure coordinates do not exist yet, so distance sorting is not
-// possible. What IS possible today is working out which continent and country
-// you are standing in, and jumping straight there - which is most of the value
-// of "near me" for an app you open while travelling.
+// possible. Near me opens a mapped state/region, or its country if the lookup
+// cannot identify a mapped subdivision. It runs only on an explicit request.
 let lastFix = null;
 
 function locate() {
+  const nativeLocation = cap('Geolocation');
+  if (nativeLocation) {
+    return nativeLocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 12000, maximumAge: 0 })
+      .then(pos => ({ lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy }))
+      .catch(error => {
+        const denied = ['OS-PLUG-GLOC-0003', 'OS-PLUG-GLOC-0008'].includes(error?.code);
+        throw new Error(denied ? 'Location access is unavailable. You can browse countries manually.'
+          : 'Could not get your location. Try again or browse countries manually.');
+      });
+  }
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error('This device has no location services.'));
     navigator.geolocation.getCurrentPosition(
@@ -1687,7 +1696,7 @@ function locate() {
         err.code === err.PERMISSION_DENIED
           ? 'Location is turned off for Wayfinder.'
           : 'Could not get a fix. Try again outside.')),
-      { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 });
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 0 });
   });
 }
 
@@ -1695,27 +1704,31 @@ function locate() {
 // is keyless and free; if it is unreachable we fall back to the map's own
 // boxes, which can still tell you the continent from the coordinates alone.
 async function whereAmI(lat, lon) {
-  const fallback = { continent: continentAt(lat, lon) };
+  const fallback = { continent: continentAt(lat, lon), approximate: true };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(
       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
-      { signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined });
+      { signal: controller.signal });
     if (!res.ok) return fallback;
     const j = await res.json();
+    const country = typeof j.countryCode === 'string' ? j.countryCode.toUpperCase() : null;
+    if (!country || typeof COUNTRY_CONT === 'undefined' || !COUNTRY_CONT[country]) return fallback;
     return {
       // The country the geocoder names decides the continent, not the map's
       // tap zones. The zones are crude rectangles tried in a fixed order, and
       // Georgia and Armenia sat inside the Europe box, which is tried before
       // Asia - so Near me opened the wrong continent even with a perfect fix
       // and a working geocoder. The zones are now only the offline fallback.
-      continent: (j.countryCode && typeof COUNTRY_CONT !== 'undefined'
-                  && COUNTRY_CONT[j.countryCode]) || continentAt(lat, lon),
-      country: j.countryCode || null,
-      region: j.principalSubdivision || null,
-      locality: j.locality || j.city || null,
+      continent: COUNTRY_CONT[country], country,
+      region: typeof j.principalSubdivision === 'string' ? j.principalSubdivision : null,
+      regionCode: typeof j.principalSubdivisionCode === 'string' ? j.principalSubdivisionCode : null,
     };
   } catch {
     return fallback;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -1732,37 +1745,38 @@ const REGION_ALIAS = {
 // New Zealand's admin1 values are its sixteen council regions, which is what
 // the geocoder returns too - so an exact match usually lands. Where it does
 // not, fall back to a country-level view rather than guessing wrongly.
-function matchRegion(country, subdivision) {
-  if (!country || !subdivision) return null;
-  const alias = (REGION_ALIAS[country] || {})[subdivision];
-  if (alias) return alias;
-
-  const inCountry = [...new Set(ADV.filter(a => a.country === country).map(a => a.admin1))];
-  const norm = x => x.toLowerCase().replace(/[^a-z]/g, '');
+function matchRegion(country, subdivision, subdivisionCode = null) {
+  if (!country) return null;
+  const inCountry = [...new Set(ADV.filter(a => a.country === country && !placeholderAdmin1(country, a.admin1))
+    .map(a => a.admin1))];
+  const code = typeof subdivisionCode === 'string' ? subdivisionCode.toUpperCase() : '';
+  if (code.startsWith(`${country}-`)) {
+    const suffix = code.slice(country.length + 1);
+    const exactCode = inCountry.find(region => region.toUpperCase() === suffix);
+    if (exactCode) return exactCode;
+  }
+  if (typeof subdivision !== 'string' || !subdivision.trim()) return null;
+  const norm = value => foldSearch(value).replace(/[^a-z0-9]/g, '');
   const want = norm(subdivision);
-
-  const exact = inCountry.find(c => norm(c) === want);
-  if (exact) return exact;
-
-  // Substring matching only between names long enough for it to mean
-  // something. Without the length floor, "Atlantis" contains "nt" and matches
-  // the Northern Territory, and someone in Kent gets sent to Australia.
-  const MIN = 5;
-  if (want.length < MIN) return null;
-  return inCountry.find(c => {
-    const n = norm(c);
-    return n.length >= MIN && (n.includes(want) || want.includes(n));
-  }) || null;
+  const alias = Object.entries(REGION_ALIAS[country] || {}).find(([name]) => norm(name) === want)?.[1];
+  if (alias && inCountry.includes(alias)) return alias;
+  const matches = inCountry.filter(region => norm(region) === want);
+  // No substring guesses: an unknown state opens its country instead.
+  return matches.length === 1 ? matches[0] : null;
 }
 
 async function jumpToHere() {
+  if (jumpToHere.busy) return;
   if (!confirm('Near me sends your current coordinates and IP address to BigDataCloud to find your country or region. BigDataCloud also uses anonymous coordinate/IP pairings to improve its location service. Wayfinder does not save this location in your account. Continue? You can browse countries manually instead.')) return;
+  jumpToHere.busy = true;
   const btn = $('#hereBtn');
   btn.disabled = true;
   btn.textContent = 'Finding you…';
   try {
+    const owner = userId, generation = authGeneration;
     lastFix = await locate();
     const here = await whereAmI(lastFix.lat, lastFix.lon);
+    if (owner !== userId || generation !== authGeneration) return;
 
     if (!here.continent) { toast('You appear to be at sea. Impressive.'); return; }
     if (!countOf(a => a.continent === here.continent)) {
@@ -1771,26 +1785,29 @@ async function jumpToHere() {
     }
 
     const country = here.country && countOf(a => a.country === here.country) ? here.country : null;
-    const admin1 = country ? matchRegion(country, here.region) : null;
+    const admin1 = country ? matchRegion(country, here.region, here.regionCode) : null;
 
     if (country && admin1) {
       goTo('adventures', { continent: here.continent, country, admin1 });
       const sample = ADV.find(a => a.admin1 === admin1 && a.country === country);
-      toast(`You're in ${regionName(sample)}`);
+      toast(`Showing ${regionName(sample)}`);
     } else if (country) {
       goTo('country', { continent: here.continent, country });
       toast(here.region ? `${here.region} isn't mapped yet — here's ${countryName(country)}`
-                        : `You're in ${countryName(country)}`);
+                        : `Showing ${countryName(country)}`);
     } else {
       goTo('continent', { continent: here.continent });
       toast(here.country ? `Nothing in ${here.country} yet — here's ${here.continent}`
-                         : `You're in ${here.continent}`);
+                         : `Location lookup couldn't identify a state or country. Showing ${here.continent}; choose your country manually.`);
     }
   } catch (err) {
     toast(err.message);
   } finally {
+    lastFix = null;
+    jumpToHere.busy = false;
     btn.disabled = false;
     btn.textContent = '📍 Near me';
+    updateTourInvite();
   }
 }
 
@@ -3042,6 +3059,9 @@ function safeNavigationState(value) {
   if (!value || typeof value !== 'object') return null;
   const level = value.level;
   if (level === 'world') return { level, continent: null, country: null, admin1: null };
+  if (level === 'adventures' && !value.continent && !value.country && !value.admin1) {
+    return { level, continent: null, country: null, admin1: null };
+  }
   if (!['continent', 'islands', 'country', 'adventures'].includes(level)) return null;
   let continent = typeof value.continent === 'string' ? value.continent : null;
   if (!continent || !CONTINENT_ORDER.includes(continent)) return null;
@@ -3085,6 +3105,45 @@ function goTo(level, opts = {}, historyMode = 'push') {
   renderPlaces();
   renderList();
   return true;
+}
+
+function browseParent() {
+  if (nav.level === 'adventures' && nav.country && countryUsesSubdivisionStep(nav.country)) {
+    return countryDestination(nav.continent, nav.country);
+  }
+  if (['country', 'adventures'].includes(nav.level) && nav.country && ISLAND_GROUP.has(nav.country)) {
+    return { level: 'islands', continent: nav.continent };
+  }
+  if (['country', 'adventures', 'islands'].includes(nav.level) && nav.continent) {
+    return { level: 'continent', continent: nav.continent };
+  }
+  return { level: 'world' };
+}
+
+function browseBack() {
+  const parent = browseParent();
+  return goTo(parent.level, parent);
+}
+
+function openWorldSearch() {
+  Object.assign(filters, { quick: 'all', q: '', st: 'All', cat: 'All', diff: 5, cost: 'All', dog: 'All' });
+  $('#search').value = '';
+  const allChip = $('#quickChips .chip[data-quick="all"]');
+  $$('#quickChips .chip').forEach(chip => chip.classList.toggle('on', chip === allChip));
+  setPressedSelection($$('#quickChips .chip'), allChip);
+  goTo('adventures');
+  $('#search').focus();
+}
+
+function renderBrowseBack() {
+  const parent = browseParent();
+  const label = parent.level === 'country' ? countryName(parent.country)
+    : parent.level === 'islands' ? 'Island nations'
+    : parent.level === 'continent' ? parent.continent : 'World';
+  for (const id of ['#placeBackBtn', '#listBackBtn']) {
+    const button = $(id);
+    if (button) button.textContent = `← Back to ${label}`;
+  }
 }
 
 function wireBrowserNavigation() {
@@ -3223,6 +3282,7 @@ function crumbHTML() {
 }
 
 function renderPlaces() {
+  renderBrowseBack();
   const world = $('#worldView'), place = $('#placeView'), list = $('#listView');
   world.classList.toggle('hidden', nav.level !== 'world');
   place.classList.toggle('hidden',
@@ -3488,6 +3548,12 @@ function renderList() {
   // at continent level, which is most of them - a tick, a filter change, a
   // sync arriving. Nothing is lost by waiting: drilling in calls this again.
   if (nav.level !== 'adventures') return;
+  const globalSearch = !nav.continent && !nav.country && !nav.admin1;
+  if (globalSearch && !filters.q.trim()) {
+    $('#resultCount').textContent = 'Search all adventures';
+    $('#list').innerHTML = '<div class="empty">Type a place, country or activity above to start.</div>';
+    return;
+  }
   const arr = filtered();
   const scopedTotal = ADV.reduce((n, a) => n + (inNavigationScope(a) ? 1 : 0), 0);
   // This line counts rows on screen, which includes locked gems - they are
@@ -3500,8 +3566,10 @@ function renderList() {
     (arr.length !== scopedTotal ? ` of ${scopedTotal}` : '') +
     (locked ? ` · ${locked} locked` : '') +
     (unavailable ? ` · ${unavailable} paused` : '');
+  const shown = globalSearch ? arr.slice(0, 200) : arr;
   $('#list').innerHTML = arr.length
-    ? arr.map(cardHTML).join('')
+    ? shown.map(cardHTML).join('') + (shown.length < arr.length
+      ? '<p class="fineprint">Showing the first 200 matches. Add a country or place to narrow your search.</p>' : '')
     : `<div class="empty">Nothing matches that.<br>Try clearing a filter.</div>`;
 }
 
@@ -4426,6 +4494,7 @@ function handleDialogKeydown(event) {
     event.preventDefault();
     if (dialog.id === 'lightbox') closeLightbox();
     else if (dialog.id === 'tourDialog') closeTour();
+    else if (dialog.id === 'tourInvite') dismissTourInvite();
     else if (dialog.id === 'photoBackupSheet') window.WayfinderPhotoTransfer.close();
     else if (dialog.id === 'continentPacksSheet') hideManagedDialog('#continentPacksSheet');
     else if (dialog.id === 'recSheet') closeRecSheet();
@@ -5038,6 +5107,8 @@ function wireNative() {
   if (!App) return;                              // web: the browser's own back works
 
   App.addListener('backButton', () => {
+    if (!$('#tourInvite').classList.contains('hidden')) return dismissTourInvite();
+    if (!$('#tourDialog').classList.contains('hidden')) return closeTour();
     const photoBackupSheet = $('#photoBackupSheet');
     if (photoBackupSheet && !photoBackupSheet.classList.contains('hidden')
         && window.WayfinderPhotoTransfer) return window.WayfinderPhotoTransfer.close();
@@ -5054,20 +5125,8 @@ function wireNative() {
       return;
     }
 
-    // Then back up the map, one level at a time.
-    if (nav.level === 'adventures' && nav.admin1) {
-      return goTo('country', { continent: nav.continent, country: nav.country });
-    }
-    if (nav.level === 'adventures' && ISLAND_GROUP.has(nav.country)) {
-      return goTo('islands', { continent: nav.continent });
-    }
-    if (nav.level === 'adventures') return goTo('continent', { continent: nav.continent });
-    if (nav.level === 'country' && ISLAND_GROUP.has(nav.country)) {
-      return goTo('islands', { continent: nav.continent });
-    }
-    if (nav.level === 'country')    return goTo('continent', { continent: nav.continent });
-    if (nav.level === 'islands')    return goTo('continent', { continent: nav.continent });
-    if (nav.level === 'continent')  return goTo('world');
+    // Visible and native Back follow the same country/region hierarchy.
+    if (nav.level !== 'world') return browseBack();
 
     App.exitApp();                               // at the top: leave, as expected
   });
@@ -5147,11 +5206,18 @@ function activateAppTab(b) {
   if (b.dataset.tab === 'tab-community') pullRecommendations();
 }
 
-// A short, optional tour. The prompt is remembered on this device per account;
+// A short, optional tour. The prompt is remembered on this installation;
 // it never changes travel, group or photo data and can be replayed from Me.
+const TOUR_DEVICE_SEEN_KEY = 'oaa.tour.v1.device-dismissed';
 const TOUR_STEPS = [
   { tab: 'tab-list', target: '.tab[data-tab="tab-list"]', title: 'Adventures',
     description: 'Browse the map or search for a place. Open an adventure to shortlist it, tick it off, add a rating or save a memory.' },
+  { tab: 'tab-list', target: '#progressViewBtn', title: 'Me / Group view',
+    description: 'This button beside the dice switches between your own progress and the group’s shared ticks, ratings and memories. Your photos stay on this device.' },
+  { tab: 'tab-list', target: '#hereBtn', title: 'Near me',
+    description: 'Choose Near me and allow a one-time location lookup to open your state or region where it is mapped. You can always browse manually.' },
+  { tab: 'tab-list', target: '#worldSearchBtn', title: 'Search anywhere',
+    description: 'Search all adventures straight from the world screen. Inside a country or region, use Back to move up one level without starting over.' },
   { tab: 'tab-passport', target: '.tab[data-tab="tab-passport"]', title: 'Passport',
     description: 'See your progress, country stamps and achievements in one place.' },
   { tab: 'tab-memories', target: '.tab[data-tab="tab-memories"]', title: 'Memories',
@@ -5173,19 +5239,33 @@ function updateTourInvite() {
   const invite = $('#tourInvite');
   if (!invite) return;
   const key = tourSeenKey();
-  invite.classList.toggle('hidden', !key || !!readLS(key, false) || tourStepIndex >= 0);
+  const legacySeen = key && !!readLS(key, false);
+  if (legacySeen && !readLS(TOUR_DEVICE_SEEN_KEY, false)) writeLS(TOUR_DEVICE_SEEN_KEY, true);
+  const seen = !!readLS(TOUR_DEVICE_SEEN_KEY, false) || legacySeen;
+  if (!key || seen || tourStepIndex >= 0 || $('#app').classList.contains('hidden')) {
+    if (!invite.classList.contains('hidden')) hideManagedDialog('#tourInvite', false);
+    return;
+  }
+  // A shared link or account flow takes priority over first-use guidance.
+  if (pendingGroupInviteBusy || jumpToHere.busy || readPendingGroupInvite() || pendingTripDeepLink) return;
+  if (!activeManagedDialog()) showManagedDialog('#tourInvite');
 }
 
 function dismissTourInvite() {
   const key = tourSeenKey();
   if (key) writeLS(key, true);
+  writeLS(TOUR_DEVICE_SEEN_KEY, true);
+  hideManagedDialog('#tourInvite', false);
   updateTourInvite();
+  // Automatic welcome has no visible opener after sign-in. Return focus to
+  // the section now on screen instead of the hidden sign-in/dismiss button.
+  if (!$('#app').classList.contains('hidden')) $('.tab.active')?.focus?.();
 }
 
 function positionTour() {
   if (tourStepIndex < 0) return;
   const step = TOUR_STEPS[tourStepIndex];
-  const target = $(step.target), ring = $('#tourTarget'), card = $('#tourCard');
+  const target = $(tourTarget(step)), ring = $('#tourTarget'), card = $('#tourCard');
   if (!target || !ring || !card) return;
   const rect = target.getBoundingClientRect();
   const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
@@ -5207,17 +5287,24 @@ function positionTour() {
     rect.left + rect.width / 2 - cardRect.width / 2))}px`;
 }
 
+function tourTarget(step) {
+  return step.target === '#progressViewBtn' && !activeGroupId ? '.topbar-actions' : step.target;
+}
+
 function renderTourStep() {
   if (tourStepIndex < 0) return;
   const step = TOUR_STEPS[tourStepIndex];
   const tab = $(`.tab[data-tab="${step.tab}"]`);
   if (tab) activateAppTab(tab);
+  if (step.tab === 'tab-list' && nav.level !== 'world') goTo('world');
   $('#tourStepCount').textContent = `${tourStepIndex + 1} of ${TOUR_STEPS.length}`;
   $('#tourTitle').textContent = step.title;
-  $('#tourDescription').textContent = step.description;
+  $('#tourDescription').textContent = step.target === '#progressViewBtn' && !activeGroupId
+    ? 'After you join a group from Me, a Me / Group button appears here beside the dice. It switches between your own progress and the group’s shared ticks, ratings and memories. Photos stay on this device.'
+    : step.description;
   $('#tourBack').classList.toggle('hidden', tourStepIndex === 0);
   $('#tourNext').textContent = tourStepIndex === TOUR_STEPS.length - 1 ? 'Finish' : 'Next';
-  const target = $(step.target);
+  const target = $(tourTarget(step));
   if (target && step.target === '#supportBtn') target.scrollIntoView({ block: 'center' });
   requestAnimationFrame(() => {
     positionTour();
@@ -5228,6 +5315,7 @@ function renderTourStep() {
 function startTour() {
   if (!userId || tourStepIndex >= 0) return;
   tourStepIndex = 0;
+  hideManagedDialog('#tourInvite', false);
   showManagedDialog('#tourDialog');
   updateTourInvite();
   renderTourStep();
@@ -5238,10 +5326,6 @@ function closeTour() {
   tourStepIndex = -1;
   hideManagedDialog('#tourDialog', false);
   dismissTourInvite();
-  // The first-use opener disappears when the tour is dismissed. Focus the
-  // section now on screen instead of returning to that hidden prompt.
-  const activeTab = $('.tab.active');
-  if (activeTab) activeTab.focus();
 }
 
 function advanceTour(delta) {
@@ -5271,6 +5355,9 @@ function wireUI() {
   $('#tourBack').onclick = () => advanceTour(-1);
   $('#tourNext').onclick = () => advanceTour(1);
   $('#tourSkip').onclick = closeTour;
+  $('#placeBackBtn').onclick = browseBack;
+  $('#listBackBtn').onclick = browseBack;
+  $('#worldSearchBtn').onclick = openWorldSearch;
   window.addEventListener('resize', positionTour);
 
   // Quick chips
@@ -6303,7 +6390,7 @@ function showAccountLock(message = '') {
 function hideAndClearPrivateOverlays() {
   tourStepIndex = -1;
   if (window.WayfinderPhotoTransfer) window.WayfinderPhotoTransfer.close(true);
-  for (const id of ['#sheet', '#tripSheet', '#recSheet', '#continentPacksSheet', '#lightbox', '#tourDialog']) {
+  for (const id of ['#sheet', '#tripSheet', '#recSheet', '#continentPacksSheet', '#lightbox', '#tourDialog', '#tourInvite']) {
     const overlay = $(id);
     if (overlay) overlay.classList.add('hidden');
   }
@@ -6777,6 +6864,7 @@ async function enterApp({ recoveryOwnerId = passwordRecoveryMode ? passwordRecov
   $('#lock').classList.add('hidden');
   $('#app').classList.remove('hidden');
   openDeepLink();
+  updateTourInvite();
   void resumePendingGroupInvite();
   await pullProgress();
   if (enteringOwner !== userId || enteringGeneration !== authGeneration) return false;
@@ -6878,6 +6966,7 @@ async function resumePendingGroupInvite() {
   } finally {
     pendingGroupInviteBusy = false;
     if (readPendingGroupInvite()) void resumePendingGroupInvite();
+    else updateTourInvite();
   }
 }
 

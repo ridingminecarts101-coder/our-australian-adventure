@@ -252,12 +252,19 @@ input, select, textarea { font: inherit; color: inherit; }
 
 .settings { display: grid; gap: 12px; justify-items: start; }
 .settings p { margin: 0; font-size: 14px; }
-.tour-invite {
-  display: grid; gap: 10px; margin: 0 0 14px; padding: 12px 14px;
-  border: 1px solid var(--line); border-radius: var(--radius); background: var(--card);
+.tour-welcome {
+  position: fixed; inset: 0; z-index: 85; display: grid; place-items: center;
+  padding: calc(20px + var(--safe-top)) 20px calc(20px + var(--safe-bottom));
+  background: rgba(22, 14, 10, .65); overflow-y: auto;
 }
-.tour-invite strong, .tour-invite span { display: block; }
-.tour-invite span { color: var(--muted); font-size: 13px; }
+.tour-welcome-card {
+  width: 100%; max-width: 360px; padding: 24px;
+  border-radius: 18px; background: var(--card); box-shadow: var(--shadow);
+}
+.tour-welcome-card h2 { font-size: 22px; }
+.tour-welcome-card p { color: var(--ink-2); }
+.world-search { display: block; margin: 10px auto 16px; min-height: 44px; font-size: 14px; }
+.browse-back { min-height: 44px; margin-bottom: 8px; font-size: 14px; }
 .tour-invite-actions, .me-quick-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .tour-invite-actions .text-button { min-height: 44px; font-size: 14px; }
 .me-quick-actions .btn-ghost { min-height: 44px; }

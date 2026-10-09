@@ -82,21 +82,16 @@
 
     <!-- Level 0: the world -->
     <div id="worldView">
-      <div id="tourInvite" class="tour-invite hidden">
-        <div><strong>Want a quick tour?</strong><span>See what each section does and where to get help.</span></div>
-        <div class="tour-invite-actions">
-          <button id="tourInviteStart" type="button" class="btn-ghost">Show me around</button>
-          <button id="tourInviteDismiss" type="button" class="text-button">No thanks</button>
-        </div>
-      </div>
       <div class="mapwrap"><canvas id="worldMap" aria-label="World map — tap a continent"></canvas></div>
       <p class="maphint">Tap a continent on the map, or pick one below.</p>
       <button id="hereBtn" class="btn-ghost wide">📍 Near me</button>
+      <button id="worldSearchBtn" type="button" class="btn-ghost world-search">⌕ Search all adventures</button>
       <div id="continentList" class="placelist"></div>
     </div>
 
     <!-- Levels 1–2: continent → country → region -->
     <div id="placeView" class="hidden">
+      <button id="placeBackBtn" type="button" class="btn-ghost browse-back">← Back</button>
       <div id="crumb" class="crumb"></div>
       <!-- The same dot map, zoomed to wherever you have drilled to. -->
       <div class="mapwrap"><canvas id="placeMap" aria-label="Map of the area you are looking at"></canvas></div>
@@ -108,6 +103,7 @@
 
     <!-- Level 3: the adventures themselves -->
     <div id="listView" class="hidden">
+    <button id="listBackBtn" type="button" class="btn-ghost browse-back">← Back</button>
     <div id="crumbList" class="crumb"></div>
     <div class="filters">
       <input id="search" type="search" aria-label="Search adventures" placeholder="Search a place, region or activity…" autocomplete="off">
@@ -286,6 +282,18 @@
     <button class="tab" data-tab="tab-community" aria-current="false"><span>🗺️</span>Community</button>
     <button class="tab" data-tab="tab-me" aria-current="false"><span>❤️</span>Me</button>
   </nav>
+</div>
+
+<!-- Offered once on this installation after sign-in; always replayable from Me. -->
+<div id="tourInvite" class="tour-welcome hidden" role="dialog" aria-modal="true" aria-labelledby="tourWelcomeTitle" aria-describedby="tourWelcomeDescription" tabindex="-1">
+  <div class="tour-welcome-card">
+    <h2 id="tourWelcomeTitle">Welcome to Wayfinder</h2>
+    <p id="tourWelcomeDescription">Want a quick tour? Find adventures, switch between Me and Group, save memories and see where to get help.</p>
+    <div class="tour-invite-actions">
+      <button id="tourInviteStart" type="button" class="btn-primary">Show me around</button>
+      <button id="tourInviteDismiss" type="button" class="btn-ghost">No thanks</button>
+    </div>
+  </div>
 </div>
 
 <!-- The optional tour points to the live navigation, with a way to leave on every step. -->
