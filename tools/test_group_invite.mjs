@@ -22,12 +22,11 @@ const storage = {
   setItem: (key, value) => stores.set(key, value),
   removeItem: key => stores.delete(key),
 };
-let accepted = true;
 const joins = [];
 const opened = [];
 const ctx = vm.createContext({
   localStorage: storage, Date, URL, userId: null, sb: {}, online: true,
-  pendingGroupInviteBusy: false, confirm: () => accepted,
+  pendingGroupInviteBusy: false,
   lastExternalDeepLink: null, lastExternalDeepLinkAt: 0,
   toast: () => {}, joinGroup: async code => joins.push(code),
   openDeepLink: search => opened.push(search),
@@ -52,9 +51,9 @@ assert.deepEqual(joins, ['ABCD12']);
 assert.equal(stores.size, 0, 'consumed invite does not replay');
 
 assert.equal(api.queueGroupInvite('BEEF99'), true);
-accepted = false;
 await api.resumePendingGroupInvite();
-assert.deepEqual(joins, ['ABCD12'], 'declined invite does not join');
+assert.deepEqual(joins, ['ABCD12', 'BEEF99'],
+  'the deep link delegates the single sharing choice to joinGroup');
 assert.equal(stores.size, 0);
 assert.equal(api.queueGroupInvite('ABC-12'), false);
 assert.equal(stores.size, 0, 'invalid external code is not saved');
@@ -62,9 +61,9 @@ assert.equal(stores.size, 0, 'invalid external code is not saved');
 ctx.userId = 'sender';
 assert.equal(api.queueGroupInvite('OWNER1'), true);
 ctx.userId = 'other-account';
-accepted = true;
 await api.resumePendingGroupInvite();
-assert.deepEqual(joins, ['ABCD12'], 'account transition cannot consume another account’s invite');
+assert.deepEqual(joins, ['ABCD12', 'BEEF99'],
+  'account transition cannot consume another account’s invite');
 assert.equal(stores.size, 0);
 
 api.openExternalDeepLink('https://evil.example/?join=EVIL12');

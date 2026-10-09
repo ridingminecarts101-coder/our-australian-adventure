@@ -252,6 +252,29 @@ input, select, textarea { font: inherit; color: inherit; }
 
 .settings { display: grid; gap: 12px; justify-items: start; }
 .settings p { margin: 0; font-size: 14px; }
+.tour-invite {
+  display: grid; gap: 10px; margin: 0 0 14px; padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--card);
+}
+.tour-invite strong, .tour-invite span { display: block; }
+.tour-invite span { color: var(--muted); font-size: 13px; }
+.tour-invite-actions, .me-quick-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tour-invite-actions .text-button { min-height: 44px; font-size: 14px; }
+.me-quick-actions .btn-ghost { min-height: 44px; }
+.me-fold {
+  margin: 14px 0; border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--card);
+}
+.me-fold summary {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 48px; padding: 11px 14px; cursor: pointer;
+  font-weight: 650; list-style: none;
+}
+.me-fold summary::-webkit-details-marker { display: none; }
+.me-fold summary::after { content: '⌄'; color: var(--muted); font-size: 22px; line-height: 1; }
+.me-fold[open] summary::after { transform: rotate(180deg); }
+.me-fold > .settings, .me-fold > .usstats { padding: 0 14px 14px; }
+.me-fold .storelist { width: 100%; }
 .account-panel {
   width: 100%; display: grid; gap: 10px; padding: 14px;
   border: 1px solid var(--line); border-radius: var(--radius); background: var(--card);
@@ -260,6 +283,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .view-switch .on, .group-list .on {
   border-color: var(--eucalypt); color: var(--eucalypt); background: rgba(45, 104, 89, .08);
 }
+.retained-history { width: 100%; }
+.retained-history-row { width: 100%; display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+.retained-history-row .btn-ghost { justify-self: start; max-width: 100%; min-height: 44px; white-space: normal; text-align: left; }
 .account-panel input {
   width: 100%; padding: 11px 12px; font-size: 16px;
   border: 1px solid var(--line); border-radius: 10px; background: var(--sand-2);
@@ -284,6 +310,25 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .tab span { font-size: 20px; line-height: 1.1; }
 .tab.active { color: var(--ochre); }
+
+/* A focused tour that leaves every section available after Skip or Finish. */
+.tour { position: fixed; inset: 0; z-index: 90; pointer-events: none; }
+.tour-shade { position: absolute; inset: 0; background: rgba(22, 14, 10, .65); pointer-events: auto; }
+.tour-target {
+  position: fixed; z-index: 1; border: 3px solid #fff; border-radius: 14px;
+  box-shadow: 0 0 0 3px var(--ochre), 0 8px 25px rgba(0, 0, 0, .45);
+}
+.tour-card {
+  position: fixed; z-index: 2; width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px); overflow-y: auto; pointer-events: auto;
+  padding: 16px; border-radius: 16px; background: var(--card); color: var(--ink);
+  box-shadow: 0 14px 45px rgba(0, 0, 0, .35);
+}
+.tour-card h2 { font-size: 20px; margin: 3px 0 8px; }
+.tour-card p { margin: 0 0 12px; }
+.tour-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.tour-actions button { min-height: 44px; }
+.tour-actions .btn-primary { width: auto; padding: 9px 18px; font-size: 14px; }
 
 /* ── Detail sheet ────────────────────────────────────────────────── */
 .sheet { position: fixed; inset: 0; z-index: 40; }
@@ -347,15 +392,19 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 
 /* ── Memories ────────────────────────────────────────────────────── */
+/* A long thumbnail rail must not set the grid track's minimum page width. */
+#memList { grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .memory {
+  min-width: 0;
   background: var(--card); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 13px; box-shadow: var(--shadow);
 }
 .memory b { font-size: 15px; }
 .memory .card-meta { margin-bottom: 6px; }
 .memory-open {
-  display: block; width: 100%; padding: 0; border: 0; background: transparent;
+  display: block; width: 100%; min-width: 0; padding: 0; border: 0; background: transparent;
   color: inherit; font: inherit; text-align: left;
+  overflow-wrap: anywhere;
 }
 .memory-open .card-meta, .memory-note { display: block; }
 .memory-note { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
@@ -363,6 +412,7 @@ input, select, textarea { font: inherit; color: inherit; }
   outline: 3px solid var(--ochre); outline-offset: 3px; border-radius: 4px;
 }
 .memory .nomemory { color: var(--muted); font-style: italic; }
+.memory-review { min-height: 44px; max-width: 100%; margin-top: 10px; }
 
 /* ── World map + place navigation ────────────────────────────────── */
 .btn-ghost.wide { width: 100%; margin-bottom: 14px; }
@@ -553,10 +603,12 @@ input, select, textarea { font: inherit; color: inherit; }
 .photostatus.show { display: block; margin: 8px 2px 4px; }
 
 .strip {
-  display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px;
+  display: flex; gap: 8px; width: 100%; max-width: 100%; min-width: 0;
+  overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 0 4px;
   scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
 .strip::-webkit-scrollbar { display: none; }
+.strip:focus-visible { outline: 3px solid var(--ochre); outline-offset: 2px; }
 .memory .strip { margin-top: 10px; }
 .sheet-strip { margin-bottom: 4px; }
 

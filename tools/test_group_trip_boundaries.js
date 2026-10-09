@@ -39,11 +39,11 @@ async function groupChecks(){
     const h=harness(), gate=deferred(), calls=[];
     h.context.rpc=async(name,args)=>{calls.push([name,args]);return gate.promise;};
     h.run('sb={rpc};');
-    const pending=h.run(operation==='create'?"createGroup('Fixture')":"joinGroup('ABCDEF12')");
+    const pending=h.run(operation==='create'?"createGroup('Fixture')":"joinGroup('ABCD12')");
     await turns();
     assert.equal(calls.length,1);
     h.run("userId='account-b'; accountUser={id:userId}; authGeneration++; activeGroupId='b-group'; myGroups=[{id:'b-group',share_completions:false}];");
-    gate.resolve({data:[{group_id:'a-group',join_code:'ABCDEF12',group_name:'Fixture'}],error:null});
+    gate.resolve({data:[{group_id:'a-group',join_code:'ABCD12',group_name:'Fixture'}],error:null});
     await pending;
     assert.equal(calls.length,1,'stale response must not start another mutation');
     assert.equal(h.run('activeGroupId'),'b-group');
@@ -54,17 +54,19 @@ async function groupChecks(){
     h.context.confirm=()=>false;
     h.context.rpc=async(name,args)=>{calls.push([name,args]);return {data:[{group_id:'g',group_name:'Fixture'}],error:null};};
     h.run("sb={rpc}; myGroups=[{id:'g',share_completions:true}]; loadGroups=async()=>{}; setProgressView=async()=>{}; pullPhotos=async()=>{}; pullTrips=async()=>{}; pullGroupTrips=async()=>{};");
-    await h.run("joinGroup('ABCDEF12')");
-    assert.equal(calls[1][0],'set_group_completion_sharing');
-    assert.deepEqual(JSON.parse(JSON.stringify(calls[1][1])),{p_group_id:'g',p_enabled:false});
-    assert.equal(h.run('myGroups[0].share_completions'),false);
+    await h.run("joinGroup('ABCD12')");
+    assert.equal(calls.length,1,'private join choice is committed with membership');
+    assert.equal(calls[0][0],'join_group_with_sharing');
+    assert.deepEqual(JSON.parse(JSON.stringify(calls[0][1])),{
+      p_join_code:'ABCD12',p_display_name:'Fixture',p_share_memories:false,
+    });
   }
   {
     const h=harness(), gate=deferred();h.context.rpc=()=>gate.promise;
-    h.run("sb={rpc}; myGroups=[{id:'g',share_completions:false}]");
-    const pending=h.run("setCompletionSharing('g',true)");
-    h.run("userId='account-b'; authGeneration++; myGroups=[{id:'g',share_completions:false}]");
-    gate.resolve({error:null});assert.equal(await pending,null);
+    h.run("sb={rpc}; myGroups=[{id:'g',share_completions:false,sharing_choice_made_at:null}]");
+    const pending=h.run("chooseLegacyGroupSharing('g')");
+    h.run("userId='account-b'; authGeneration++; myGroups=[{id:'g',share_completions:false,sharing_choice_made_at:null}]");
+    gate.resolve({error:null});await pending;
     assert.equal(h.run('myGroups[0].share_completions'),false);
   }
   {
@@ -77,7 +79,7 @@ async function groupChecks(){
     assert.equal(calls.length,1,'same-account double submit must issue one lifecycle RPC');
 
     h.run("userId='account-b'; accountUser={id:userId}; authGeneration++;");
-    const replacement=h.run("joinGroup('ABCDEF12')");
+    const replacement=h.run("joinGroup('ABCD12')");
     await turns();
     assert.equal(calls.length,2,'a replacement account must not inherit the old busy lock');
     gates[0].resolve({data:null,error:{message:'stale failure'}});

@@ -55,10 +55,11 @@ def main() -> int:
             all(token in local_photo for token in
                 ("owner_id: owner", "user_id: owner", "group_id: null")), passed)
     require("group lifecycle uses server RPCs", all(f".rpc('{name}'" in APP for name in
-            ("create_group", "join_group_by_code", "leave_group")), passed)
+            ("create_group_with_sharing", "join_group_with_sharing", "leave_group")), passed)
     require("client cannot directly enrol a member", ".from('group_members')\n    .insert" not in APP, passed)
-    require("joining asks about past completions", "Share your past and future completion ticks with this group?" in APP, passed)
-    require("sharing consent is server-owned", "set_group_completion_sharing" in APP and
+    require("joining asks once about ticks, ratings and memories", "askGroupSharingChoice('join')" in APP and
+            "ticks, completion dates, star ratings and written memories" in APP, passed)
+    require("sharing consent is server-owned", "choose_group_sharing" in APP and
             "oaa.groupsharing" not in APP, passed)
     require("group feed contains completion facts only", "group_completion_feed" in APP, passed)
     require("personal and group progress views exist", "My progress" in APP and "Group progress" in APP, passed)

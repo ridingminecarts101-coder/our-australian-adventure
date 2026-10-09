@@ -140,16 +140,18 @@ async function main() {
     rpcCalls.push([name, args]);
     return { error: null };
   };
-  h.run(`sb={rpc}; myGroups=[{id:'group-a',share_completions:false,share_feedback:false}];`);
-  assert.equal(await h.run("setFeedbackSharing('group-a',true)"), false);
-  assert.equal(rpcCalls.length, 0, 'feedback cannot be shared without completion consent');
-  h.run('myGroups[0].share_completions=true');
-  assert.equal(await h.run("setFeedbackSharing('group-a',true)"), true);
-  assert.equal(rpcCalls[0][0], 'set_group_feedback_sharing');
+  h.context.savedPullProgress = h.run('pullProgress');
+  h.run(`sb={rpc}; myGroups=[{id:'group-a',share_completions:false,share_feedback:false,sharing_choice_made_at:null}];
+    loadGroups=async()=>{myGroups[0].share_completions=true;myGroups[0].share_feedback=true;myGroups[0].sharing_choice_made_at='now'};
+    pullProgress=async()=>{};`);
+  await h.run("chooseLegacyGroupSharing('group-a')");
+  assert.equal(rpcCalls.length, 1, 'one legacy choice commits ticks and feedback together');
+  assert.equal(rpcCalls[0][0], 'choose_group_sharing');
   assert.deepEqual(JSON.parse(JSON.stringify(rpcCalls[0][1])),
-    { p_group_id: 'group-a', p_enabled: true });
+    { p_group_id: 'group-a', p_share_memories: true });
   assert.equal(h.run('myGroups[0].share_feedback'), true);
   assert.equal(h.run('groupFeedback.size'), 0, 'consent change discards the old feed');
+  h.run('pullProgress=savedPullProgress');
 
   h.context.groupRpc = (name) => {
     if (name === 'list_unconfirmed_personal_progress')
@@ -317,8 +319,11 @@ async function main() {
     owner_id:'alice',share_completions:true,share_feedback:false,invite_enabled:false}];
     renderMe_groups();`);
   assert.match(burst.elements.get('#groupPanel').innerHTML,
-    /ratings and written memories are not shared with this group/,
-    'the off-state describes only the selected group');
+    /ticks are shared; ratings and notes are private/,
+    'the legacy state describes exactly what is already shared');
+  assert.doesNotMatch(burst.elements.get('#groupPanel').innerHTML,
+    /data-groupact="sharing"|data-groupact="feedback-sharing"/,
+    'the two old sharing toggles are gone');
 
   const revoked = harness(), beforeRevocation = deferred();
   revoked.context.groupRpc = name => name === 'group_completion_feed'

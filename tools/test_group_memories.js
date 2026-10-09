@@ -84,13 +84,39 @@ assert.match(card, /Unwritten walk/);
 assert.match(card, /aria-label="5 stars"/);
 assert.match(card, /No memory written yet/, 'a rating without any written note retains the empty text');
 assert.match(card, /Earlier group walk/);
-assert.match(card, /earlier shared completion without verified personal attribution/);
+assert.match(card, /older group tick without a confirmed owner/);
+assert.match(card, /data-review-memory="20">Check my entry<\/button>/,
+  'an unnamed group tick has a direct route to the owner review');
+assert.doesNotMatch(card, /data-review-memory="17"/,
+  'verified member ticks do not offer the older-entry review');
 assert.doesNotMatch(card, /Earlier group walk[\s\S]*Charlie.*completed/,
   'a historical group row cannot be credited to a different member');
 h.run(`members.set('bob','<Bob & team>'); renderMemories()`);
 assert.match(h.html(), /&lt;Bob &amp; team&gt;/, 'member names are escaped like their notes');
 assert.doesNotMatch(h.html(), /<Bob & team>/);
 h.run(`members.set('bob','Bob')`);
+
+// A departed member has no current group_members row. The completion feed
+// carries their frozen display name, and the feedback feed retains their note.
+h.run(`membersLoadedForGroup='group-a';
+  members.delete('charlie');
+  groupCompletions.get(17).get('charlie').completed_by='Charlie at departure';
+  renderMemories()`);
+assert.match(h.html(), /Charlie at departure \(former member\).*completed 1 Oct 2026.*Great views/,
+  'a retained entry uses its frozen name and is marked as a former member');
+assert.match(h.run('groupFeedbackHTML(17)'), /Charlie at departure \(former member\).*Great views/s,
+  'the adventure sheet attributes retained ratings and notes to the former member');
+assert.match(h.run('groupCompletionNotesHTML(17)'), /Charlie at departure \(former member\).*1 Oct 2026/,
+  'the adventure sheet attributes retained completion dates to the former member');
+h.run(`members.set('charlie','Charlie rejoined'); renderMemories()`);
+assert.match(h.html(), /Charlie rejoined.*Great views/,
+  'an active membership uses the current group display name');
+assert.doesNotMatch(h.html(), /Charlie at departure \(former member\)/);
+h.run(`members.delete('charlie'); membersLoadedForGroup=null; renderMemories()`);
+assert.match(h.html(), /Charlie at departure.*Great views/);
+assert.doesNotMatch(h.html(), /Charlie at departure \(former member\)/,
+  'a failed membership fetch does not falsely identify a member as departed');
+h.run(`members.set('charlie','Charlie'); membersLoadedForGroup='group-a'`);
 
 h.run(`groupFeedback=indexGroupFeedback([]); renderMemories()`);
 assert.match(h.html(), /Shared walk/);
@@ -143,6 +169,21 @@ h.run(`progressView='personal'; progress=new Map(personalProgress); renderMemori
 assert.match(h.html(), /Photo walk/, 'the viewer still sees a photo-only adventure in Personal view');
 assert.match(h.html(), /1 on this device/);
 assert.match(h.html(), /class="strip"/);
+assert.match(h.html(), /role="region" aria-label="Photos for Shared walk on this device" tabindex="0"/,
+  'a long photo rail remains an accessible scroll region within its adventure');
+const manyPhotos = harness();
+manyPhotos.run(`progressView='personal';
+  personalProgress.set(17,{adventure_id:17,completed:true,memory:'One adventure'});
+  progress=new Map(personalProgress);
+  photos=Array.from({length:12},(_,i)=>({id:'photo-'+i,adventure_id:17,
+    taken_at:'2026-10-01T00:00:00Z',local:true}));
+  renderMemories()`);
+assert.equal((manyPhotos.html().match(/class="memory"/g) || []).length, 1,
+  'many photos of one adventure stay in one card');
+assert.equal((manyPhotos.html().match(/data-photo="photo-\d+"/g) || []).length, 12,
+  'every local photo remains available in that card');
+assert.equal((manyPhotos.html().match(/class="strip"/g) || []).length, 1,
+  'the adventure has one scrollable photo rail');
 h.run(`progressView='group'; renderMemories()`);
 assert.doesNotMatch(h.html(), /class="strip"/);
 h.run(`memoryGrouping='month'; renderMemories()`);
@@ -307,7 +348,58 @@ async function testPersonalConfirmation() {
   assert.equal(switchedDuringRpc.run('toastMessages.length'), 0);
 }
 
-testPersonalConfirmation().then(() => {
+async function testDirectOlderEntryReview() {
+  const review = harness();
+  review.run(`personalProgress.set(20,{id:'older-alice-20',adventure_id:20,
+    user_id:'alice',completed:true,memory:'My older note'});
+    renderAll=()=>{}; steps=[]; messages=[]; confirmed=false;
+    pullProgress=async()=>{
+      steps.push('personal progress loaded');
+      unconfirmedPersonalScope=userId;
+      unconfirmedPersonalProgress=new Set(['older-alice-20']);
+    };
+    openSheet=id=>steps.push('opened '+id);
+    confirmPersonalProgress=()=>{confirmed=true};
+    toast=message=>messages.push(message);`);
+  await review.run('reviewOlderGroupMemory(20)');
+  assert.equal(review.run('progressView'), 'personal');
+  assert.equal(review.run('JSON.stringify(steps)'),
+    '["personal progress loaded","opened 20"]',
+    'the same adventure opens after the personal confirmation list loads');
+  assert.match(review.run('personalConfirmationHTML(personalProgress.get(20))'),
+    /data-act="confirmPersonal"/,
+    'the owner sees the existing explicit confirmation control');
+  assert.equal(review.run('confirmed'), false,
+    'opening the personal adventure never confirms or attributes it automatically');
+
+  const unrelated = harness();
+  unrelated.run(`renderAll=()=>{}; openSheet=id=>{opened=id};`);
+  await unrelated.run('reviewOlderGroupMemory(17)');
+  assert.equal(unrelated.run('progressView'), 'group',
+    'a verified adventure cannot take the historical review route');
+  assert.equal(unrelated.run('typeof opened'), 'undefined');
+
+  const switched = harness();
+  switched.run(`renderAll=()=>{}; openSheet=id=>{opened=id};
+    pullProgress=()=>new Promise(resolve=>{finishPull=resolve});`);
+  const pending = switched.run('reviewOlderGroupMemory(20)');
+  switched.run(`userId='other-account'; authGeneration++; finishPull()`);
+  await pending;
+  assert.equal(switched.run('typeof opened'), 'undefined',
+    'an account switch while loading cannot open the prior owner memory');
+
+  const failed = harness();
+  failed.run(`renderAll=()=>{}; messages=[];
+    toast=message=>messages.push(message);
+    openSheet=id=>{opened=id};
+    pullProgress=async()=>{throw Error('network failed')};`);
+  await failed.run('reviewOlderGroupMemory(20)');
+  assert.equal(failed.run('typeof opened'), 'undefined',
+    'a failed personal refresh cannot open a sheet with missing confirmation state');
+  assert.match(failed.run('messages.join(" ")'), /Could not check your older entry/);
+}
+
+testDirectOlderEntryReview().then(testPersonalConfirmation).then(() => {
   console.log('PASS: Group Memories and owner-scoped older personal progress confirmation');
 }).catch(error => {
   console.error(error);
