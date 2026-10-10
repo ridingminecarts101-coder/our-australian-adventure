@@ -18,14 +18,14 @@ name: iOS signed archive and delivery
         required: true
         type: string
       marketing_version:
-        description: Public App Store version for the prepared build 13 release
+        description: Public App Store version for the prepared build 14 release
         required: true
-        default: 1.1.3
+        default: '1.2'
         type: string
       build_number:
-        description: Internal build number for the prepared 1.1.3 release
+        description: Internal build number for the prepared 1.2 release
         required: true
-        default: '13'
+        default: '14'
         type: string
 
 permissions:
@@ -67,14 +67,11 @@ jobs:
         run: |
           set -eu
           test "$GITHUB_REF" = refs/heads/main
-          [[ "$RELEASE_MARKETING_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$RELEASE_MARKETING_VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]
           [[ "$RELEASE_BUILD_NUMBER" =~ ^[1-9][0-9]*$ ]]
           # Explicit pair for this candidate. Change both together for the next
           # release; caller-supplied mismatches cannot bypass this gate.
-          test "$RELEASE_MARKETING_VERSION:$RELEASE_BUILD_NUMBER" = "1.1.3:13"
-          # Owner sequence: build 11 -> 1.1.1, 19 -> 1.1.9, 20 -> 1.2.0.
-          expected_sequential_version="1.$((RELEASE_BUILD_NUMBER / 10)).$((RELEASE_BUILD_NUMBER % 10))"
-          test "$RELEASE_MARKETING_VERSION" = "$expected_sequential_version"
+          test "$RELEASE_MARKETING_VERSION:$RELEASE_BUILD_NUMBER" = "1.2:14"
           for name in APPLE_TEAM_ID APP_STORE_CONNECT_KEY_ID APP_STORE_CONNECT_ISSUER_ID \
             REVENUECAT_IOS_PUBLIC_SDK_KEY; do
             test -n "${!name}" || { echo "Missing protected environment value: $name" >&2; exit 1; }
@@ -206,7 +203,7 @@ jobs:
           team = os.environ['APPLE_TEAM_ID']
           version = os.environ['RELEASE_MARKETING_VERSION']
           build = os.environ['RELEASE_BUILD_NUMBER']
-          if not re.fullmatch(r'[A-Z0-9]{10}', team) or not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version) or not re.fullmatch(r'[1-9][0-9]*', build):
+          if not re.fullmatch(r'[A-Z0-9]{10}', team) or not re.fullmatch(r'[0-9]+\.[0-9]+(?:\.[0-9]+)?', version) or not re.fullmatch(r'[1-9][0-9]*', build):
               raise SystemExit('Invalid protected Release configuration')
           block = block.replace('CODE_SIGN_STYLE = Automatic;',
               'CODE_SIGN_STYLE = Manual;\n'

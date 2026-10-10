@@ -69,24 +69,22 @@ const project = (await readFile('ios/App/App.xcodeproj/project.pbxproj', 'utf8')
   .replace(/\r\n/g, '\n');
 const listing = JSON.parse(await readFile('store-release/ios-listing.json', 'utf8'));
 const workflowMarketingVersion = workflow.match(
-  /marketing_version:[\s\S]*?^\s+default:\s*['"]?([0-9]+\.[0-9]+\.[0-9]+)['"]?\s*$/m)?.[1];
+  /marketing_version:[\s\S]*?^\s+default:\s*['"]?([0-9]+\.[0-9]+(?:\.[0-9]+)?)['"]?\s*$/m)?.[1];
 const workflowBuildNumber = workflow.match(
   /build_number:[\s\S]*?^\s+default:\s*['"]?([1-9][0-9]*)['"]?\s*$/m)?.[1];
 assert(workflowMarketingVersion, 'the signed workflow must have a semantic marketing-version default');
 assert(workflowBuildNumber, 'the signed workflow must have a positive internal-build default');
+assert(workflow.includes('[[ "$RELEASE_MARKETING_VERSION" =~ ^[0-9]+\\.[0-9]+(\\.[0-9]+)?$ ]]'),
+  'the signed workflow must accept two- or three-part iOS marketing versions');
 const buildOrdinal = Number(workflowBuildNumber);
 assert(Number.isSafeInteger(buildOrdinal), 'the iOS build number must be a safe integer');
-assert.equal(workflowMarketingVersion, `1.${Math.floor(buildOrdinal / 10)}.${buildOrdinal % 10}`,
-  'public version must follow the owner numbering sequence (11→1.1.1, 19→1.1.9, 20→1.2.0)');
-assert.equal(`${workflowMarketingVersion}:${workflowBuildNumber}`, '1.1.3:13',
-  'the signed-workflow default must use the prepared 1.1.3 (build 13) pair');
+assert.equal(`${workflowMarketingVersion}:${workflowBuildNumber}`, '1.2:14',
+  'the signed-workflow default must use the prepared 1.2 (build 14) pair');
 assert.match(workflow,
-  /test "\$RELEASE_MARKETING_VERSION:\$RELEASE_BUILD_NUMBER" = "1\.1\.3:13"/,
-  'the signed workflow must reject upload inputs outside the prepared 1.1.3 (build 13) pair');
-assert.match(workflow, /expected_sequential_version="1\.\$\(\(RELEASE_BUILD_NUMBER \/ 10\)\)\.\$\(\(RELEASE_BUILD_NUMBER % 10\)\)"/,
-  'the signed workflow must derive the public version from the sequential build number');
-assert.match(workflow, /test "\$RELEASE_MARKETING_VERSION" = "\$expected_sequential_version"/,
-  'the signed workflow must reject a public version that breaks the owner numbering sequence');
+  /test "\$RELEASE_MARKETING_VERSION:\$RELEASE_BUILD_NUMBER" = "1\.2:14"/,
+  'the signed workflow must reject upload inputs outside the prepared 1.2 (build 14) pair');
+assert.doesNotMatch(workflow, /expected_sequential_version|RELEASE_BUILD_NUMBER \/ 10/,
+  'public marketing versions and internal build numbers must remain independently chosen');
 const projectMarketingVersions = [...project.matchAll(/MARKETING_VERSION = ([^;]+);/g)]
   .map(match => match[1]);
 const projectBuildNumbers = [...project.matchAll(/CURRENT_PROJECT_VERSION = ([^;]+);/g)]
@@ -119,7 +117,7 @@ try {
     input: pythonBody,
     encoding: 'utf8',
     env: { ...process.env, PROFILE_NAME: 'Wayfinder App Store', APPLE_TEAM_ID: 'ABCDEFGHIJ',
-      RELEASE_MARKETING_VERSION: '2.3.4', RELEASE_BUILD_NUMBER: '42' },
+      RELEASE_MARKETING_VERSION: '1.2', RELEASE_BUILD_NUMBER: '42' },
   });
   assert.equal(result.status, 0, result.stderr || 'App-only signing injection failed');
   const configured = await readFile(sandboxProject, 'utf8');
@@ -129,7 +127,7 @@ try {
   assert.match(appRelease, /DEVELOPMENT_TEAM = ABCDEFGHIJ;/);
   assert.match(appRelease, /PROVISIONING_PROFILE_SPECIFIER = "Wayfinder App Store";/);
   assert.match(appRelease, /CURRENT_PROJECT_VERSION = 42;/);
-  assert.match(appRelease, /MARKETING_VERSION = 2\.3\.4;/);
+  assert.match(appRelease, /MARKETING_VERSION = 1\.2;/);
   assert.equal(configured.replace(appReleasePattern, '').replace(/\r\n/g, '\n') ===
     project.replace(appReleasePattern, '').replace(/\r\n/g, '\n'), true,
     'no project, UI test, package, or resource configuration may receive signing overrides');
