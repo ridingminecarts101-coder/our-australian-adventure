@@ -1,8 +1,8 @@
 # Wayfinder App Store copy and review material
 
-Prepared 15 September 2026 from the current native source and the existing
-`ios-listing.json`. This is copy for owner review. It has not been entered in
-App Store Connect or submitted to Apple.
+Updated 10 October 2026 for the prepared public Wayfinder 1.2 (build 14)
+release and the current `ios-listing.json`. This file is review guidance; any
+App Store Connect change or submission remains a separate verified action.
 
 ## Product-page copy
 
@@ -67,7 +67,7 @@ Draft Notes for Review:
 >
 > Purchases: open Me, then Paid collections. The eight non-consumable products unlock digital hidden-gem guide entries. Seven continent packs are AUD 2.99 each. All continents is AUD 14.99 and includes all seven geographic packs plus the Antarctica collection and future additions. Travel, admission, permits, accommodation and guide services are not included. Restore purchases is directly below the products. Purchases are associated with the signed-in Wayfinder account through RevenueCat’s App User ID.
 >
-> Near me: return to Adventures and select Near me. An explanation and choice appear before device location is requested. Coordinates and the network IP address go to BigDataCloud for area lookup and anonymous geolocation-model improvement. Wayfinder does not save this location to the account. Manual browsing remains available if either choice is declined.
+> Search and navigation: return to Adventures and select the full-width Search all adventures action to search worldwide. The current version does not show Near me or request device location. Select a continent and country to browse manually, and use Back to move up one level.
 >
 > Memories: new photos added by the submitted native build remain in app-private device storage and do not sync to another device. Notes, ratings, completion status and trips sync to the account. Removing the app can remove device-local photos.
 >
@@ -143,14 +143,17 @@ environment mechanism. It never creates a review account.
 
 Captured public-product candidates for both iPhone and iPad:
 
-1. World adventure browser
+1. World adventure browser with full-width Search
 2. Passport
 3. Device-local Memories view
 4. Community feed
-5. Trips and achievements
+5. Me: trips and personal numbers
 6. Paid collections
 7. Oceania navigation
 8. Australia navigation
+9. Australia adventure list
+10. Adventure detail
+11. The genuine Me / Group tutorial step, replayed from Me after the stable main captures
 
 It also captures one review-only image while each of the eight IAP rows is
 visible. An operator must inspect every exported image for fixture privacy,
@@ -165,6 +168,12 @@ Because the target supports iPhone and iPad, retain at least one accepted set
 for each. See Apple’s current [Screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications)
 and [upload instructions](https://developer.apple.com/help/app-store-connect/manage-app-information/upload-app-previews-and-screenshots/).
 
-No screenshot has been produced yet. A passing hosted run establishes simulator
-capture, not physical-device testing, sandbox purchase success, signed archive
-validation or App Store acceptance.
+Seven genuine native screenshots are already live on the public App Store record:
+four iPhone images and three iPad images. Six browse images predate the current
+catalogue totals, and both old World images still show Near me instead of the
+full-width Search action, so do not reuse those six for the 1.2 submission. Run
+the protected workflow on the exact release source and inspect the refreshed
+images before upload. The additional tutorial attachment is named
+`11-tutorial-me-group` for each device family. A passing hosted run establishes
+simulator capture, not physical-device testing, sandbox purchase success,
+signed archive validation or App Store acceptance.

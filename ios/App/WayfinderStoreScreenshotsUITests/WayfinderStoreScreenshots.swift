@@ -29,6 +29,7 @@ final class WayfinderStoreScreenshots: XCTestCase {
         try signInIfRequired()
         let adventures = button(containing: "Adventures")
         XCTAssertTrue(adventures.waitForExistence(timeout: 45), "The signed-in app did not become available")
+        dismissTourInviteIfShown()
         XCTAssertTrue(button(containing: "Oceania").waitForExistence(timeout: 15),
                       "The World continent list did not render after sign-in")
 
@@ -96,6 +97,48 @@ final class WayfinderStoreScreenshots: XCTestCase {
         XCTAssertTrue(detailDialog.waitForExistence(timeout: 10),
                       "The selected adventure detail did not open")
         capture("10-adventure-detail")
+        captureMeGroupTourStep()
+    }
+
+    private func dismissTourInviteIfShown() {
+        let noThanks = app.buttons["No thanks"]
+        if noThanks.waitForExistence(timeout: 5) { noThanks.tap() }
+    }
+
+    private func captureMeGroupTourStep() {
+        let close = app.buttons["Close"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5), "The adventure detail could not be closed")
+        XCTAssertTrue(close.isHittable, "The adventure detail close control was not tappable")
+        close.tap()
+
+        let me = app.buttons.matching(NSPredicate(
+            format: "label ==[c] %@ OR label ENDSWITH[c] %@", "Me", " Me"
+        )).firstMatch
+        XCTAssertTrue(me.waitForExistence(timeout: 10), "The Me tab was unavailable for the tutorial replay")
+        me.tap()
+        XCTAssertTrue(app.staticTexts["Trips"].waitForExistence(timeout: 10),
+                      "The Me panel did not render before the tutorial replay")
+
+        let replay = app.buttons["Show me around"]
+        XCTAssertTrue(scrollTo(replay, swipeUp: false), "The tutorial replay control was not reachable")
+        replay.tap()
+        XCTAssertTrue(app.staticTexts["Adventures"].waitForExistence(timeout: 10),
+                      "The first tutorial step did not render")
+        let next = app.buttons["Next"]
+        XCTAssertTrue(next.waitForExistence(timeout: 5), "The tutorial could not advance")
+        XCTAssertTrue(next.isHittable, "The tutorial Next control was not tappable")
+        next.tap()
+        XCTAssertTrue(app.staticTexts["Me / Group view"].waitForExistence(timeout: 10),
+                      "The Me / Group tutorial step did not render")
+        XCTAssertTrue(app.staticTexts["2 of 8"].waitForExistence(timeout: 5),
+                      "The tutorial did not settle on its Me / Group step")
+        // The target ring and card are positioned in requestAnimationFrame after
+        // the text changes. Let that genuine rendered state settle before capture.
+        Thread.sleep(forTimeInterval: 0.25)
+        capture("11-tutorial-me-group")
+        let skip = app.buttons["Skip tour"]
+        XCTAssertTrue(skip.isHittable, "The tutorial Skip control was not tappable")
+        skip.tap()
     }
 
     private func signInIfRequired() throws {

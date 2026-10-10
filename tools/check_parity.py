@@ -61,7 +61,7 @@ print('\n  %-26s %-22s %-22s' % ('', 'ANDROID', 'iOS'))
 print('  ' + '-' * 72)
 compare('bundle id', a_id, i_id)
 version_ok = bool(re.fullmatch(r'\d+\.\d+\.\d+', a_name or '')) and bool(
-    re.fullmatch(r'\d+\.\d+\.\d+', i_name or ''))
+    re.fullmatch(r'\d+\.\d+(?:\.\d+)?', i_name or ''))
 build_ok = bool(re.fullmatch(r'[1-9]\d*', a_code or '')) and bool(
     re.fullmatch(r'[1-9]\d*', i_code or ''))
 print('  %-26s %-22s %-22s %s' % (
@@ -69,7 +69,7 @@ print('  %-26s %-22s %-22s %s' % (
 print('  %-26s %-22s %-22s %s' % (
     'internal build numbers', a_code or '-', i_code or '-', 'valid' if build_ok else 'INVALID'))
 if not version_ok:
-    problems.append('Android and iOS store versions must each use semantic version format')
+    problems.append('Android must use a three-part store version; iOS must use a two- or three-part store version')
 if not build_ok:
     problems.append('Android and iOS internal build numbers must each be positive integers')
 if a_name != i_name or a_code != i_code:

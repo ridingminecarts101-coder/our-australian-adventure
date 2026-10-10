@@ -80,6 +80,10 @@ assert.match(testSource, /WAYFINDER_REVIEW_EMAIL/);
 assert.match(testSource, /WAYFINDER_REVIEW_PASSWORD/);
 assert.match(testSource, /throw XCTSkip\("A private, verified review account/);
 assert.match(testSource, /button\(containing: "Oceania"\)\.waitForExistence/);
+assert.match(testSource, /dismissTourInviteIfShown\(\)/,
+  'the automatic first-use invite must not cover the stable product screenshots');
+assert.match(testSource, /app\.buttons\["No thanks"\]/,
+  'the screenshot test must dismiss the genuine optional welcome without bypassing authentication');
 assert.match(testSource, /app\.staticTexts\.matching\(NSPredicate\(format: "label == %@", "Mobile app"\)\)\.count/);
 assert.match(testSource, /app\.staticTexts\.matching\(NSPredicate\(format: "label == %@", "Unlocked"\)\)\.count/);
 assert.doesNotMatch(testSource, /@example\.|fixture-service|password\s*=\s*"[^"\n]+"/i);
@@ -106,8 +110,18 @@ assert.match(markup, /data-tab="tab-list"[^>]*>.*Adventures/);
 for (const name of [
   '01-adventures-world', '02-passport', '03-memories', '04-community',
   '05-trips-achievements', '06-paid-collections', '07-oceania', '08-australia',
-  '09-australia-adventures', '10-adventure-detail',
+  '09-australia-adventures', '10-adventure-detail', '11-tutorial-me-group',
 ]) assert(testSource.includes(`"${name}"`), `missing screenshot ${name}`);
+assert(testSource.indexOf('capture("10-adventure-detail")') < testSource.indexOf('capture("11-tutorial-me-group")'),
+  'the added tutorial candidate must preserve all existing screenshot ordering and names');
+assert.match(testSource, /app\.buttons\["Show me around"\]/);
+assert.match(testSource, /app\.staticTexts\["Me \/ Group view"\]\.waitForExistence/);
+assert.match(testSource, /app\.staticTexts\["2 of 8"\]\.waitForExistence/,
+  'the tutorial capture must verify it reached the second step');
+assert.match(testSource, /Thread\.sleep\(forTimeInterval: 0\.25\)/,
+  'the tutorial target positioning frame must settle before capture');
+assert.match(testSource, /let skip = app\.buttons\["Skip tour"\][\s\S]*?skip\.tap\(\)/,
+  'the screenshot test must leave the replayed tutorial cleanly');
 assert.match(testSource, /button\(containing: "Everything in Australia"\)/);
 assert.equal((testSource.match(/\("iap-/g) || []).length, 1,
   'IAP captures are generated from the reviewed eight-product loop');
@@ -117,7 +131,8 @@ assert(listing.app.subtitle.length <= 30);
 assert(listing.localization.promotional_text.length <= 170);
 assert(Buffer.byteLength(listing.localization.keywords, 'utf8') <= 100);
 assert(listing.localization.description.length <= 4000);
-assert.match(copy, /No screenshot has been produced yet/);
+assert.match(copy, /Seven genuine native screenshots are already live/);
+assert.match(copy, /11-tutorial-me-group/);
 assert.match(copy, /does not certify/);
 assert.match(copy, /protected `app-store`/);
 
