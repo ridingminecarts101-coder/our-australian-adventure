@@ -27,9 +27,9 @@ final class WayfinderStoreScreenshots: XCTestCase {
 
     func testCaptureStoreSubmissionScreens() throws {
         try signInIfRequired()
+        dismissWelcomeAfterSignInIfShown()
         let adventures = button(containing: "Adventures")
         XCTAssertTrue(adventures.waitForExistence(timeout: 45), "The signed-in app did not become available")
-        dismissTourInviteIfShown()
         XCTAssertTrue(button(containing: "Oceania").waitForExistence(timeout: 15),
                       "The World continent list did not render after sign-in")
 
@@ -100,9 +100,23 @@ final class WayfinderStoreScreenshots: XCTestCase {
         captureMeGroupTourStep()
     }
 
-    private func dismissTourInviteIfShown() {
+    private func dismissWelcomeAfterSignInIfShown() {
         let noThanks = app.buttons["No thanks"]
-        if noThanks.waitForExistence(timeout: 5) { noThanks.tap() }
+        let adventures = button(containing: "Adventures")
+        let signedInUI = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in noThanks.exists || adventures.exists },
+            object: app
+        )
+        let result = XCTWaiter.wait(for: [signedInUI], timeout: 45)
+        if result != .completed {
+            attachStartupEvidence()
+            XCTFail("Sign-in did not reach the optional welcome or main navigation")
+            return
+        }
+        if noThanks.exists {
+            XCTAssertTrue(noThanks.isHittable, "The optional welcome could not be dismissed")
+            noThanks.tap()
+        }
     }
 
     private func captureMeGroupTourStep() {
