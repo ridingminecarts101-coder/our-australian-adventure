@@ -170,11 +170,45 @@ final class WayfinderStoreScreenshots: XCTestCase {
         }
         let emailField = app.textFields["Email"]
         let passwordField = app.secureTextFields["Password"]
-        XCTAssertTrue(emailField.waitForExistence(timeout: 5))
-        XCTAssertTrue(passwordField.exists)
-        emailField.tap(); emailField.typeText(email)
-        passwordField.tap(); passwordField.typeText(password)
+        guard focusAndType(email, into: emailField, named: "Email"),
+              focusAndType(password, into: passwordField, named: "Password") else { return }
         signIn.tap()
+    }
+
+    private func focusAndType(_ text: String, into field: XCUIElement, named name: String) -> Bool {
+        guard field.waitForExistence(timeout: 15) else {
+            attachStartupEvidence()
+            XCTFail("The \(name) field did not appear")
+            return false
+        }
+        let fieldReady = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "hittable == true"),
+            object: field
+        )
+        guard XCTWaiter.wait(for: [fieldReady], timeout: 15) == .completed else {
+            attachStartupEvidence()
+            XCTFail("The \(name) field was not hittable")
+            return false
+        }
+
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let keyboard = app.keyboards.firstMatch
+        guard keyboard.waitForExistence(timeout: 10) else {
+            attachStartupEvidence()
+            XCTFail("The software keyboard did not appear for the \(name) field")
+            return false
+        }
+        let keyboardReady = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "hittable == true"),
+            object: keyboard
+        )
+        guard XCTWaiter.wait(for: [keyboardReady], timeout: 10) == .completed else {
+            attachStartupEvidence()
+            XCTFail("The software keyboard was not hittable for the \(name) field")
+            return false
+        }
+        field.typeText(text)
+        return true
     }
 
     private func button(containing text: String) -> XCUIElement {
