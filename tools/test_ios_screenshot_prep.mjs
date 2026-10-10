@@ -72,8 +72,28 @@ assert(diagnostic.indexOf('attachStartupEvidence()') < diagnostic.indexOf('XCTAs
 assert.doesNotMatch(diagnostic, /reviewEmail|reviewPassword|WAYFINDER_REVIEW_/);
 assert.match(testSource, /let accountGateFound = signIn\.waitForExistence\(timeout: 45\)/);
 assert.match(testSource, /if !accountGateFound \{ attachStartupEvidence\(\) \}/);
-assert(testSource.indexOf('if !accountGateFound { attachStartupEvidence() }') < testSource.indexOf('emailField.tap(); emailField.typeText(email)'),
+assert(testSource.indexOf('if !accountGateFound { attachStartupEvidence() }') < testSource.indexOf('focusAndType(email, into: emailField'),
   'a failed pre-login gate must attach evidence before typing credentials');
+const credentialDriver = testSource.slice(
+  testSource.indexOf('private func focusAndType('),
+  testSource.indexOf('private func button(containing:'),
+);
+assert.match(credentialDriver, /field\.waitForExistence\(timeout: 15\)/,
+  'each credential field must exist before the driver attempts focus');
+assert.match(credentialDriver, /NSPredicate\(format: "hittable == true"\)[\s\S]*?object: field/,
+  'each credential field must become hittable before the driver taps it');
+assert.match(credentialDriver,
+  /field\.coordinate\(withNormalizedOffset: CGVector\(dx: 0\.5, dy: 0\.5\)\)\.tap\(\)/,
+  'the WebView field must receive a real center-coordinate tap');
+assert.match(credentialDriver, /keyboard\.waitForExistence\(timeout: 10\)/,
+  'the driver must wait for software-keyboard focus before typing');
+assert.match(credentialDriver, /NSPredicate\(format: "hittable == true"\)[\s\S]*?object: keyboard/,
+  'the software keyboard must be hittable before typing');
+assert(credentialDriver.indexOf('field.coordinate(withNormalizedOffset:') < credentialDriver.indexOf('keyboard.waitForExistence(timeout: 10)')
+  && credentialDriver.indexOf('keyboard.waitForExistence(timeout: 10)') < credentialDriver.indexOf('field.typeText(text)'),
+  'credential entry must tap the field, prove keyboard focus, and only then type');
+assert.doesNotMatch(credentialDriver, /valueForKey|setValue|performSelector|XCUIDevice/,
+  'the screenshot driver must use public XCTest focus APIs only');
 assert.match(testSource, /screenshot\.name = "startup-actual-screen"/);
 assert.match(testSource, /tree\.name = "startup-accessibility-tree"/);
 assert.match(testSource, /WAYFINDER_REVIEW_EMAIL/);
