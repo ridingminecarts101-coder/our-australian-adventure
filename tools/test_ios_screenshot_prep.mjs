@@ -80,10 +80,27 @@ assert.match(testSource, /WAYFINDER_REVIEW_EMAIL/);
 assert.match(testSource, /WAYFINDER_REVIEW_PASSWORD/);
 assert.match(testSource, /throw XCTSkip\("A private, verified review account/);
 assert.match(testSource, /button\(containing: "Oceania"\)\.waitForExistence/);
-assert.match(testSource, /dismissTourInviteIfShown\(\)/,
+assert.match(testSource, /dismissWelcomeAfterSignInIfShown\(\)/,
   'the automatic first-use invite must not cover the stable product screenshots');
 assert.match(testSource, /app\.buttons\["No thanks"\]/,
   'the screenshot test must dismiss the genuine optional welcome without bypassing authentication');
+const captureFlow = testSource.slice(
+  testSource.indexOf('func testCaptureStoreSubmissionScreens()'),
+  testSource.indexOf('private func dismissWelcomeAfterSignInIfShown()'),
+);
+assert(captureFlow.indexOf('try signInIfRequired()') < captureFlow.indexOf('dismissWelcomeAfterSignInIfShown()')
+  && captureFlow.indexOf('dismissWelcomeAfterSignInIfShown()') < captureFlow.indexOf('adventures.waitForExistence(timeout: 45)'),
+  'the optional welcome must be awaited and dismissed after authentication but before the main-navigation wait');
+const welcomeDismissal = testSource.slice(
+  testSource.indexOf('private func dismissWelcomeAfterSignInIfShown()'),
+  testSource.indexOf('private func captureMeGroupTourStep()'),
+);
+assert.match(welcomeDismissal, /XCTNSPredicateExpectation\([\s\S]*?noThanks\.exists \|\| adventures\.exists/,
+  'post-sign-in waiting must accept either the optional welcome or already-visible main navigation');
+assert.match(welcomeDismissal, /XCTWaiter\.wait\(for: \[signedInUI\], timeout: 45\)/,
+  'post-sign-in UI needs enough time for asynchronous authentication');
+assert(welcomeDismissal.indexOf('if result != .completed') < welcomeDismissal.indexOf('if noThanks.exists'),
+  'post-sign-in timeout handling must precede optional welcome dismissal');
 assert.match(testSource, /app\.staticTexts\.matching\(NSPredicate\(format: "label == %@", "Mobile app"\)\)\.count/);
 assert.match(testSource, /app\.staticTexts\.matching\(NSPredicate\(format: "label == %@", "Unlocked"\)\)\.count/);
 assert.doesNotMatch(testSource, /@example\.|fixture-service|password\s*=\s*"[^"\n]+"/i);
