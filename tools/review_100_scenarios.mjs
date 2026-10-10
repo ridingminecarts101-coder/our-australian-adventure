@@ -107,7 +107,7 @@ const cases = [
   r('Community', 'Stale moderation email cannot publish changed content', 'test_community_email_review.mjs', 'PASS 10: stale email and client/worker decisions cannot publish', 'PGlite'),
 
   // Navigation, catalogue, availability and reviewed booking links.
-  r('Discovery/booking', 'Map dots handle world/continent/country windows and dateline', 'test_map_geometry.js', 'PASS: world/continent/country dot maps, dateline wrapping, product geography and small-country markers', 'synthetic UI'),
+  r('Discovery/booking', 'Detailed map dots retain thumb hit targets, geographic windows and dateline routing', 'test_map_geometry.js', 'PASS: detailed responsive world map, thumb hit radius, continent/country maps, dateline wrapping, product geography and small-country markers', 'synthetic UI'),
   r('Discovery/booking', 'Deep links, Back, subdivisions and exhausted lists navigate', 'test_navigation.js', 'PASS: sourced subdivision threshold, direct country routes, history, Back, trip links, counts, search and exhaustion', 'synthetic UI'),
   r('Discovery/booking', 'Avoided/advised experiences show explicit warnings', 'test_advisory_behavior.js', 'advisory behavior: 15 passed', 'synthetic UI'),
   r('Discovery/booking', 'Paused listings preserve history but leave discovery counts', 'test_availability.js', 'availability behavior: historic ID/tick retained; discovery, targets and paid counts excluded', 'synthetic client'),
@@ -120,7 +120,7 @@ const cases = [
 
   // Policy, accessibility, native release structure.
   r('Policy/access/native', 'Cards and dialogs support keyboard/focus semantics', 'test_accessibility.js', 'PASS: keyboard card activation, selection semantics and six-dialog focus lifecycle', 'synthetic UI'),
-  r('Policy/access/native', 'First-use tour is optional, device-scoped and replayable', 'test_tour.js', 'PASS: once-per-device welcome, legacy no-nag, nine live tour targets, nonmember Group teaching, Back, Skip and replay', 'synthetic UI'),
+  r('Policy/access/native', 'First-use tour is optional, device-scoped and replayable', 'test_tour.js', 'PASS: once-per-device welcome, legacy no-nag, eight live tour targets, nonmember Group teaching, Back, Skip and replay', 'synthetic UI'),
   r('Policy/access/native', 'Framed app refuses to expose private state', 'test_frame_guard.js', 'PASS: top-level startup is unchanged; framed startup paints only a refusal and reads no private state', 'synthetic client'),
   r('Policy/access/native', 'Bundled privacy manifests match archive collection claims', 'test_archive_privacy.py', null, 'static/unit'),
   r('Policy/access/native', 'Historical cloud photo objects remain closed to group members', 'test_group_feedback.mjs', 'PASS 15: group member cannot read historical cloud photo object', 'PGlite'),

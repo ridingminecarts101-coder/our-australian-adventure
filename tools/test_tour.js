@@ -22,9 +22,10 @@ assert.match(html, /id="tourDialog"[^>]*role="dialog"[^>]*aria-modal="true"/);
 assert.match(html, /id="tourInvite"[^>]*role="dialog"[^>]*aria-modal="true"/);
 assert.match(html, /id="tourInvite"[^>]*aria-labelledby="tourWelcomeTitle"[^>]*aria-describedby="tourWelcomeDescription"/);
 assert.match(html, /id="tourInviteDismiss"[^>]*>No thanks<\/button>/);
-for (const id of ['tourWelcomeTitle', 'tourWelcomeDescription', 'hereBtn', 'worldSearchBtn', 'progressViewBtn']) {
+for (const id of ['tourWelcomeTitle', 'tourWelcomeDescription', 'worldSearchBtn', 'progressViewBtn']) {
   assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, `${id} appears once`);
 }
+assert.equal((html.match(/id="hereBtn"/g) || []).length, 0, 'tour has no retired location target');
 for (const title of ['Your numbers', 'Paid collections', 'Account &amp; display name',
   'Photos &amp; backups', 'Reminders &amp; syncing', 'About Wayfinder']) {
   assert.match(html, new RegExp(`<details class="me-fold">\\s*<summary>${title}</summary>`));
@@ -52,7 +53,7 @@ for (const tab of ['list', 'passport', 'memories', 'community', 'me']) {
 }
 for (const id of ['tourInvite', 'tourTarget', 'tourCard', 'tourTitle',
   'tourStepCount', 'tourDescription', 'tourBack', 'tourNext', 'tourSkip',
-  'tourDialog', 'tourInviteStart', 'supportBtn', 'app', 'hereBtn', 'worldSearchBtn',
+  'tourDialog', 'tourInviteStart', 'supportBtn', 'app', 'worldSearchBtn',
   'progressViewBtn']) elements.set(`#${id}`, element());
 elements.set('.topbar-actions', element({ left: 280, top: 30, width: 94, height: 44 }));
 elements.get('#tourInvite').classList.add('hidden');
@@ -77,7 +78,6 @@ const context = {
   nav: { level: 'world', continent: null, country: null, admin1: null },
   goTo: () => { throw new Error('the tour should already be at the world screen'); },
   readPendingGroupInvite: () => context.pendingGroupInvite,
-  jumpToHere: Object.assign(() => {}, { busy: false }),
   activeManagedDialog: () => context.managedDialog,
   activateAppTab: tab => {
     tabs.push(tab);
@@ -121,11 +121,9 @@ assert.match(elements.get('#tourDescription').textContent, /After you join a gro
 assert.equal(elements.get('#tourTarget').style.left, '274px',
   'the nonmember step highlights the persistent top-bar actions instead of a hidden switch');
 context.advanceTour(1);
-assert.equal(elements.get('#tourTitle').textContent, 'Near me');
-context.advanceTour(1);
 assert.equal(elements.get('#tourTitle').textContent, 'Search anywhere');
 
-for (let step = 4; step < 9; step++) context.advanceTour(1);
+for (let step = 3; step < 8; step++) context.advanceTour(1);
 assert.equal(elements.get('#tourTitle').textContent, 'Help & support');
 assert.equal(elements.get('#supportBtn').scrolled, 1, 'support is brought into view');
 assert.equal(elements.get('#tourNext').textContent, 'Finish');
@@ -213,7 +211,4 @@ assertDeferredUntilCleared('active group join',
 assertDeferredUntilCleared('pending trip link',
   () => { context.pendingTripDeepLink = { id: 'trip-id' }; },
   () => { context.pendingTripDeepLink = null; });
-assertDeferredUntilCleared('Near me lookup',
-  () => { context.jumpToHere.busy = true; },
-  () => { context.jumpToHere.busy = false; });
-console.log('PASS: once-per-device welcome, legacy no-nag, nine live tour targets, nonmember Group teaching, Back, Skip and replay');
+console.log('PASS: once-per-device welcome, legacy no-nag, eight live tour targets, nonmember Group teaching, Back, Skip and replay');

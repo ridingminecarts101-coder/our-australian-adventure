@@ -7,15 +7,15 @@ const vm = require('node:vm');
 
 const html = fs.readFileSync('index.html', 'utf8');
 const css = fs.readFileSync('styles.css', 'utf8');
-for (const id of ['hereBtn', 'worldSearchBtn', 'placeBackBtn', 'listBackBtn', 'search']) {
+for (const id of ['worldSearchBtn', 'placeBackBtn', 'listBackBtn', 'search']) {
   assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, `${id} appears once`);
 }
-assert(html.indexOf('id="hereBtn"') < html.indexOf('id="worldSearchBtn"'),
-  'world search sits directly after Near me');
-assert.match(html, /id="worldSearchBtn"[^>]*type="button"[^>]*>[^<]*Search all adventures/);
+assert.equal((html.match(/id="hereBtn"/g) || []).length, 0, 'the unreliable location action is absent');
+assert.match(html, /id="worldSearchBtn"[^>]*type="button"[^>]*class="btn-ghost wide"[^>]*>[^<]*Search all adventures/);
 assert.match(html, /id="placeBackBtn"[^>]*type="button"/);
 assert.match(html, /id="listBackBtn"[^>]*type="button"/);
-assert.match(css, /\.world-search\s*\{[^}]*min-height:\s*44px/s);
+assert.match(css, /\.btn-ghost\.wide\s*\{[^}]*width:\s*100%/s,
+  'world search uses the former full-width primary browse-action scale');
 assert.match(css, /\.browse-back\s*\{[^}]*min-height:\s*44px/s);
 
 function harness() {

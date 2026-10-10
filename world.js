@@ -224,8 +224,26 @@ function contOf(code, lat, lon) {
   return (code && LAND.cont[code]) || continentAt(lat, lon);
 }
 
-const DOT_PITCH = 5;              // css px between dot centres
+const DOT_PITCH = 5;              // css px between dot centres in zoomed views
+const WORLD_DOT_PITCH_MIN = 3.1;  // extra world detail on narrow phone canvases
+const WORLD_DOT_PITCH_MAX = 4.2;  // bounded work and calmer texture on wide screens
+const WORLD_MAX_COLS = 240;       // cap ultra-wide raster and canvas work
+const MAP_HIT_RADIUS = 20;        // css px; preserve a thumb-sized nearby search
 const MAP_PAD = 0.06;             // fraction of the span left as margin
+
+// A fixed five-pixel grid only gives a 390px phone about 78 samples across the
+// planet. Use a denser world grid where the silhouette needs it most, then
+// relax it gradually as the canvas grows. Continent and country views retain
+// the established pitch because their smaller geographic windows already
+// resolve considerably more coastline.
+function mapDotPitch(view, width) {
+  if (view) return DOT_PITCH;
+  const phone = 320;
+  const wide = 760;
+  const t = Math.max(0, Math.min((width - phone) / (wide - phone), 1));
+  return WORLD_DOT_PITCH_MIN
+    + t * (WORLD_DOT_PITCH_MAX - WORLD_DOT_PITCH_MIN);
+}
 
 // The last grid drawn, kept so a tap can be resolved without rasterising again.
 let lastMap = null;
@@ -278,13 +296,16 @@ function drawWorldMap(canvas, counts, selected, view) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
 
-  const cols = Math.max(Math.round(w / DOT_PITCH), 12);
-  const rows = Math.max(Math.round(h / DOT_PITCH), 8);
+  let pitch = mapDotPitch(view, w);
+  if (!view) pitch = Math.max(pitch, w / WORLD_MAX_COLS);
+  const cols = Math.max(Math.round(w / pitch), 12);
+  const rows = Math.max(Math.round(h / pitch), 8);
   const grid = landGrid(s, n, west, east, cols, rows);
-  lastMap = { canvas, s, n, w: west, e: east, cols, rows, grid };
+  lastMap = { canvas, s, n, w: west, e: east, cols, rows, grid, pitch };
 
   const cw = w / cols, ch = h / rows;
-  const r = Math.max(Math.min(cw, ch) * 0.40, 0.6);
+  const radiusRatio = view ? 0.40 : 0.35;
+  const r = Math.max(Math.min(cw, ch) * radiusRatio, 0.6);
   let selectedCountryDots = 0;
 
   for (let row = 0; row < rows; row++) {
@@ -346,10 +367,22 @@ function mapHit(canvas, clientX, clientY) {
   if (!lastMap || lastMap.canvas !== canvas) return null;
   const { s, n, w, e, cols, rows, grid } = lastMap;
   const rect = canvas.getBoundingClientRect();
-  const col0 = Math.floor(((clientX - rect.left) / rect.width) * cols);
-  const row0 = Math.floor(((clientY - rect.top) / rect.height) * rows);
+  if (![rect.left, rect.top, rect.width, rect.height, clientX, clientY]
+      .every(Number.isFinite) || rect.width <= 0 || rect.height <= 0) return null;
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  // A nearby-dot search is useful inside the card, but must never turn a tap
+  // beside the canvas into map navigation.
+  if (x < 0 || x > rect.width || y < 0 || y > rect.height) return null;
+  const col0 = Math.floor((x / rect.width) * cols);
+  const row0 = Math.floor((y / rect.height) * rows);
 
-  for (const pad of [0, 1, 2, 3, 4]) {
+  // The denser world grid must not shrink the useful tap target. Convert the
+  // same CSS-pixel search radius into however many cells this rendering uses.
+  const cellWidth = rect.width / cols;
+  const cellHeight = rect.height / rows;
+  const maxPad = Math.ceil(MAP_HIT_RADIUS / Math.min(cellWidth, cellHeight));
+  for (let pad = 0; pad <= maxPad; pad++) {
     for (let dr = -pad; dr <= pad; dr++) {
       for (let dc = -pad; dc <= pad; dc++) {
         if (pad && Math.max(Math.abs(dr), Math.abs(dc)) !== pad) continue;

@@ -197,19 +197,6 @@ async function main(){
     assert(h.effects.some(t=>t.includes(expected)),'database boundary has useful feedback');
     assert(!h.effects.includes('close'),'rejected request keeps form text');
   }
-  {
-    const h=harness();h.context.confirm=()=>false;
-    h.run(`locate=async()=>{effects.push('geolocation');return {lat:0,lon:0}};
-      whereAmI=async()=>{effects.push('vendor');return {continent:null}};`);
-    await h.run('jumpToHere()');
-    assert(!h.effects.includes('geolocation'),'cancel must avoid device location');
-    assert(!h.effects.includes('vendor'),'cancel must avoid BigDataCloud request');
-    assert.equal(h.elements.get('#hereBtn'),undefined,'cancel must leave UI untouched');
-    h.context.confirm=()=>true;
-    await h.run('jumpToHere()');
-    assert(h.effects.includes('geolocation'),'allow starts location request');
-    assert(h.effects.includes('vendor'),'allow reaches vendor lookup');
-  }
   console.log('PASS: eight Community mutation boundaries, deletion guard, feedback serialization, retry and owner-scoped block/unblock');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
