@@ -374,7 +374,7 @@ def local_checks() -> tuple[list[str], set[str]]:
         "style-src": {"'self'", "'unsafe-inline'"},
         "img-src": {"'self'", "data:", "blob:", "https://ajyuozqoukigeeyhvuqc.supabase.co"},
         "connect-src": {"'self'", "https://ajyuozqoukigeeyhvuqc.supabase.co",
-                        "wss://ajyuozqoukigeeyhvuqc.supabase.co", "https://api.bigdatacloud.net"},
+                        "wss://ajyuozqoukigeeyhvuqc.supabase.co"},
         "font-src": {"'self'"},
         "manifest-src": {"'self'"},
         "worker-src": {"'self'"},
@@ -423,7 +423,7 @@ def local_checks() -> tuple[list[str], set[str]]:
             errors.append(f"{relative}: legal footer missing")
     app_config = (APP_ROOT / "config.js").read_text(encoding="utf-8")
     app_source = (APP_ROOT / "app.js").read_text(encoding="utf-8")
-    for required_origin in ("https://ajyuozqoukigeeyhvuqc.supabase.co", "https://api.bigdatacloud.net"):
+    for required_origin in ("https://ajyuozqoukigeeyhvuqc.supabase.co",):
         if required_origin not in csp or required_origin not in app_config + app_source:
             errors.append(f"PWA CSP/runtime origin inventory is missing {required_origin}")
 

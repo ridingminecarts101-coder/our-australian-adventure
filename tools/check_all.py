@@ -39,7 +39,7 @@ CHECKS = [
     ('guided tour',    'test_tour.js', 'once-per-device welcome, live section targets and replayable help'),
     ('navigation',     'test_navigation.js', 'country depth, history, Back and deep-link routing'),
     ('navigation onboarding', 'test_navigation_onboarding.js', 'visible parent controls and world-wide search history'),
-    ('near me',        'test_near_me.js', 'native/web location, subdivision resolution, fallbacks and session boundaries'),
+    ('location retirement', 'test_near_me.js', 'no current location UI/request and legacy shortcut search fallback'),
     ('offline cache',  'test_service_worker.js', 'service worker network and update regressions'),
     ('photo failures', 'test_photo_failures.js', 'failed deletion preserves metadata and legacy files stay aligned'),
     ('local photos',   'test_local_photos.js', 'device-local photo ownership, transactions and account boundaries'),

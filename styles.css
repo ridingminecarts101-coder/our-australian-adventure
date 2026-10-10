@@ -263,7 +263,6 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .tour-welcome-card h2 { font-size: 22px; }
 .tour-welcome-card p { color: var(--ink-2); }
-.world-search { display: block; margin: 10px auto 16px; min-height: 44px; font-size: 14px; }
 .browse-back { min-height: 44px; margin-bottom: 8px; font-size: 14px; }
 .tour-invite-actions, .me-quick-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .tour-invite-actions .text-button { min-height: 44px; font-size: 14px; }

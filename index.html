@@ -2,7 +2,7 @@
 <html lang="en-AU">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://ajyuozqoukigeeyhvuqc.supabase.co; connect-src 'self' https://ajyuozqoukigeeyhvuqc.supabase.co wss://ajyuozqoukigeeyhvuqc.supabase.co https://api.bigdatacloud.net; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://ajyuozqoukigeeyhvuqc.supabase.co; connect-src 'self' https://ajyuozqoukigeeyhvuqc.supabase.co wss://ajyuozqoukigeeyhvuqc.supabase.co; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'">
 <script src="frame-guard.js"></script>
 <!-- No maximum-scale: locking zoom breaks pinch-to-enlarge for anyone who needs it.
      iOS only auto-zooms on focus when an input is under 16px, and ours are 17px. -->
@@ -84,8 +84,7 @@
     <div id="worldView">
       <div class="mapwrap"><canvas id="worldMap" aria-label="World map — tap a continent"></canvas></div>
       <p class="maphint">Tap a continent on the map, or pick one below.</p>
-      <button id="hereBtn" class="btn-ghost wide">📍 Near me</button>
-      <button id="worldSearchBtn" type="button" class="btn-ghost world-search">⌕ Search all adventures</button>
+      <button id="worldSearchBtn" type="button" class="btn-ghost wide">⌕ Search all adventures</button>
       <div id="continentList" class="placelist"></div>
     </div>
 

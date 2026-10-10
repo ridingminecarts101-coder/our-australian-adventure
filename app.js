@@ -1671,147 +1671,6 @@ function renderPhotoStatus() {
 //  shipping as an app rather than a bookmark. Each one degrades quietly if
 //  the permission is refused - nothing here is load-bearing.
 
-// ── Where am I? ──────────────────────────────────────────────────────
-// Per-adventure coordinates do not exist yet, so distance sorting is not
-// possible. Near me opens a mapped state/region, or its country if the lookup
-// cannot identify a mapped subdivision. It runs only on an explicit request.
-let lastFix = null;
-
-function locate() {
-  const nativeLocation = cap('Geolocation');
-  if (nativeLocation) {
-    return nativeLocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 12000, maximumAge: 0 })
-      .then(pos => ({ lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy }))
-      .catch(error => {
-        const denied = ['OS-PLUG-GLOC-0003', 'OS-PLUG-GLOC-0008'].includes(error?.code);
-        throw new Error(denied ? 'Location access is unavailable. You can browse countries manually.'
-          : 'Could not get your location. Try again or browse countries manually.');
-      });
-  }
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error('This device has no location services.'));
-    navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy }),
-      err => reject(new Error(
-        err.code === err.PERMISSION_DENIED
-          ? 'Location is turned off for Wayfinder.'
-          : 'Could not get a fix. Try again outside.')),
-      { enableHighAccuracy: false, timeout: 12000, maximumAge: 0 });
-  });
-}
-
-// Reverse geocode to a real region rather than just a continent. The service
-// is keyless and free; if it is unreachable we fall back to the map's own
-// boxes, which can still tell you the continent from the coordinates alone.
-async function whereAmI(lat, lon) {
-  const fallback = { continent: continentAt(lat, lon), approximate: true };
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-  try {
-    const res = await fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
-      { signal: controller.signal });
-    if (!res.ok) return fallback;
-    const j = await res.json();
-    const country = typeof j.countryCode === 'string' ? j.countryCode.toUpperCase() : null;
-    if (!country || typeof COUNTRY_CONT === 'undefined' || !COUNTRY_CONT[country]) return fallback;
-    return {
-      // The country the geocoder names decides the continent, not the map's
-      // tap zones. The zones are crude rectangles tried in a fixed order, and
-      // Georgia and Armenia sat inside the Europe box, which is tried before
-      // Asia - so Near me opened the wrong continent even with a perfect fix
-      // and a working geocoder. The zones are now only the offline fallback.
-      continent: COUNTRY_CONT[country], country,
-      region: typeof j.principalSubdivision === 'string' ? j.principalSubdivision : null,
-      regionCode: typeof j.principalSubdivisionCode === 'string' ? j.principalSubdivisionCode : null,
-    };
-  } catch {
-    return fallback;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-// What the geocoder calls a subdivision and what the data calls admin1 are
-// usually the same string. These are the ones that are not.
-const REGION_ALIAS = {
-  AU: {
-    'South Australia': 'SA', 'Victoria': 'VIC', 'New South Wales': 'NSW',
-    'Queensland': 'QLD', 'Western Australia': 'WA', 'Tasmania': 'TAS',
-    'Northern Territory': 'NT', 'Australian Capital Territory': 'ACT',
-  },
-};
-
-// New Zealand's admin1 values are its sixteen council regions, which is what
-// the geocoder returns too - so an exact match usually lands. Where it does
-// not, fall back to a country-level view rather than guessing wrongly.
-function matchRegion(country, subdivision, subdivisionCode = null) {
-  if (!country) return null;
-  const inCountry = [...new Set(ADV.filter(a => a.country === country && !placeholderAdmin1(country, a.admin1))
-    .map(a => a.admin1))];
-  const code = typeof subdivisionCode === 'string' ? subdivisionCode.toUpperCase() : '';
-  if (code.startsWith(`${country}-`)) {
-    const suffix = code.slice(country.length + 1);
-    const exactCode = inCountry.find(region => region.toUpperCase() === suffix);
-    if (exactCode) return exactCode;
-  }
-  if (typeof subdivision !== 'string' || !subdivision.trim()) return null;
-  const norm = value => foldSearch(value).replace(/[^a-z0-9]/g, '');
-  const want = norm(subdivision);
-  const alias = Object.entries(REGION_ALIAS[country] || {}).find(([name]) => norm(name) === want)?.[1];
-  if (alias && inCountry.includes(alias)) return alias;
-  const matches = inCountry.filter(region => norm(region) === want);
-  // No substring guesses: an unknown state opens its country instead.
-  return matches.length === 1 ? matches[0] : null;
-}
-
-async function jumpToHere() {
-  if (jumpToHere.busy) return;
-  if (!confirm('Near me sends your current coordinates and IP address to BigDataCloud to find your country or region. BigDataCloud also uses anonymous coordinate/IP pairings to improve its location service. Wayfinder does not save this location in your account. Continue? You can browse countries manually instead.')) return;
-  jumpToHere.busy = true;
-  const btn = $('#hereBtn');
-  btn.disabled = true;
-  btn.textContent = 'Finding you…';
-  try {
-    const owner = userId, generation = authGeneration;
-    lastFix = await locate();
-    const here = await whereAmI(lastFix.lat, lastFix.lon);
-    if (owner !== userId || generation !== authGeneration) return;
-
-    if (!here.continent) { toast('You appear to be at sea. Impressive.'); return; }
-    if (!countOf(a => a.continent === here.continent)) {
-      toast(`Nothing mapped in ${here.continent} yet`);
-      return;
-    }
-
-    const country = here.country && countOf(a => a.country === here.country) ? here.country : null;
-    const admin1 = country ? matchRegion(country, here.region, here.regionCode) : null;
-    resetAdventureFilters();
-
-    if (country && admin1) {
-      goTo('adventures', { continent: here.continent, country, admin1 });
-      const sample = ADV.find(a => a.admin1 === admin1 && a.country === country);
-      toast(`Showing ${regionName(sample)}`);
-    } else if (country) {
-      goTo('country', { continent: here.continent, country });
-      toast(here.region ? `${here.region} isn't mapped yet — here's ${countryName(country)}`
-                        : `Showing ${countryName(country)}`);
-    } else {
-      goTo('continent', { continent: here.continent });
-      toast(here.country ? `Nothing in ${here.country} yet — here's ${here.continent}`
-                         : `Location lookup couldn't identify a state or country. Showing ${here.continent}; choose your country manually.`);
-    }
-  } catch (err) {
-    toast(err.message);
-  } finally {
-    lastFix = null;
-    jumpToHere.busy = false;
-    btn.disabled = false;
-    btn.textContent = '📍 Near me';
-    updateTourInvite();
-  }
-}
-
 // ── Sharing ──────────────────────────────────────────────────────────
 // A link back into the app, so what arrives is a tappable thing rather than
 // a wall of text someone has to read and then go looking for.
@@ -5222,8 +5081,6 @@ const TOUR_STEPS = [
     description: 'Browse the map or search for a place. Open an adventure to shortlist it, tick it off, add a rating or save a memory.' },
   { tab: 'tab-list', target: '#progressViewBtn', title: 'Me / Group view',
     description: 'This button beside the dice switches between your own progress and the group’s shared ticks, ratings and memories. Your photos stay on this device.' },
-  { tab: 'tab-list', target: '#hereBtn', title: 'Near me',
-    description: 'Choose Near me and allow a one-time location lookup to open your state or region where it is mapped. You can always browse manually.' },
   { tab: 'tab-list', target: '#worldSearchBtn', title: 'Search anywhere',
     description: 'Search all adventures straight from the world screen. Inside a country or region, use Back to move up one level without starting over.' },
   { tab: 'tab-passport', target: '.tab[data-tab="tab-passport"]', title: 'Passport',
@@ -5255,7 +5112,7 @@ function updateTourInvite() {
     return;
   }
   // A shared link or account flow takes priority over first-use guidance.
-  if (pendingGroupInviteBusy || jumpToHere.busy || readPendingGroupInvite() || pendingTripDeepLink) return;
+  if (pendingGroupInviteBusy || readPendingGroupInvite() || pendingTripDeepLink) return;
   if (!activeManagedDialog()) showManagedDialog('#tourInvite');
 }
 
@@ -5651,7 +5508,6 @@ function wireUI() {
     pushMyName().then(renderAll);
     renderAll();
   };
-  $('#hereBtn').onclick = jumpToHere;
   $('#notifyBtn').onclick = toggleNotifications;
   $('#previewNotifyBtn').onclick = previewReminder;
   $('#deleteAccountBtn').onclick = deleteAccount;
@@ -7017,7 +6873,9 @@ function openDeepLink(search = location.search) {
   // Long-press shortcuts from the home screen icon.
   const shortcut = q.get('shortcut');
   if (shortcut === 'random') { $('#randomBtn').click(); return; }
-  if (shortcut === 'near')   { $('#hereBtn').click(); return; }
+  // Older installed PWAs can still expose the retired location shortcut.
+  // Keep it useful without requesting location or contacting a geocoder.
+  if (shortcut === 'near')   { openWorldSearch(); return; }
   if (shortcut === 'passport') {
     $('.tab[data-tab="tab-passport"]').click();
     return;
