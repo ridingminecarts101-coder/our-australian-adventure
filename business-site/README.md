@@ -1,6 +1,6 @@
 # RL Applications business site
 
-Static public website for `https://rlapplications.com`, including studio-wide support and privacy pages plus Wayfinder product, support, privacy and account-deletion pages.
+Static public website for `https://rlapplications.com`, including the studio About/home, support and privacy pages; Wayfinder product, support, privacy and account-deletion pages; and TenancyTrove product, support and privacy pages.
 
 ## Cloudflare Pages settings
 
@@ -70,3 +70,15 @@ checker requires the exact published address and reviewed subject lines and
 rejects other Gmail addresses in the public runtime. If the mailbox changes,
 update the intended contact actions and checker together, then repeat the
 local, live and email-link checks.
+
+## TenancyTrove product status
+
+The TenancyTrove overview, support and privacy routes are at
+`/tenancytrove/`, `/tenancytrove/support/` and `/tenancytrove/privacy/`.
+The shared navigation links back to the studio About/home, support and privacy
+pages from both products. TenancyTrove is in a private internal TestFlight
+group as of 15 October 2026; the website must not show a public App Store or
+PWA download button until a real public destination is verified. Its full help
+and privacy detail mirrors the current TenancyTrove-Legal source and should be
+kept aligned with the app whenever product behaviour changes. All current
+TenancyTrove tools are free.

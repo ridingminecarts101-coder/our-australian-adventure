@@ -173,6 +173,7 @@ li + li { margin-top: 0.45rem; }
 }
 .card p:last-child, .notice p:last-child { margin-bottom: 0; }
 .card .number { color: var(--clay); font-family: Georgia, serif; font-size: 2.1rem; line-height: 1; }
+.app-card { margin-top: 1.25rem; }
 
 .feature-card { display: grid; grid-template-columns: 8rem 1fr; gap: clamp(1.25rem, 4vw, 2.5rem); align-items: center; }
 .feature-card img { width: 8rem; }
