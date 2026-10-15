@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How TenancyTrove keeps Australian rental records locally, handles optional reminders and text capture, and what to know before exporting or emailing evidence.">
+  <title>TenancyTrove privacy — RL Applications</title>
+  <link rel="canonical" href="https://rlapplications.com/tenancytrove/privacy/">
+  <link rel="icon" href="/assets/tenancytrove-mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/assets/site.css?v=20261015-tenancytrove">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header"><nav class="nav-shell" aria-label="Primary navigation"><a class="brand" href="/"><img src="/assets/brand-mark.svg" alt="" width="64" height="64">RL Applications</a><div class="nav-links"><a href="/#about">About</a><a href="/wayfinder/">Wayfinder</a><a href="/tenancytrove/">TenancyTrove</a><a href="/support/">Support</a><a href="/privacy/">Privacy</a></div></nav></header>
+  <main id="main">
+    <header class="page-hero"><div class="narrow"><p class="breadcrumbs"><a href="/">RL Applications</a> / <a href="/tenancytrove/">TenancyTrove</a> / Privacy</p><p class="eyebrow">Product privacy</p><h1>TenancyTrove privacy</h1><p class="lede">TenancyTrove keeps your rental records and selected file bytes in the app on your device or in your browser profile. There is no TenancyTrove account or automatic evidence upload.</p><p class="meta">Last updated 15 October 2026</p></div></header>
+    <article class="prose"><div class="narrow">
+      <p>The app bundles a copy of this policy for offline reading. This website carries the current version and requires an internet connection.</p>
+      <h2>What stays on your device</h2>
+      <p>Tenancy details, notes, dates, contacts, amounts, selected photos and files, their metadata and SHA-256 checksums are stored in local IndexedDB. Room inspection notes and photos use the same local record. The app also stores a preference for the last prepared backup and, on iPhone if you choose, whether local reminders are enabled.</p>
+      <p>Text capture processes an image you select locally. The iPhone app uses Apple's on-device Vision framework. The web app uses OCR code and English language data hosted with TenancyTrove; it downloads those assets when you first use text capture and may cache them for later offline use where browser storage permits. Your image and extracted words are not sent to an OCR server. Review the transcription; text is added to a record only when you choose to save it.</p>
+      <p>The current app has no account, cloud sync, analytics, advertising or automatic upload of rental records. RL Applications cannot access or recover records that exist only on your device.</p>
+
+      <h2>Optional iPhone reminders</h2>
+      <p>If you enable device reminders and grant notification permission, TenancyTrove schedules local iPhone alerts for future follow-up dates at 9 am device local time. The notification title and lock-screen text are generic; they do not show an address, record title, photo or note. iOS holds the scheduled time and an internal record ID/date on the device. You can turn reminders off in the app or change notification permissions in iPhone Settings. Browser/PWA use does not schedule notifications. Device notification delivery is controlled by iOS and is not guaranteed.</p>
+
+      <h2>What can leave your device</h2>
+      <p>Opening RL Applications studio, product, support or privacy pages, or an official rental help link, connects your browser to those external sites under their own privacy policies. The PWA and its first-use OCR downloads make ordinary requests to the TenancyTrove website host, which may retain technical access logs; the OCR request does not include your image or recognised text. The installed iPhone app bundles its core assets and uses local Vision text capture. An email you choose to send to support, including any attachment you add, goes to the email provider and RL Applications. The app does not attach your records automatically. A device or cloud backup service you use may also copy local app data or saved exports according to its settings.</p>
+
+      <h2>Exports, sharing and access</h2>
+      <p>Full ZIP backups, PDF summaries and selected evidence packs are prepared on your device. An evidence pack contains a numbered PDF chronology, original saved files and checksum metadata. Checksums show whether exported bytes match those saved by the app; they do not establish when or where material was created, whether a message was delivered, or whether a tribunal will accept it. Event dates are entered by you and device-clock or file modification times are not independently verified. The evidence pack is not a restorable backup.</p>
+      <p>The PWA downloads exports through your browser. The iPhone app opens the system share sheet so you can save or send a file; it uses a temporary cache copy and attempts to remove it when sharing finishes. <strong>TenancyTrove does not encrypt its local database or ZIP/PDF exports.</strong> Anyone with access to your unlocked device, browser profile, notifications or exported files may be able to read what is available there. Keep a separate full backup and independent originals in a place you trust. If evidence collection could put you at risk, read <a href="https://www.esafety.gov.au/key-topics/domestic-family-violence/collecting-evidence-safely" rel="noopener noreferrer" target="_blank">eSafety's evidence-safety guidance</a>.</p>
+
+      <h2>Retention and deletion</h2>
+      <p>Records stay in the app or browser profile until you delete them, remove the app, clear site data or the device removes storage. Deleting in the app does not erase exports or copies you saved elsewhere. Turn off iPhone reminders in the app to cancel its pending local alerts; changing or deleting a record updates the scheduled alerts when the app next synchronises them. Browser site-data controls can clear the PWA's records and downloaded OCR cache. Removing the iPhone app clears its local container. We cannot restore lost local data without your own full ZIP backup.</p>
+
+      <h2>Questions and changes</h2>
+      <p>Email <a href="mailto:help.rlapplications@gmail.com?subject=TenancyTrove%20privacy">help.rlapplications@gmail.com</a>. Please do not include sensitive evidence unless you intend to send it. We will update this page before enabling any future cloud, account or analytics feature.</p>
+      <p>Read <a href="/privacy/">RL Applications studio privacy</a> for website visits and general support messages, or learn more <a href="/#about">about the studio</a>.</p>
+      <div class="notice"><p><strong>About the tool:</strong> TenancyTrove does not submit official reports, deliver legal notices, prove evidence provenance or provide legal advice. Check current state or territory guidance for formal obligations.</p></div>
+    </div></article>
+  </main>
+  <footer class="site-footer"><div class="shell footer-grid"><div><a class="brand" href="/"><img src="/assets/brand-mark.svg" alt="" width="64" height="64">RL Applications</a><p class="fineprint">RL Applications · ABN 92 363 169 656<br>Riley Nicholas Lawler - Sole Trader - Australia.</p></div><div class="footer-links"><a href="/#about">About RL Applications</a><a href="/tenancytrove/">TenancyTrove</a><a href="/tenancytrove/support/">TenancyTrove support</a><a href="/tenancytrove/privacy/">TenancyTrove privacy</a><a href="/privacy/">Studio privacy</a></div></div></footer>
+</body>
+</html>
