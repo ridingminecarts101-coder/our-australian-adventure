@@ -47,6 +47,7 @@ ASSETS = {
     "/assets/tenancytrove-overview.png": "assets/tenancytrove-overview.png",
     "/assets/tenancytrove-timeline.png": "assets/tenancytrove-timeline.png",
     "/assets/tenancytrove-evidence-pack.png": "assets/tenancytrove-evidence-pack.png",
+    "/assets/tenancytrove-third-party-notices.txt": "assets/tenancytrove-third-party-notices.txt",
     "/robots.txt": "robots.txt",
     "/sitemap.xml": "sitemap.xml",
 }
