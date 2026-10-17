@@ -223,3 +223,12 @@ details[open] summary { border-bottom: 1px solid var(--line); }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+.app-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 3vw, 2.5rem); align-items: start; }
+.app-gallery figure { margin: 0; min-width: 0; }
+.app-gallery img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 1.25rem; background: white; }
+.app-gallery figcaption { margin-top: .85rem; color: var(--muted); font-size: .95rem; }
+@media (max-width: 650px) {
+  .app-gallery { grid-template-columns: 1fr; justify-items: center; gap: 2rem; }
+  .app-gallery figure { width: min(100%, 320px); }
+}

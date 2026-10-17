@@ -44,6 +44,9 @@ ASSETS = {
     "/assets/wayfinder-mark.svg": "assets/wayfinder-mark.svg",
     "/assets/tenancytrove-mark.svg": "assets/tenancytrove-mark.svg",
     "/assets/wayfinder-invite.js": "assets/wayfinder-invite.js",
+    "/assets/tenancytrove-overview.png": "assets/tenancytrove-overview.png",
+    "/assets/tenancytrove-timeline.png": "assets/tenancytrove-timeline.png",
+    "/assets/tenancytrove-evidence-pack.png": "assets/tenancytrove-evidence-pack.png",
     "/robots.txt": "robots.txt",
     "/sitemap.xml": "sitemap.xml",
 }

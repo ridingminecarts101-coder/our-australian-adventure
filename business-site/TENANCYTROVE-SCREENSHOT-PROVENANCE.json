@@ -1,0 +1,24 @@
+{
+  "app": "TenancyTrove",
+  "nativeRun": 39005174712,
+  "captureSource": "7177ccb7f68a7db3a90b1ac44847c51fbe3f0bf0",
+  "fictionalData": true,
+  "unalteredNativePngs": true,
+  "assets": [
+    {
+      "asset": "tenancytrove-overview.png",
+      "nativeAttachment": "FD6CD7C3-FA63-4524-96B8-D828504C8B34.png",
+      "sha256": "cdebd1f42a082ff03545a38690fa818c96b8c932031e6ce00adc342f966323c3"
+    },
+    {
+      "asset": "tenancytrove-timeline.png",
+      "nativeAttachment": "7E68F838-4450-4D3C-8543-D52AB16F6D05.png",
+      "sha256": "61ed7e186061475090b1edfa33dbd38f94f502d33f01fed0895d652ae82a1799"
+    },
+    {
+      "asset": "tenancytrove-evidence-pack.png",
+      "nativeAttachment": "DC5FABC0-8397-4D81-93A8-4669B08CF53B.png",
+      "sha256": "e36ca0d3ee96ddfcdebda1434649dfd7c856bf8a2ed8eb3310b0b3b5a931e76c"
+    }
+  ]
+}
